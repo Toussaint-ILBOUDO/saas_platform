@@ -1,0 +1,24 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /select-role
+Disallow: /mon-profil
+Disallow: /notifications
+Disallow: /cahiers-textes
+Disallow: /classes
+Disallow: /contrats
+Disallow: /demande-cours/
+Disallow: /documents-administratifs
+Disallow: /eleves
+Disallow: /enseignants
+Disallow: /finance
+Disallow: /bibliotheque/creer
+Disallow: /bibliotheque/favoris
+Disallow: /bibliotheque/mes-documents
+Disallow: /bibliotheque/*/modifier
+Disallow: /librairie/mes-commandes
+Disallow: /temoignages/creer
+Disallow: /temoignages/mes-temoignages
+Disallow: /temoignages/*/modifier
+
+Sitemap: https://keducbf.com/sitemap.xml

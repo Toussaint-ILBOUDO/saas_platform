@@ -1,0 +1,204 @@
+/* Bibliothèque Numérique — K'Educ */
+
+:root {
+    --biblio-primary: #2563eb;
+    --biblio-success: #198754;
+    --biblio-accent: #1a365d;
+}
+
+/* === Public Library Page === */
+
+.biblio-hero {
+    position: relative;
+    overflow: hidden;
+}
+
+.biblio-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 50%;
+}
+
+/* === Document Cards === */
+
+.doc-card {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    background: #fff;
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.doc-card:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.doc-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: #fff;
+    margin-bottom: 12px;
+}
+
+.doc-card-title {
+    font-weight: 600;
+    color: var(--heading-color);
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+.doc-card-title a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.doc-card-title a:hover {
+    color: var(--accent-color);
+}
+
+.doc-card-meta {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.doc-card-stats {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f1f3f5;
+    display: flex;
+    gap: 12px;
+    font-size: 0.78rem;
+    color: #9ca3af;
+}
+
+.doc-card-stats i {
+    margin-right: 3px;
+}
+
+.doc-stars {
+    color: #f59e0b;
+    font-size: 0.85rem;
+}
+
+/* === Star Rating === */
+
+.star-rating {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.star-rating .star {
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: color 0.15s;
+}
+
+.star-rating .star:hover {
+    color: #f59e0b !important;
+}
+
+/* === Search Bar === */
+
+.biblio-search-bar .input-group {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.biblio-search-bar .form-control:focus {
+    box-shadow: none;
+}
+
+/* === Stats Cards === */
+
+.biblio-hero-stats {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.biblio-stat-card {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    color: #fff;
+    min-width: 110px;
+}
+
+.biblio-stat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    opacity: 0.9;
+}
+
+.biblio-stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.biblio-stat-label {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* === Responsive === */
+
+@media (max-width: 768px) {
+    .biblio-hero-stats {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .biblio-stat-card {
+        min-width: 200px;
+    }
+
+    .doc-card {
+        padding: 16px;
+    }
+}
+
+/* === Panel overrides for biblio pages === */
+
+.panel {
+    border: 1px solid var(--admin-border, #e9ecef);
+    border-radius: 12px;
+    background: var(--admin-surface, #fff);
+    box-shadow: var(--admin-shadow-sm, 0 1px 3px rgba(0,0,0,0.04));
+}
+
+.panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--admin-border, #e9ecef);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* === Admin moderation === */
+
+.border-danger {
+    border-color: #dc3545 !important;
+}

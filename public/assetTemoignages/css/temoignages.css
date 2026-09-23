@@ -1,0 +1,273 @@
+/* ======================================================
+   K'Educ — Module Témoignages (site public)
+   Design : Bootstrap 5 + variables du template public
+   ====================================================== */
+
+/* ---------- Cartes témoignages ---------- */
+
+.temo-card {
+    overflow: hidden;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.temo-card:hover {
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10);
+    transform: translateY(-3px);
+}
+
+.temo-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px 18px 0;
+}
+
+.temo-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.28);
+}
+
+.temo-avatar i {
+    font-size: 1rem;
+}
+
+.temo-avatar-lg {
+    width: 52px;
+    height: 52px;
+}
+
+.temo-avatar-lg i {
+    font-size: 1.3rem;
+}
+
+.temo-avatar-sm {
+    width: 34px;
+    height: 34px;
+    box-shadow: none;
+}
+
+.temo-avatar-sm i {
+    font-size: 0.8rem;
+}
+
+.temo-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.temo-author {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--heading-color, #0f172a);
+}
+
+.temo-role {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.temo-score {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #b45309;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    padding: 3px 10px;
+}
+
+.temo-text {
+    padding: 12px 18px 0;
+    margin: 0;
+    font-size: 0.92rem;
+    color: #374151;
+    line-height: 1.7;
+}
+
+.temo-text .quote-icon-left {
+    color: #93c5fd;
+    margin-right: 4px;
+}
+
+.temo-text .quote-icon-right {
+    color: #93c5fd;
+    margin-left: 4px;
+}
+
+.temo-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 16px;
+    margin-top: auto;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.temo-more {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.temo-more:hover {
+    color: #1e40af;
+}
+
+/* ---------- Article détail ---------- */
+
+.temo-article-head {
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.temo-quote {
+    font-size: 1.05rem;
+    line-height: 1.9;
+    color: #1f2937;
+    padding: 18px 4px 0;
+    margin: 0;
+}
+
+.temo-quote .quote-icon-left {
+    color: #93c5fd;
+    margin-right: 6px;
+}
+
+.temo-quote .quote-icon-right {
+    color: #93c5fd;
+    margin-left: 6px;
+}
+
+.temo-score-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff7ed;
+    color: #ea580c;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ---------- Barre de réactions ---------- */
+
+.temo-reactions {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.temo-reactions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.temo-reaction-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 999px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    position: relative;
+}
+
+.temo-reaction-btn .temo-reaction-emoji {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.temo-reaction-btn .temo-reaction-count {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+    min-width: 14px;
+    text-align: center;
+}
+
+.temo-reaction-btn:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.12);
+}
+
+.temo-reaction-btn:active {
+    transform: scale(0.94);
+}
+
+.temo-reaction-btn.is-active {
+    border-color: #2563eb;
+    background: #2563eb;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+}
+
+.temo-reaction-btn.is-active .temo-reaction-count {
+    color: #ffffff;
+}
+
+.temo-reactions-hint {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* ---------- Commentaires ---------- */
+
+.temo-comment {
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: #fbfdff;
+}
+
+.temo-comment-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+}
+
+/* ---------- Bouton Voir plus ---------- */
+
+.temo-load-more {
+    border-radius: 999px;
+    padding: 8px 24px;
+}
+
+.temo-load-more.is-loading {
+    pointer-events: none;
+    opacity: 0.7;
+}

@@ -1,0 +1,131 @@
+/* ======================================================
+   K'Educ — Module Actualités (site public)
+   ====================================================== */
+
+/* ---------- Carte actualité (liste) ---------- */
+
+.actu-card-img-wrap {
+    display: block;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+}
+
+.actu-card-img {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.actu-card-img-wrap:hover .actu-card-img {
+    transform: scale(1.05);
+}
+
+.actu-card-date {
+    display: block;
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 0.35rem;
+}
+
+.actu-card-stats {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.78rem;
+}
+
+.actu-card-stats span {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* ---------- Article (détail) ---------- */
+
+.actu-article-header {
+    margin-bottom: 1.25rem;
+}
+
+.actu-article-meta {
+    font-size: 0.9rem;
+}
+
+.actu-article-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.actu-article-figure {
+    margin: 0 0 1.25rem;
+}
+
+.actu-article-figure img {
+    border-radius: 12px;
+    max-height: 520px;
+    object-fit: cover;
+}
+
+.actu-article-resume {
+    font-size: 1.05rem;
+    color: #4b5563;
+}
+
+.actu-article-content {
+    line-height: 1.8;
+    font-size: 1rem;
+    color: #333;
+}
+
+.actu-article-content p {
+    margin-bottom: 1rem;
+}
+
+/* ---------- Réactions ---------- */
+
+.actu-reaction-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.actu-reaction-btn:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.actu-reaction-btn.active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.actu-reaction-emoji {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.actu-reaction-count {
+    font-size: 0.72rem;
+    color: #6b7280;
+    min-height: 14px;
+}
+
+.actu-reaction-btn.active .actu-reaction-count {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+/* ---------- Partage ---------- */
+
+.actu-share-btn .bi {
+    font-size: 0.95rem;
+}

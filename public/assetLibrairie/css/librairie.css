@@ -1,0 +1,528 @@
+/* Librairie Scolaire — K'Educ
+ * Harmonized with KEduc institutional design system
+ * Colors: --heading-color: #2c4964 | --accent-color: #198754 | --default-color: #444444
+ */
+
+/* === Hero === */
+
+.lib-hero {
+    position: relative;
+    overflow: hidden;
+    background: var(--heading-color, #2c4964);
+    padding: 60px 0;
+}
+
+.lib-hero h1 {
+    color: #fff;
+    font-weight: 700;
+}
+
+.lib-hero .lead {
+    color: rgba(255,255,255,0.85);
+}
+
+/* === Search Bar === */
+
+.lib-search-bar .input-group {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.lib-search-bar .form-control:focus {
+    box-shadow: none;
+}
+
+/* === Stats Cards (hero) === */
+
+.lib-hero-stats {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.lib-stat-card {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    color: #fff;
+    min-width: 110px;
+    backdrop-filter: blur(10px);
+}
+
+.lib-stat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    opacity: 0.9;
+}
+
+.lib-stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.lib-stat-label {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* === Product Cards === */
+
+.lib-product-card {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 0;
+    background: var(--surface-color, #fff);
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.lib-product-card:hover {
+    border-color: var(--accent-color, #198754);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.lib-product-card .card-img-top {
+    border-radius: 0;
+}
+
+.lib-product-card .card-body {
+    padding: 16px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.lib-product-card .product-price {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f1f3f5;
+}
+
+/* === Panel === */
+
+.panel {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* === Filter sidebar === */
+
+.lib-filter-sidebar {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    padding: 20px;
+}
+
+/* === Cart Summary === */
+
+.lib-cart-summary {
+    position: sticky;
+    top: 100px;
+}
+
+/* === Checkout Form === */
+
+.lib-checkout-form .form-control,
+.lib-checkout-form .form-select {
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+
+.lib-checkout-form .form-label {
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+
+/* === Floating Cart Button (draggable) === */
+
+.lib-floating-cart {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9990;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    transition: opacity 0.3s ease;
+}
+
+.lib-floating-cart:active {
+    cursor: grabbing;
+}
+
+.lib-floating-cart-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--accent-color, #198754);
+    color: #fff;
+    font-size: 1.5rem;
+    text-decoration: none;
+    box-shadow: 0 6px 20px rgba(25, 135, 84, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+}
+
+.lib-floating-cart-link:hover {
+    color: #fff;
+    transform: scale(1.08);
+    box-shadow: 0 8px 28px rgba(25, 135, 84, 0.5);
+}
+
+.lib-floating-cart-link:active {
+    transform: scale(0.95);
+}
+
+.lib-cart-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.lib-floating-cart-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    padding: 0 6px;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.lib-floating-cart-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 60px;
+    margin-left: -6px;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.85rem;
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.lib-floating-cart:hover .lib-floating-cart-handle {
+    opacity: 1;
+}
+
+/* === Quick Add Button === */
+
+.lib-quick-add {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: var(--accent-color, #198754);
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+    transform: translateY(4px);
+    z-index: 2;
+}
+
+.lib-product-card:hover .lib-quick-add {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.lib-quick-add:hover {
+    background: #146c43;
+    transform: scale(1.1);
+}
+
+.lib-quick-add:active {
+    transform: scale(0.95);
+}
+
+/* === Toast Container === */
+
+#toast-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 400px;
+}
+
+#toast-container .toast {
+    min-width: 280px;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+/* === Loading Spinner === */
+
+.lib-spinner-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+    backdrop-filter: blur(2px);
+}
+
+.lib-spinner-overlay .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* === Price styling === */
+
+.lib-price {
+    font-weight: 700;
+    color: var(--accent-color, #198754);
+}
+
+/* === Pulse Animation === */
+
+@keyframes lib-cart-pulse {
+    0% {
+        box-shadow: 0 6px 20px rgba(25, 135, 84, 0.35);
+    }
+    50% {
+        box-shadow: 0 0 0 12px rgba(25, 135, 84, 0.12), 0 6px 20px rgba(25, 135, 84, 0.35);
+    }
+    100% {
+        box-shadow: 0 6px 20px rgba(25, 135, 84, 0.35);
+    }
+}
+
+.lib-floating-cart.has-items .lib-floating-cart-link {
+    animation: lib-cart-pulse 2s ease-in-out infinite;
+}
+
+.lib-floating-cart.has-items .lib-floating-cart-badge {
+    animation: lib-badge-wiggle 2s ease-in-out infinite;
+}
+
+@keyframes lib-badge-wiggle {
+    0%, 100% {
+        transform: scale(1);
+    }
+    30% {
+        transform: scale(1.15);
+    }
+    60% {
+        transform: scale(0.95);
+    }
+}
+
+/* === Navbar Cart Link === */
+
+.lib-cart-link {
+    position: relative;
+    color: #fff;
+    font-size: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    transition: background 0.2s;
+    text-decoration: none;
+}
+
+.lib-cart-link:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+}
+
+/* === Responsive === */
+
+@media (max-width: 768px) {
+    .lib-hero-stats {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .lib-stat-card {
+        min-width: 200px;
+    }
+
+    .lib-product-card .card-body {
+        padding: 12px 16px;
+    }
+}
+
+/* === Product Images === */
+
+.lib-produit-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    background: #f8f9fa;
+}
+
+.lib-produit-img-placeholder {
+    width: 100%;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+}
+
+.lib-produit-img-placeholder i {
+    font-size: 3rem;
+    color: #adb5bd;
+}
+
+.lib-produit-img-detail {
+    width: 100%;
+    max-height: 500px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    background: #f8f9fa;
+}
+
+.lib-produit-img-detail-placeholder {
+    width: 100%;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+}
+
+.lib-produit-img-detail-placeholder i {
+    font-size: 5rem;
+    color: #adb5bd;
+}
+
+.lib-thumb-img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.lib-thumb-img-placeholder {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.lib-thumb-img-placeholder i {
+    font-size: 1rem;
+    color: #adb5bd;
+}
+
+.lib-thumb-sm {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 6px;
+    background: #f8f9fa;
+}
+
+.lib-thumb-sm-placeholder {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.lib-thumb-sm-placeholder i {
+    font-size: 0.9rem;
+    color: #adb5bd;
+}
+
+.lib-thumb-xs {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 4px;
+    background: #f8f9fa;
+}
+
+.lib-thumb-xs-placeholder {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.lib-thumb-xs-placeholder i {
+    font-size: 0.8rem;
+    color: #adb5bd;
+}

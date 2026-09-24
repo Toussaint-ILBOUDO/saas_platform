@@ -48,7 +48,7 @@
 ## P2 — Landlord (super-admin)
 
 - [x] **T2.1** Table `super_admins`, guard `landlord`, connexion Blade, seeder du premier super-admin. (migration + `SuperAdmin` (CentralConnection) + guard/provider `landlord` + 3 middlewares `landlord.auth/guest/central.domain` + routes `/admin` + vues connexion/dashboard + `SuperAdminSeeder` ; 8 tests verts. **Seed : `php artisan db:seed --class=SuperAdminSeeder`** après `php artisan migrate`)
-- [ ] **T2.2** Layout Blade Landlord (navigation : Tableau de bord, Cabinets, Facturation, Journal).
+- [ ] **T2.2** Layout Blade Landlord (navigation : Tableau de bord, Cabinets, Facturation, Journal) — **fait côté code** : `landlord/layouts/app.blade.php` (sidebar + topbar + logout), Dashboard et 3 sections placeholder (`/admin/cabinets`, `/admin/facturation`, `/admin/journal`), CSS `landlord.css` ; 4 tests verts (16 au total). ✅ implémenté — voir DECISIONS D-030.
 - [ ] **T2.3** Table `parametres_cabinet` + CRUD cabinets (liste, création, fiche, modification, tarifs, fonctionnalités actives).
 - [ ] **T2.4** **Pipeline de création** (jobs) : cabinet + domaine → base → migrations → seeder → admin de cabinet → email identifiants + lien → journal. Rollback complet en cas d'échec. *Fin : un clic crée un cabinet utilisable ; un échec simulé ne laisse rien derrière.*
 - [ ] **T2.5** Suspendre / réactiver / archiver ; suppression définitive avec `pg_dump` préalable.

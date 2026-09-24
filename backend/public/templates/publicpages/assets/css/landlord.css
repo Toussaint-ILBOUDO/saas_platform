@@ -1,5 +1,5 @@
 /* =====================================================
-   Landlord — cadrage de base (super-admin plateforme)
+   Landlord — cadre de base (super-admin plateforme)
    SaasCD
    ===================================================== */
 
@@ -8,6 +8,92 @@
     min-height: 100vh;
 }
 
-.landlord-body main {
+.landlord-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.landlord-sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: #1f2937;
+    color: #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 0.75rem;
+}
+
+.landlord-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.15rem;
+    padding: 0.25rem 0.5rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1rem;
+}
+
+.landlord-brand span {
+    color: #4f8ff7;
+}
+
+.landlord-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.landlord-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: #cbd5e1;
+    text-decoration: none;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.925rem;
+}
+
+.landlord-nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.landlord-nav-link.active {
+    background: #2563eb;
+    color: #fff;
+}
+
+.landlord-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.landlord-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.landlord-topbar-title {
+    font-weight: 600;
+    color: #374151;
+}
+
+.landlord-content {
+    padding: 1.5rem;
     max-width: 1200px;
+    width: 100%;
+}
+
+.table thead th {
+    white-space: nowrap;
 }

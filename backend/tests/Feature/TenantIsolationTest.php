@@ -79,7 +79,14 @@ class TenantIsolationTest extends TestCase
         // MigrateDatabase, SeedDatabase) : la page publique répond directement.
         $this->makeCabinet('c1');
 
-        $this->get('http://c1.localhost/')->assertOk();
+        $response = $this->get('http://c1.localhost/');
+        $response->assertOk();
+
+        // Les assets statiques sont servis depuis public/ (pas de réécriture
+        // stancl vers /tenancy/assets — sinon le site serait rendu « sans CSS »).
+        $response->assertDontSee('/tenancy/assets');
+        $response->assertSee('/templates/publicpages/assets/css/main.css', false);
+        $response->assertSee('/templates/publicpages/assets/js/main.js', false);
     }
 
     public function test_seeder_tenant_roles_et_parametres_publics(): void

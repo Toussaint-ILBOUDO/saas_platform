@@ -7,22 +7,18 @@ use Illuminate\Foundation\Configuration\Middleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: [
-            __DIR__.'/../routes/web.php',
-            __DIR__.'/../routes/auth.php',
-            __DIR__.'/../routes/pedagogie.php',
-            __DIR__.'/../routes/notifications.php',
-            __DIR__.'/../routes/finance.php',
-            __DIR__.'/../routes/bibliotheque.php',
-            __DIR__.'/../routes/librairie.php',
-            __DIR__.'/../routes/cms.php',
-            __DIR__.'/../routes/actualites.php',
-            __DIR__.'/../routes/temoignages.php',
+            __DIR__.'/../routes/landlord.php',
             ],
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->api(append: [
+            \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
+            \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
+        ]);
+
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,

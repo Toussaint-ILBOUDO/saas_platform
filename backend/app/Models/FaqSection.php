@@ -14,7 +14,6 @@ class FaqSection extends Model
     protected $table = 'faq_sections';
 
     protected $fillable = [
-        'cabinet_id',
         'title',
         'slug',
         'description',

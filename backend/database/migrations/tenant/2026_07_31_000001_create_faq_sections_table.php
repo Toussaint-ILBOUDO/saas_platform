@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('faq_sections', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('cabinet_id')->nullable();
             $table->string('title');
             $table->string('slug')->unique();
             $table->text('description')->nullable();

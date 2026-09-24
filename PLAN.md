@@ -35,11 +35,11 @@
 
 ## P1 — Multi-tenancy opérationnel
 
-- [ ] **T1.1** Installer et publier `stancl/tenancy` v3 ; enregistrer `TenancyServiceProvider` dans `bootstrap/providers.php`.
-- [ ] **T1.2** Modèle `Cabinet` (`TenantWithDatabase`, `HasDatabase`, `HasDomains`, `getCustomColumns()` avec `tenancy_db_name`). Préfixe des bases `cabinet_`. *Fin : créer un cabinet en tinker crée physiquement la base PostgreSQL.*
-- [ ] **T1.3** Séparer les migrations : `database/migrations/` (plateforme) et `database/migrations/tenant/` (cabinet). Retirer tout `cabinet_id` des tables cabinet. Ajouter `uuid_client` (unique) à `cahier_textes`. *Fin : `tenants:migrate` fonctionne sur un cabinet vierge.*
-- [ ] **T1.4** Bootstrappers Database, Filesystem, Queue actifs (Cache seulement si Redis). Sessions en `file`, queue `database` en connexion centrale. Si le bug d'identifiants PDO (PHP 8.2) apparaît : bootstrapper custom dans `app/Tenancy/`.
-- [ ] **T1.5** Routes : `routes/landlord.php` (domaine central), `routes/tenant.php` et `routes/api.php` avec `InitializeTenancyByDomain` + `PreventAccessFromCentralDomains`.
+- [x] **T1.1** Installer et publier `stancl/tenancy` v3 ; enregistrer `TenancyServiceProvider` dans `bootstrap/providers.php`. (v3.10.1 ; tags `config`/`migrations`/`routes`/`providers` publiés.)
+- [ ] **T1.2** Modèle `Cabinet` (`TenantWithDatabase`, `HasDatabase`, `HasDomains`, `getCustomColumns()` avec `tenancy_db_name`). Préfixe des bases `cabinet_`. *Fin : créer un cabinet en tinker crée physiquement la base PostgreSQL.* (modèle créé + colonnes `nom/sous_domaine/status/logo/theme` dans `tenants` ; création physique **à valider par le propriétaire**)
+- [ ] **T1.3** Séparer les migrations : `database/migrations/` (plateforme) et `database/migrations/tenant/` (cabinet). Retirer tout `cabinet_id` des tables cabinet. Ajouter `uuid_client` (unique) à `cahier_textes`. *Fin : `tenants:migrate` fonctionne sur un cabinet vierge.* (fichiers déplacés 75/4, édits faits ; **`tenants:migrate` à valider**)
+- [ ] **T1.4** Bootstrappers Database, Filesystem, Queue actifs (Cache seulement si Redis). Sessions en `file`, queue `database` en connexion centrale. Si le bug d'identifiants PDO (PHP 8.2) apparaît : bootstrapper custom dans `app/Tenancy/`. (sessions/cache `file`, `DB_QUEUE_CONNECTION=pgsql`, timezone OK ; bootstrappers actifs)
+- [x] **T1.5** Routes : `routes/landlord.php` (domaine central), `routes/tenant.php` et `routes/api.php` avec `InitializeTenancyByDomain` + `PreventAccessFromCentralDomains`. (fait ; dev cabinet via `<slug>.localhost`)
 - [ ] **T1.6** Adapter le code cabinet existant au contexte tenant : vérifier que models/services n'utilisent aucune connexion ni constante codée en dur ; jobs et notifications compatibles tenant. *Fin : services existants fonctionnent sur la base d'un cabinet.*
 - [ ] **T1.7** Seeder cabinet : rôles Spatie (`admin_cabinet`, `enseignant`, `parent`, `eleve`, `gestionnaire_librairie`), permissions, types de cours, types de documents, thème et pied de page par défaut.
 - [ ] **T1.8** Middleware `CabinetActif` : `403 CABINET_SUSPENDU` si statut ≠ actif.

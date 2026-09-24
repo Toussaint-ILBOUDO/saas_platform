@@ -11,6 +11,9 @@ return new class extends Migration
         Schema::create('cahier_textes', function (Blueprint $table) {
             $table->id();
 
+            // Identifiant métier stable côté client (UUID), unique par cabinet.
+            $table->uuid('uuid_client')->nullable()->unique();
+
             // Affectation (cours réel du prof)
             $table->foreignId('affectation_enseignant_id')
                 ->constrained('affectation_enseignants')

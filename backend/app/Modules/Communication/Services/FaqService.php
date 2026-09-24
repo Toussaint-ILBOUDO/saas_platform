@@ -31,7 +31,6 @@ class FaqService
     {
         return DB::transaction(function () use ($data) {
             $section = FaqSection::create([
-                'cabinet_id' => $data['cabinet_id'] ?? null,
                 'title' => $data['title'],
                 'slug' => $this->uniqueSlug(! empty($data['slug']) ? $data['slug'] : $data['title']),
                 'description' => $data['description'] ?? null,

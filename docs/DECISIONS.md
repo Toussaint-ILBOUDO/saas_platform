@@ -27,6 +27,15 @@
 | D-016 | **Périmètre de la copie** | L'ancienne `docs/conception.md` est supprimée/ignorée ; KEduc historique (prod, Blade) reste intact et hors plateforme. | consigne |
 | D-017 | **Nom de la base centrale (dev)** | `saascd_plateforme` (créée par le propriétaire le 24/09 ; initialement prévue `saas_plateforme`, cf. `.env`). La copie KEduc historique reste sur `keduc` ; tests sur `keduc_test`. | T0.5 |
 
+## 24/09/2026 — P1 (multi-tenancy stancl v3.10)
+
+| # | Décision | Détail | Réf. |
+|---|---|---|---|
+| D-018 | **Nommage des bases cabinets** | `prefix='cabinet_'` + slug ⇒ `cabinet_<slug>`. Bootstrappers actifs : Database, Filesystem, Queue ; cache isolé par tenant **uniquement** si Redis (`file` → non inclu). | T1.2/T1.4 |
+| D-019 | **Queue centrale + sessions/cache file + timezone** | `DB_QUEUE_CONNECTION=pgsql` (jobs en base Landlord, indépendante du tenant courant) ; `SESSION_DRIVER=file`, `CACHE_STORE=file` ; `APP_TIMEZONE=Africa/Ouagadougou`. | T1.4 |
+| D-020 | **Découpage routes** | `routes/landlord.php` (domaine central, web) ; `routes/tenant.php` = 10 fichiers web KEduc sous `InitializeTenancyByDomain` + `PreventAccessFromCentralDomains` ; groupe `api` tenant-scope (landlord API à préfixer séparément en P3). | T1.5 |
+| D-021 | **Migrations : 4 landlord / 75 tenant** | Landlord = stancl (`tenants`/`domains` + colonnes cabinet) + infra (`cache`, `jobs`) ; tenant = schéma KEduc dans `database/migrations/tenant/`, `cabinet_id` retiré de `faq_sections`, `uuid_client` (unique) ajouté à `cahier_textes`. | T1.3 |
+
 ---
 
 ## Conventions permanentes

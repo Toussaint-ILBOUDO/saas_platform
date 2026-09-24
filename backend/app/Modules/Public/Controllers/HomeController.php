@@ -10,6 +10,7 @@ use App\Modules\Communication\Services\FaqService;
 use App\Modules\Temoignages\Services\TemoignageService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 final class HomeController extends Controller
 {
@@ -20,17 +21,11 @@ final class HomeController extends Controller
 
     public function index(): View
     {
-        $enseignants = User::query()
-            ->role('enseignant')
-            ->with([
-                'media',
-                'enseignantProfil',
-                'enseignantProfil.matieres',
-            ])
-            ->where('statut', true)
-            ->latest('id')
-            ->take(10) // par exemple les 10 premiers
-            ->get();
+        // Garde : la page publique ne doit jamais planter tant que le rôle
+        // n'est pas seedé (cabinet en cours de provisionnement).
+        $enseignants = Role::where('name', 'enseignant')->exists()
+            ? $this->enseignantsEnPageAccueil()
+            : collect();
 
         $counts = DB::selectOne("
             SELECT
@@ -54,5 +49,20 @@ final class HomeController extends Controller
 
             'temoignages'     => $this->temoignageService->topHome(3),
         ]);
+    }
+
+    protected function enseignantsEnPageAccueil()
+    {
+        return User::query()
+            ->role('enseignant')
+            ->with([
+                'media',
+                'enseignantProfil',
+                'enseignantProfil.matieres',
+            ])
+            ->where('statut', true)
+            ->latest('id')
+            ->take(10)
+            ->get();
     }
 }

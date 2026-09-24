@@ -75,13 +75,9 @@ class TenantIsolationTest extends TestCase
 
     public function test_domaine_cabinet_serre_la_page_publique(): void
     {
+        // Le pipeline de création seed automatiquement (jobs CreateDatabase,
+        // MigrateDatabase, SeedDatabase) : la page publique répond directement.
         $this->makeCabinet('c1');
-
-        Artisan::call('tenants:seed', [
-            '--tenants' => ['c1'],
-            '--class' => 'TenantDatabaseSeeder',
-            '--force' => true,
-        ]);
 
         $this->get('http://c1.localhost/')->assertOk();
     }
@@ -90,6 +86,7 @@ class TenantIsolationTest extends TestCase
     {
         $c1 = $this->makeCabinet('c1');
 
+        // Rejouer le seed manuellement doit rester idempotent (rôles findOrCreate).
         Artisan::call('tenants:seed', [
             '--tenants' => ['c1'],
             '--class' => 'TenantDatabaseSeeder',

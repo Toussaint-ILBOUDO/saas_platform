@@ -3,6 +3,7 @@
 namespace App\Modules\Finance\Services;
 
 use App\Models\Facture;
+use App\Support\CabinetInfo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
@@ -85,7 +86,7 @@ class FacturePdfService
             'lignes.affectation.matiere',
         ]);
 
-        $cabinet = config('keduc.cabinet');
+        $cabinet = CabinetInfo::all();
 
         $montantCours = $facture->montant_total
             - $facture->frais_suivi

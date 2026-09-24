@@ -21,6 +21,7 @@ Route::middleware([
     'web',
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
+    'cabinet.actif',
 ])->group(function () {
     require __DIR__ . '/web.php';
     require __DIR__ . '/auth.php';

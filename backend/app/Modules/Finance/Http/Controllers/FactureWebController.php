@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ContratCours;
 use App\Models\Facture;
 use App\Models\PeriodeComptable;
+use App\Support\CabinetInfo;
 use App\Modules\Finance\Http\Requests\GenerateFactureRequest;
 use App\Modules\Finance\Http\Requests\MarquerPayeRequest;
 use App\Modules\Finance\Services\FacturationService;
@@ -101,7 +102,7 @@ class FactureWebController extends Controller
             'lignes.affectation.matiere',
         ]);
 
-        $cabinet = config('keduc.cabinet');
+        $cabinet = CabinetInfo::all();
 
         return view(
             'finances.facture-parent.show',
@@ -218,7 +219,7 @@ class FactureWebController extends Controller
             'periode',
         ]);
 
-        $cabinet = config('keduc.cabinet');
+        $cabinet = CabinetInfo::all();
 
         return view(
             'finances.facture-parent.payer',

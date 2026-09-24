@@ -253,7 +253,7 @@
         '@type' => 'Review',
         'itemReviewed' => [
             '@type' => 'Organization',
-            'name' => config('keduc.cabinet.nom', 'K\'Educ'),
+            'name' => \App\Support\CabinetInfo::get('nom', "K'Educ"),
         ],
         'reviewBody' => $temoignage->contenu,
         'datePublished' => $temoignage->published_at?->toIso8601String(),

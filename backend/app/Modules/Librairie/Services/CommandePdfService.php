@@ -3,6 +3,7 @@
 namespace App\Modules\Librairie\Services;
 
 use App\Models\Commande;
+use App\Support\CabinetInfo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
 
@@ -49,7 +50,7 @@ class CommandePdfService
             'user',
         ]);
 
-        $cabinet = config('keduc.cabinet');
+        $cabinet = CabinetInfo::all();
 
         return [
             'commande'  => $commande,

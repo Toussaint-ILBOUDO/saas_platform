@@ -3,6 +3,7 @@
 namespace App\Modules\Finance\Services;
 
 use App\Models\BulletinPaie;
+use App\Support\CabinetInfo;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\App;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -55,7 +56,7 @@ class BulletinPaiePdfService
             'ajustements',
         ]);
 
-        $cabinet = config('keduc.cabinet');
+        $cabinet = CabinetInfo::all();
 
         $totalPrimes = $bulletin->ajustements
             ->where('type', 'prime')

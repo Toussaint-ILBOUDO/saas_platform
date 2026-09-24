@@ -2,7 +2,7 @@
 
     @php
         $isHome = request()->is('/');
-        $cabinet = config('keduc.cabinet');
+        $cabinet = \App\Support\CabinetInfo::all();
         $cabinetPhone = preg_replace('/^(\+226)(\d{2})(\d{2})(\d{2})(\d{2})$/', '$1 $2 $3 $4 $5', $cabinet['telephone']);
     @endphp
 

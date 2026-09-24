@@ -4,6 +4,7 @@ namespace App\Modules\Pedagogie\Services;
 
 use App\Models\CahierTexte;
 use App\Models\Eleve;
+use App\Support\CabinetInfo;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -167,7 +168,7 @@ class CahierTextePdfService
 
     private function getCabinet(): array
     {
-        return config('keduc.cabinet');
+        return CabinetInfo::all();
     }
 
     /*

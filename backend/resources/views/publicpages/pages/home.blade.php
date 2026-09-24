@@ -42,7 +42,7 @@
 
 @push('scripts')
 @php
-    $keduc = config('keduc.cabinet');
+    $keduc = \App\Support\CabinetInfo::all();
     $keducName = $keduc['nom'] ?? 'K\'Educ';
     $keducUrl = url('/');
     $siteJsonLd = [

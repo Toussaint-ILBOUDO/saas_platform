@@ -35,6 +35,7 @@
 | D-019 | **Queue centrale + sessions/cache file + timezone** | `DB_QUEUE_CONNECTION=pgsql` (jobs en base Landlord, indépendante du tenant courant) ; `SESSION_DRIVER=file`, `CACHE_STORE=file` ; `APP_TIMEZONE=Africa/Ouagadougou`. | T1.4 |
 | D-020 | **Découpage routes** | `routes/landlord.php` (domaine central, web) ; `routes/tenant.php` = 10 fichiers web KEduc sous `InitializeTenancyByDomain` + `PreventAccessFromCentralDomains` ; groupe `api` tenant-scope (landlord API à préfixer séparément en P3). | T1.5 |
 | D-021 | **Migrations : 4 landlord / 75 tenant** | Landlord = stancl (`tenants`/`domains` + colonnes cabinet) + infra (`cache`, `jobs`) ; tenant = schéma KEduc dans `database/migrations/tenant/`, `cabinet_id` retiré de `faq_sections`, `uuid_client` (unique) ajouté à `cahier_textes`. | T1.3 |
+| D-022 | **Données cabinet du tenant (D-014)** | Table tenant `parametres_publics` (1 ligne : `theme` json, `footer` json, `data`) + `CabinetInfo` (source tenant, repli temporaire `keduc.cabinet`). Les 4 services PDF vivants, `FactureWebController` et 7 vues ne lisent plus la config statique. | T1.6/T1.7 |
 
 ---
 

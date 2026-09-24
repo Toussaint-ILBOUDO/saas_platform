@@ -117,9 +117,10 @@
         <tr>
 
             @php
-                $logo = config('keduc.cabinet.logo');
+                $cabinet = \App\Support\CabinetInfo::all();
+                $logo = $cabinet['logo'] ?? null;
                 // Convertit une URL publique en chemin filesystem si besoin
-                $logoPath = str_starts_with($logo, 'http')
+                $logoPath = $logo && str_starts_with($logo, 'http')
                     ? $logo
                     : public_path(ltrim($logo, '/'));
             @endphp
@@ -131,15 +132,15 @@
 
             <td style="vertical-align: middle; padding-left: 10px;">
                 <strong style="font-size: 13px;">
-                    {{ config('keduc.cabinet.nom') }}
+                    {{ $cabinet['nom'] ?? '' }}
                 </strong><br>
                 <span style="color: #6b7280; font-size: 11px;">
-                    {{ config('keduc.cabinet.slogan') }}
+                    {{ $cabinet['slogan'] ?? '' }}
                 </span><br>
                 <span style="font-size: 11px;">
-                    {{ config('keduc.cabinet.telephone') }}
+                    {{ $cabinet['telephone'] ?? '' }}
                     &nbsp;|&nbsp;
-                    {{ config('keduc.cabinet.email') }}
+                    {{ $cabinet['email'] ?? '' }}
                 </span>
             </td>
 

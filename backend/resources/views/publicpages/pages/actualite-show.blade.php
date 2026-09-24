@@ -256,11 +256,11 @@
             '@type' => 'Person',
             'name' => $actualite->auteur
                 ? trim($actualite->auteur->prenom.' '.$actualite->auteur->nom)
-                : config('keduc.cabinet.nom', 'K\'Educ'),
+                : \App\Support\CabinetInfo::get('nom', "K'Educ"),
         ],
         'publisher' => [
             '@type' => 'Organization',
-            'name' => config('keduc.cabinet.nom', 'K\'Educ'),
+            'name' => \App\Support\CabinetInfo::get('nom', "K'Educ"),
         ],
     ];
 @endphp

@@ -40,9 +40,9 @@
 - [ ] **T1.3** Séparer les migrations : `database/migrations/` (plateforme) et `database/migrations/tenant/` (cabinet). Retirer tout `cabinet_id` des tables cabinet. Ajouter `uuid_client` (unique) à `cahier_textes`. *Fin : `tenants:migrate` fonctionne sur un cabinet vierge.* (fichiers déplacés 75/4, édits faits ; **`tenants:migrate` à valider**)
 - [ ] **T1.4** Bootstrappers Database, Filesystem, Queue actifs (Cache seulement si Redis). Sessions en `file`, queue `database` en connexion centrale. Si le bug d'identifiants PDO (PHP 8.2) apparaît : bootstrapper custom dans `app/Tenancy/`. (sessions/cache `file`, `DB_QUEUE_CONNECTION=pgsql`, timezone OK ; bootstrappers actifs)
 - [x] **T1.5** Routes : `routes/landlord.php` (domaine central), `routes/tenant.php` et `routes/api.php` avec `InitializeTenancyByDomain` + `PreventAccessFromCentralDomains`. (fait ; dev cabinet via `<slug>.localhost`)
-- [ ] **T1.6** Adapter le code cabinet existant au contexte tenant : vérifier que models/services n'utilisent aucune connexion ni constante codée en dur ; jobs et notifications compatibles tenant. *Fin : services existants fonctionnent sur la base d'un cabinet.*
-- [ ] **T1.7** Seeder cabinet : rôles Spatie (`admin_cabinet`, `enseignant`, `parent`, `eleve`, `gestionnaire_librairie`), permissions, types de cours, types de documents, thème et pied de page par défaut.
-- [ ] **T1.8** Middleware `CabinetActif` : `403 CABINET_SUSPENDU` si statut ≠ actif.
+- [x] **T1.6** Adapter le code cabinet existant au contexte tenant : vérifier que models/services n'utilisent aucune connexion ni constante codée en dur ; jobs et notifications compatibles tenant. *Fin : services existants fonctionnent sur la base d'un cabinet.* (`App\Support\CabinetInfo` = données tenant + repli `keduc.cabinet` ; 4 services PDF + FactureWebController + 7 vues migrés ; module dormant inchangé)
+- [x] **T1.7** Seeder cabinet : rôles Spatie (`admin_cabinet`, `enseignant`, `parent`, `eleve`, `gestionnaire_librairie`), permissions, types de cours, types de documents, thème et pied de page par défaut. (`TenantDatabaseSeeder` branché sur `tenancy.seeder_parameters` ; table tenant `parametres_publics`)
+- [x] **T1.8** Middleware `CabinetActif` : `403 CABINET_SUSPENDU` si statut ≠ actif. (alias `cabinet.actif`, appliqué aux routes tenant + groupe api)
 - [ ] **T1.9** **Tests d'isolation** : deux cabinets, aucune donnée croisée ; un cabinet inconnu → 404. *Fin : tests verts.*
 
 ## P2 — Landlord (super-admin)

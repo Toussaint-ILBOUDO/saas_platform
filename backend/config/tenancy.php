@@ -195,7 +195,7 @@ return [
      * Parameters used by the tenants:seed command.
      */
     'seeder_parameters' => [
-        '--class' => 'DatabaseSeeder', // root seeder class
+        '--class' => 'TenantDatabaseSeeder', // seeder exécuté dans chaque base cabinet
         // '--force' => true, // This needs to be true to seed tenant databases in production
     ],
 ];

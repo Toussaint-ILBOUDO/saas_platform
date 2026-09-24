@@ -17,12 +17,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [
             \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
             \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
+            'cabinet.actif',
         ]);
 
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'cabinet.actif' => \App\Http\Middleware\CabinetActif::class,
         ]);
     })
 

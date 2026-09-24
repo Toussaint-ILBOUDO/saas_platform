@@ -16,10 +16,12 @@ manuelle n'est requise. Ne jamais lancer `artisan migrate:fresh` avec
 réinitialise la base de développement `keduc` (incident du 14/08/2026).
 
 ## Environnement
-- PHP : `/mnt/c/xampp/php/php.exe`
-- BDD réelle : PostgreSQL `keduc` (`DB_HOST=127.0.0.1`, `DB_PORT=5432`,
-  `DB_USERNAME=postgres`)
-- Tests : base PostgreSQL `keduc_test`, exécutés via phpunit avec une
-  configuration temporaire pgsql/keduc_test, puis `phpunit.xml` restauré en
-  sqlite `:memory:`.
+- PHP : `/mnt/c/xampp/php/php.exe` ; commandes Laravel à exécuter depuis `backend/`
+- BDD centrale (Landlord) : PostgreSQL `saascd_plateforme` (`DB_HOST=127.0.0.1`,
+  `DB_PORT=5432`, `DB_USERNAME=postgres`, mot de passe dans `backend/.env`)
+- BDD des cabinets : créées dynamiquement par stancl (`cabinet_<slug>`) ; le compte
+  `postgres` doit rester superuser local (`CREATEDB`).
+- Tests : base PostgreSQL `keduc_test` (base centrale de test) + bases tenant
+  créées dynamiquement par les tests d'isolation ; `phpunit.xml` restauré en
+  sqlite `:memory:` (ne s'exécute pas : les migrations utilisent `dropColumn`).
 - Langue de travail : français.

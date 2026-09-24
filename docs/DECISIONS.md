@@ -25,6 +25,7 @@
 | D-014 | **Config cabinet non statique** | `config('keduc.cabinet')` (coordonnées, téléphones, logo, directrice) transféré en base **tenant** (thème/pied de page/paramètres). `HomeController` (SQL brut) remplacé par des services. | consigne |
 | D-015 | **Snap super-admin unique (plateforme)** | Table `super_admins` + guard `landlord` ; un seul compte ; le rôle `super-admin` spatie de la copie n'existe pas dans les bases tenant. | consigne |
 | D-016 | **Périmètre de la copie** | L'ancienne `docs/conception.md` est supprimée/ignorée ; KEduc historique (prod, Blade) reste intact et hors plateforme. | consigne |
+| D-017 | **Nom de la base centrale (dev)** | `saascd_plateforme` (créée par le propriétaire le 24/09 ; initialement prévue `saas_plateforme`, cf. `.env`). La copie KEduc historique reste sur `keduc` ; tests sur `keduc_test`. | T0.5 |
 
 ---
 

@@ -31,7 +31,7 @@
 - [x] **T0.2** Produire `docs/INVENTAIRE_KEDUC.md` : versions (PHP, Laravel), migrations/tables, models, services, policies, requests, controllers web, routes, vues, PDF. *Fin : fichier complet.*
 - [x] **T0.3** Comparer l'inventaire aux sections 7-9 de `conception.md` ; noter chaque écart dans `docs/QUESTIONS.md` avec l'option par défaut. *Fin : écarts listés.*
 - [x] **T0.4** Initialiser Git (`backend/`, `frontend/`), `.gitignore`, `.env.example`. Ne jamais toucher au projet Keduc original. *Fin : premier commit propre.* (restructuration effectuée : code Laravel déplacé dans `backend/`, `frontend/` créé, `.env.testing` ignoré — secret retiré du suivi)
-- [ ] **T0.5** Créer les bases PostgreSQL locales : `saas_plateforme` uniquement (les bases cabinet sont créées par le code). Régler `.env` sur `saas_plateforme`. *Fin : `php artisan migrate:status` répond sur la bonne base.*
+- [x] **T0.5** Créer les bases PostgreSQL locales : `saascd_plateforme` uniquement (les bases cabinet sont créées par le code). Régler `.env` sur `saascd_plateforme`. *Fin : `php artisan migrate:status` répond sur la bonne base.* (fait le 24/09 — migrations [1] Ran constatées ; le schéma complet y sera réorganisé en P1)
 
 ## P1 — Multi-tenancy opérationnel
 

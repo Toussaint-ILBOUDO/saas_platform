@@ -25,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'cabinet.actif' => \App\Http\Middleware\CabinetActif::class,
+            'landlord.auth' => \App\Http\Middleware\RedirectIfNotLandlord::class,
+            'landlord.guest' => \App\Http\Middleware\RedirectIfLandlord::class,
+            'central.domain' => \App\Http\Middleware\EnsureCentralDomain::class,
         ]);
     })
 

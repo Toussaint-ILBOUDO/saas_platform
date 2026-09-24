@@ -1,0 +1,13 @@
+/* =====================================================
+   Landlord — cadrage de base (super-admin plateforme)
+   SaasCD
+   ===================================================== */
+
+.landlord-body {
+    background-color: #f5f7fb;
+    min-height: 100vh;
+}
+
+.landlord-body main {
+    max-width: 1200px;
+}

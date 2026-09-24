@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
 /*
 |--------------------------------------------------------------------------
 | Routes Landlord (domaine central de la plateforme)
@@ -9,14 +7,7 @@ use Illuminate\Support\Facades\Route;
 |
 | Réservées au super admin de la plateforme : connexion, gestion des
 | cabinets, facturation plateforme (P2/P7). Aucune donnée de cabinet
-| n'est exposée ici.
+| n'est exposée ici. Aucune route « / » : elle appartient aux cabinets
+| (routes/tenant.php) — le Landlord arrive avec l'interface P2.
 |
 */
-
-Route::get('/', function () {
-    return response()->json([
-        'plateforme' => config('app.name'),
-        'contexte' => 'landlord',
-        'message' => 'Interface plateforme — en construction (P2).',
-    ]);
-});

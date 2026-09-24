@@ -21,7 +21,12 @@ réinitialise la base de développement `keduc` (incident du 14/08/2026).
   `DB_PORT=5432`, `DB_USERNAME=postgres`, mot de passe dans `backend/.env`)
 - BDD des cabinets : créées dynamiquement par stancl (`cabinet_<slug>`) ; le compte
   `postgres` doit rester superuser local (`CREATEDB`).
-- Tests : base PostgreSQL `keduc_test` (base centrale de test) + bases tenant
-  créées dynamiquement par les tests d'isolation ; `phpunit.xml` restauré en
-  sqlite `:memory:` (ne s'exécute pas : les migrations utilisent `dropColumn`).
+- Tests (D-003/D-023) : `phpunit.xml` = pgsql, base centrale de test `keduc_test`,
+  préfixe tenant `keduc_test_` (env `TENANCY_DB_PREFIX`, saisie en `force="true"` — les
+  `<env>` PHPUnit doivent surcharger le `.env` chargé par `artisan test`). Base centrale
+  NON transactée (PostgreSQL interdit `CREATE DATABASE` en transaction) ; `migrate:fresh`
+  avant chaque test ; bases tenant `keduc_test_<slug>` créées par le pipeline et supprimées
+  en tearDown. **Ne pas exécuter `php artisan config:cache`** : la config en cache ignorerait
+  les `<env>` PHPUnit (incident test du 24/09/2026). Suite Legacy KEduc (195 tests monolithe
+  web) déplacée dans `tests/Feature/Legacy/` et exclue — réécrite par module API dès P3.
 - Langue de travail : français.

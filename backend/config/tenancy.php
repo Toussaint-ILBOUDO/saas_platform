@@ -52,7 +52,7 @@ return [
          * Tenant database names are created like this:
          * prefix + tenant_id + suffix.
          */
-        'prefix' => 'cabinet_',
+        'prefix' => env('TENANCY_DB_PREFIX', 'cabinet_'),
         'suffix' => '',
 
         /**

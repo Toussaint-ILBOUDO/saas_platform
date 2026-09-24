@@ -12,6 +12,17 @@ class Cabinet extends BaseTenant implements TenantWithDatabase
     use HasDatabase;
     use HasDomains;
 
+    protected $keyType = 'string';
+
+    /**
+     * L'id est fourni manuellement (slug D-005) : jamais d'auto-incrément,
+     * sinon stancl insérerait une ligne sans id (id varchar → 0).
+     */
+    public function getIncrementing(): bool
+    {
+        return false;
+    }
+
     protected $fillable = [
         'id',
         'nom',

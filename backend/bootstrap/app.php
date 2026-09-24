@@ -29,7 +29,17 @@ return Application::configure(basePath: dirname(__DIR__))
     })
 
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (
+            \Stancl\Tenancy\Contracts\TenantCouldNotBeIdentifiedException $e,
+            \Illuminate\Http\Request $request
+        ) {
+            return $request->expectsJson()
+                ? response()->json([
+                    'message' => 'Cabinet introuvable.',
+                    'code' => 'CABINET_INCONNU',
+                ], 404)
+                : abort(404);
+        });
     })->create();
 
     

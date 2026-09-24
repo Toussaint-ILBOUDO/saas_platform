@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Landlord\Controllers\AuthenticatedSessionController;
+use App\Modules\Landlord\Controllers\CabinetController;
 use App\Modules\Landlord\Controllers\DashboardController;
 use App\Modules\Landlord\Controllers\SectionPlaceholderController;
 use Illuminate\Support\Facades\Route;
@@ -26,8 +27,16 @@ Route::prefix('admin')->name('landlord.')->middleware('central.domain')->group(f
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-        // Sections (placeholders — implémentation réelle en T2.3/T2.7/P7)
-        Route::get('cabinets', SectionPlaceholderController::class)->defaults('section', 'cabinets')->name('cabinets.index');
+        // Cabinets (T2.3)
+        Route::get('cabinets', [CabinetController::class, 'index'])->name('cabinets.index');
+        Route::get('cabinets/create', [CabinetController::class, 'create'])->name('cabinets.create');
+        Route::post('cabinets', [CabinetController::class, 'store'])->name('cabinets.store');
+        Route::get('cabinets/{cabinet}', [CabinetController::class, 'show'])->name('cabinets.show');
+        Route::get('cabinets/{cabinet}/edit', [CabinetController::class, 'edit'])->name('cabinets.edit');
+        Route::put('cabinets/{cabinet}', [CabinetController::class, 'update'])->name('cabinets.update');
+        Route::put('cabinets/{cabinet}/parametres', [CabinetController::class, 'updateParametres'])->name('cabinets.parametres.update');
+
+        // Sections (placeholders — implémentation réelle en T2.7/P7)
         Route::get('facturation', SectionPlaceholderController::class)->defaults('section', 'facturation')->name('facturation.index');
         Route::get('journal', SectionPlaceholderController::class)->defaults('section', 'journal')->name('journal.index');
     });

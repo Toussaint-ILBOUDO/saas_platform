@@ -4,41 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\ParametrePublic;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Artisan;
 use Spatie\Permission\Models\Role;
-use Tests\TestCase;
+use Tests\TenantTestCase;
 use Tests\Traits\InteractsWithCabinets;
 
-class TenantIsolationTest extends TestCase
+class TenantIsolationTest extends TenantTestCase
 {
-    use RefreshDatabase;
     use InteractsWithCabinets;
-
-    /**
-     * PostgreSQL interdit CREATE DATABASE dans un bloc de transaction :
-     * la base centrale de test est migrée (migrate:fresh) mais non transactée.
-     * Les bases tenant sont supprimées en tearDown (ensureCabinetsDropped).
-     */
-    protected function connectionsToTransact(): array
-    {
-        return [];
-    }
-
-    protected function refreshTestDatabase(): void
-    {
-        RefreshDatabaseState::$migrated = false;
-        $this->artisan('migrate:fresh');
-        $this->beginDatabaseTransaction();
-    }
-
-    protected function tearDown(): void
-    {
-        $this->ensureCabinetsDropped();
-
-        parent::tearDown();
-    }
 
     public function test_deux_cabinets_isolent_leurs_donnees(): void
     {

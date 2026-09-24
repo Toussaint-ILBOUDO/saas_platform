@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Stancl\Tenancy\Database\Concerns\HasDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDomains;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
@@ -43,5 +44,18 @@ class Cabinet extends BaseTenant implements TenantWithDatabase
             'logo',
             'theme',
         ];
+    }
+
+    public function parametres(): HasOne
+    {
+        return $this->hasOne(ParametresCabinet::class, 'cabinet_id', 'id');
+    }
+
+    /**
+     * Premier domaine (ex. c1.localhost) — UI du Landlord.
+     */
+    public function getPrimaryDomainAttribute(): ?string
+    {
+        return $this->domains()->value('domain');
     }
 }

@@ -58,12 +58,12 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Email de contact</label>
-                    <input type="email" name="email" value="{{ old('email', data_get($cabinet?->data, 'email', '')) }}"
+                    <input type="email" name="email" value="{{ old('email', $cabinet?->email ?? '') }}"
                            class="form-control">
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Téléphone</label>
-                    <input type="text" name="telephone" value="{{ old('telephone', data_get($cabinet?->data, 'telephone', '')) }}"
+                    <input type="text" name="telephone" value="{{ old('telephone', $cabinet?->telephone ?? '') }}"
                            class="form-control">
                 </div>
             </div>

@@ -38,11 +38,11 @@
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span class="text-secondary">Email</span>
-                        <span>{{ data_get($cabinet->data, 'email') ?: '—' }}</span>
+                        <span>{{ $cabinet->email ?: '—' }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span class="text-secondary">Téléphone</span>
-                        <span>{{ data_get($cabinet->data, 'telephone') ?: '—' }}</span>
+                        <span>{{ $cabinet->telephone ?: '—' }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span class="text-secondary">Base de données</span>

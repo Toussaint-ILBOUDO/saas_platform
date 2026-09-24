@@ -32,6 +32,9 @@ class Cabinet extends BaseTenant implements TenantWithDatabase
         'logo',
         'theme',
         'data',
+        // stancl VirtualColumn : sérialisés dans la colonne json « data »
+        'email',
+        'telephone',
     ];
 
     public static function getCustomColumns(): array

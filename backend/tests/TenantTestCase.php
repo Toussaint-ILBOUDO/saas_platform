@@ -23,6 +23,10 @@ abstract class TenantTestCase extends TestCase
 
     protected function refreshTestDatabase(): void
     {
+        if (method_exists($this, 'purgeBasesTenantResiduelles')) {
+            $this->purgeBasesTenantResiduelles();
+        }
+
         RefreshDatabaseState::$migrated = false;
         $this->artisan('migrate:fresh');
         $this->beginDatabaseTransaction();

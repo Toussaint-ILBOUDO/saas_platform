@@ -68,7 +68,10 @@ final class CabinetController extends Controller
                 'nom' => $data['nom'],
                 'sous_domaine' => $data['sous_domaine'] ?? $data['id'],
                 'status' => 'actif',
-                'data' => ['email' => $data['email'] ?? null, 'telephone' => $data['telephone'] ?? null],
+                // stancl VirtualColumn : toute colonne hors getCustomColumns()
+                // est sérialisée dans la colonne json « data » (lu via $cabinet->email).
+                'email' => $data['email'] ?? null,
+                'telephone' => $data['telephone'] ?? null,
             ]);
 
         $domaine = sprintf('%s.%s', $cabinet->sous_domaine, env('TENANCY_DOMAIN_SUFFIX', 'localhost'));
@@ -115,8 +118,7 @@ final class CabinetController extends Controller
             'telephone' => ['nullable', 'string', 'max:30'],
         ]);
 
-        $data['data'] = ['email' => $data['email'] ?? null, 'telephone' => $data['telephone'] ?? null];
-
+        // stancl VirtualColumn : email/telephone sérialisés dans la colonne json « data ».
         $cabinet->update($data);
 
         request()->session()->flash('success', 'Informations du cabinet mises à jour.');

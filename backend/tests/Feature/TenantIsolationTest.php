@@ -18,7 +18,10 @@ class TenantIsolationTest extends TenantTestCase
         $c1 = $this->makeCabinet('c1');
         $c2 = $this->makeCabinet('c2');
 
+        // Le pipeline de création provisionne un admin par cabinet (T2.4) :
+        // chaque base ne contient que SON admin (isolation d'abord).
         tenancy()->initialize($c1);
+        $this->assertSame(['admin@c1.local'], User::pluck('email')->all());
 
         User::create([
             'nom' => 'Alice',
@@ -26,10 +29,10 @@ class TenantIsolationTest extends TenantTestCase
             'email' => 'alice@exemple.test',
             'password' => 'secret',
         ]);
-        $this->assertSame(1, User::count());
+        $this->assertSame(['admin@c1.local', 'alice@exemple.test'], User::orderBy('id')->pluck('email')->all());
 
         tenancy()->initialize($c2);
-        $this->assertSame(0, User::count());
+        $this->assertSame(['admin@c2.local'], User::pluck('email')->all());
 
         User::create([
             'nom' => 'Bob',
@@ -37,11 +40,11 @@ class TenantIsolationTest extends TenantTestCase
             'email' => 'bob@exemple.test',
             'password' => 'secret',
         ]);
-        $this->assertSame(1, User::count());
+        $this->assertSame(['admin@c2.local', 'bob@exemple.test'], User::orderBy('id')->pluck('email')->all());
 
+        // Retour au cabinet c1 : aucune des données de c2 ne fuite.
         tenancy()->initialize($c1);
-        $this->assertSame('Alice', User::first()->nom);
-        $this->assertSame(1, User::count());
+        $this->assertSame(['admin@c1.local', 'alice@exemple.test'], User::orderBy('id')->pluck('email')->all());
 
         tenancy()->end();
     }

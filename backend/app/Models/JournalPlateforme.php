@@ -21,6 +21,7 @@ class JournalPlateforme extends Model
 
     protected $casts = [
         'contexte' => 'array',
+        'created_at' => 'datetime',
     ];
 
     public function cabinet(): BelongsTo

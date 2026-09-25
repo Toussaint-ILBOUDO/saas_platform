@@ -13,7 +13,7 @@
 | P0 | Préparation et inventaire | ☐ |
 | P1 | Multi-tenancy (stancl) opérationnel | ☐ |
 | P2 | Landlord : super-admin et création de cabinet | ☐ |
-| P3 | API cabinet : socle | ☐ |
+| P3 | API cabinet : socle | En cours |
 | P4 | Core Angular + PWA | ☐ |
 | P5 | Frontend du cabinet 1 (MVP) | ☐ |
 | P6 | Déploiement et exploitation | ☐ |
@@ -60,10 +60,10 @@
 
 ## P3 — API cabinet : socle
 
-- [ ] **T3.1** Conventions API : préfixe `/api`, format d'erreur JSON `{message, code, erreurs}`, messages `lang/fr`, gestion d'exceptions centralisée.
-- [ ] **T3.2** Authentification par session : connexion, déconnexion, `moi`, mot de passe oublié, réinitialisation, changement. Throttling.
-- [ ] **T3.3** Routes publiques : `/api/public/cabinet`, `actualites`, `faq`, `documents`, `produits`, `POST demandes-cours`, `POST commandes`.
-- [ ] **T3.4** Tables et modèles du site public s'ils n'existent pas : `theme_cabinet`, `pied_de_page_cabinet`, `actualites`, `faq_sections`, `faq_questions` (+ services, policies, requests).
+- [x] **T3.1** Conventions API : préfixe `/api`, format d'erreur JSON `{message, code, erreurs}`, messages `lang/fr`, gestion d'exceptions centralisée. (rendu global des exceptions dans `bootstrap/app.php` (`withExceptions`) : `HttpException` → statut + `{message, code}` (code par défaut = statut HTTP sauf `CABINET_INCONNU`/`CABINET_SUSPENDU`), `ValidationException` → `422 VALIDATION` + `erreurs`, 500 → `ERREUR_INTERNE`/+ log technique)
+- [x] **T3.2** Authentification par session : connexion, déconnexion, `moi`, mot de passe oublié, réinitialisation, changement. Throttling. (`routes/api.php` : `/api/auth/*` — connexion `throttle:5,1`, mot-de-passe-oublie + reinitialiser `throttle:5,1`, reste sous `auth:web`. `AuthApiController` (connexion/deconnexion/moi/roleActif/motDePasseOublie/reinitialiserMotDePasse/changerMotDePasse), `UserResource`, 5 FormRequests d'API ; notification `ReinitialisationMotDePasse` (broker tenant reconfiguré via `User::sendPasswordResetNotification`). **Session sur l'API** : groupe `api` augmenté de `EncryptCookies` + `StartSession` (D-038))
+- [x] **T3.3** Routes publiques : `/api/public/cabinet`, `actualites`, `faq`, `documents`, `produits`, `POST demandes-cours`, `POST commandes`. (7 contrôleurs publics + `Api/*` Resources, throttles demandes-cours/commandes `10,1`)
+- [x] **T3.4** Tables et modèles du site public s'ils n'existent pas : `theme_cabinet`, `pied_de_page_cabinet`, `actualites`, `faq_sections`, `faq_questions` (+ services, policies, requests). (rien à créer : `theme`/`footer` = colonnes json de `parametres_publics` [D-022], tables `actualites`, `faq_sections`, `faq_questions` + services `ActualiteService`/`FaqService` existants — D-039)
 - [ ] **T3.5** API du backoffice MVP : contenu public (thème, pied de page, actualités, FAQ) et utilisateurs (créer, activer/désactiver, rôles). Reprendre services/policies/requests existants ; ajouter uniquement controllers API, Resources, routes.
 - [ ] **T3.6** Envoi email des identifiants (notification en queue) et notifications `database` + `webpush` (abonnement push).
 - [ ] **T3.7** Documentation OpenAPI générée (ex. Scramble). *Fin : le frontend peut se baser dessus.*

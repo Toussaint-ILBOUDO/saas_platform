@@ -24,6 +24,24 @@ class AuthService
         return $user;
     }
 
+    /**
+     * Motif de refus de connexion, ou null si l'utilisateur peut se connecter.
+     * Utilisé par l'API (T3.2), miroir des règles du web : élève inactif
+     * bloqué, compte sans rôle inutilisable.
+     */
+    public function motifDeRefusConnexion(User $user): ?string
+    {
+        if ($user->hasRole('eleve') && (!$user->eleve || !$user->eleve->statut)) {
+            return 'COMPTE_ELEVE_INACTIF';
+        }
+
+        if ($user->getRoleNames()->isEmpty()) {
+            return 'AUCUN_ROLE';
+        }
+
+        return null;
+    }
+
     public function login(array $data, Request $request)
     {
         $user = $this->attemptLogin($data);

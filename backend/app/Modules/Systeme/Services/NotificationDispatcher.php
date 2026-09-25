@@ -128,13 +128,22 @@ class NotificationDispatcher
         });
     }
 
+    /**
+     * Rôles « staff » du cabinet (D-007) : ceux que l'on notifie pour les
+     * demandes de cours, commandes, rapports et bulletins.
+     */
+    protected function staffRoleNames(): array
+    {
+        return ['admin_cabinet', 'gestionnaire_librairie'];
+    }
+
     // =========================
     // LIBRAIRIE
     // =========================
 
     public function newOrder(\App\Models\Commande $commande): void
     {
-        $roles = Role::whereIn('name', ['admin', 'gestionnaire'])->pluck('name');
+        $roles = Role::whereIn('name', $this->staffRoleNames())->pluck('name');
 
         if ($roles->isEmpty()) return;
 
@@ -155,7 +164,7 @@ class NotificationDispatcher
     public function commandeStatutChange(\App\Models\Commande $commande, string $nouveauStatut): void
     {
         if ($commande->user_id) {
-            $estAdmin = $commande->user->hasAnyRole(['admin', 'super-admin', 'gestionnaire']);
+            $estAdmin = $commande->user->hasAnyRole($this->staffRoleNames());
 
             $this->notificationService->create(
                 $commande->user_id,
@@ -274,7 +283,7 @@ class NotificationDispatcher
 
     public function reportSubmitted(RapportMensuelEnseignant $rapport): void
     {
-       $admins = User::role('admin')->get();
+       $admins = User::role('admin_cabinet')->get();
 
         foreach ($admins as $admin) {
             $this->notificationService->create(
@@ -294,7 +303,7 @@ class NotificationDispatcher
 
     public function courseRequestCreated(DemandeCours $demande): void
     {
-       $admins = User::role('admin')->get();
+       $admins = User::role('admin_cabinet')->get();
 
         foreach ($admins as $admin) {
             $this->notificationService->create(
@@ -330,7 +339,7 @@ class NotificationDispatcher
 
     public function bulletinConsulte(BulletinPaie $bulletin): void
     {
-        $admins = User::role('admin')->get();
+        $admins = User::role('admin_cabinet')->get();
 
         foreach ($admins as $admin) {
             $this->notificationService->create(
@@ -346,7 +355,7 @@ class NotificationDispatcher
 
     public function bulletinValide(BulletinPaie $bulletin): void
     {
-        $admins = User::role('admin')->get();
+        $admins = User::role('admin_cabinet')->get();
 
         foreach ($admins as $admin) {
             $this->notificationService->create(
@@ -362,7 +371,7 @@ class NotificationDispatcher
 
     public function bulletinConteste(BulletinPaie $bulletin): void
     {
-        $admins = User::role('admin')->get();
+        $admins = User::role('admin_cabinet')->get();
 
         foreach ($admins as $admin) {
             $this->notificationService->create(

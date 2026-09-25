@@ -33,6 +33,14 @@ class User extends Authenticatable implements HasMedia
         'remember_token',
     ];
 
+    /**
+     * Mail de réinitialisation personnalisé (T3.2) au lieu du mail du framework.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\ReinitialisationMotDePasse($token));
+    }
+
     protected function casts(): array
     {
         return [

@@ -1,104 +1,63 @@
 <?php
 
-// use Illuminate\Support\Facades\Route;
-// use App\Modules\Pedagogie\Http\Controllers\ContratCoursController;
-// use App\Modules\Finance\Http\Controllers\PeriodeComptableController;
-// use App\Modules\Pedagogie\Http\Controllers\CahierTexteController;
-// use App\Modules\Pedagogie\Http\Controllers\RapportMensuelController;
-// use App\Modules\Finance\Http\Controllers\FactureController;
-// use App\Modules\Finance\Http\Controllers\PaiementEnseignantController;
-// use App\Modules\Systeme\Http\Controllers\NotificationController;
+use App\Modules\Auth\Http\Controllers\Api\AuthApiController;
+use App\Modules\Bibliotheque\Http\Controllers\Api\PublicDocumentApiController;
+use App\Modules\Communication\Http\Controllers\Api\PublicActualiteApiController;
+use App\Modules\Communication\Http\Controllers\Api\PublicFaqApiController;
+use App\Modules\Librairie\Http\Controllers\Api\PublicCommandeApiController;
+use App\Modules\Librairie\Http\Controllers\Api\PublicProduitApiController;
+use App\Modules\Pedagogie\Http\Controllers\Api\PublicDemandeCoursApiController;
+use App\Modules\Public\Http\Controllers\Api\CabinetPublicApiController;
+use Illuminate\Support\Facades\Route;
 
-// Route::apiResource('contrats', ContratCoursController::class)
-//     ->only(['index', 'show', 'store']);
+/*
+|--------------------------------------------------------------------------
+| API cabinets (P3)
+|--------------------------------------------------------------------------
+| Préfixe /api, JSON, tenancy par domaine (appliqué au groupe api dans
+| bootstrap/app.php) : chaque <slug>.localhost fait sa propre base.
+| Conventions T3.1 : {message, code, erreurs}, 422/401/403/404/429, français.
+*/
 
+// ---------- Public (aucune connexion) — T3.3 ----------
+Route::prefix('public')->group(function () {
+    Route::get('cabinet', [CabinetPublicApiController::class, 'index']);
 
-// Route::prefix('periodes')->group(function () {
-//     Route::get('/', [PeriodeComptableController::class, 'index']);
-//     Route::post('/', [PeriodeComptableController::class, 'store']);
-//     Route::get('/{periode}', [PeriodeComptableController::class, 'show']);
-//     Route::put('/{periode}', [PeriodeComptableController::class, 'update']);
-//     Route::delete('/{periode}', [PeriodeComptableController::class, 'destroy']);
+    Route::get('actualites', [PublicActualiteApiController::class, 'index']);
+    Route::get('actualites/{slug}', [PublicActualiteApiController::class, 'show']);
 
-//     Route::post('/{periode}/close', [PeriodeComptableController::class, 'close']);
-// });
+    Route::get('faq', [PublicFaqApiController::class, 'index']);
 
+    Route::get('documents', [PublicDocumentApiController::class, 'index']);
+    Route::get('documents/{slug}', [PublicDocumentApiController::class, 'show']);
 
-// Route::prefix('cahier-texte')->group(function () {
-//     Route::post('/', [CahierTexteController::class, 'store']);
-//     Route::get('/', [CahierTexteController::class, 'index']);
-// });
+    Route::get('produits', [PublicProduitApiController::class, 'index']);
 
-// Route::middleware('auth:sanctum')->group(function() {
-//     Route::post('/rapports-mensuels', [RapportMensuelController::class, 'store']);
-// });
+    Route::post('demandes-cours', [PublicDemandeCoursApiController::class, 'store'])
+        ->middleware('throttle:10,1');
+    Route::post('commandes', [PublicCommandeApiController::class, 'store'])
+        ->middleware('throttle:10,1');
+});
 
-// Route::prefix('factures')
-//     ->group(function () {
-//         Route::get('/', [FactureController::class, 'index']);
-//         Route::get('/{facture}', [FactureController::class, 'show']);
-//         Route::post('/generer', [FactureController::class, 'generate']);
-//         Route::patch('/{facture}/payer', [FactureController::class, 'payer']);
-//         Route::delete('/{facture}', [FactureController::class, 'destroy']);
-//     });
+// ---------- Authentification par session (guard web) — T3.2 ----------
+Route::prefix('auth')->group(function () {
+    Route::post('connexion', [AuthApiController::class, 'connexion'])
+        ->middleware('throttle:5,1');
+    Route::post('mot-de-passe-oublie', [AuthApiController::class, 'motDePasseOublie'])
+        ->middleware('throttle:5,1');
+    Route::post('reinitialiser-mot-de-passe', [AuthApiController::class, 'reinitialiserMotDePasse'])
+        ->middleware('throttle:5,1');
 
-// Route::prefix('paiements-enseignants')
-//     ->group(function () {
+    Route::middleware('auth:web')->group(function () {
+        Route::post('deconnexion', [AuthApiController::class, 'deconnexion']);
+        Route::get('moi', [AuthApiController::class, 'moi']);
+        Route::post('changer-mot-de-passe', [AuthApiController::class, 'changerMotDePasse']);
+        Route::post('role-actif', [AuthApiController::class, 'roleActif']);
+    });
+});
 
-//         Route::post(
-//             '/',
-//             [PaiementEnseignantController::class, 'store']
-//         );
-//     });    
-
-
-//     // ROutes pour les notifications
-//     Route::middleware('auth:sanctum')
-//         ->prefix('notifications')
-//         ->group(function () {
-
-//             Route::get(
-//                 '/',
-//                 [NotificationController::class, 'index']
-//             );
-//             Route::post(
-//                 '/',
-//                 [NotificationController::class, 'store']
-//             );
-//             Route::get(
-//                 '/{notification}',
-//                 [NotificationController::class, 'show']
-//             );
-//             Route::patch(
-//                 '/{notification}/read',
-//                 [NotificationController::class, 'markAsRead']
-//             );
-//             Route::patch(
-//                 '/read-all',
-//                 [NotificationController::class, 'markAllAsRead']
-//             );
-//             Route::delete(
-//                 '/{notification}',
-//                 [NotificationController::class, 'destroy']
-//             );
-
-//             Route::get('/unread-count', [
-//                 NotificationController::class,
-//                 'unreadCount'
-//             ]);
-
-//             Route::patch(
-//                 '/{notification}/read',
-//                 [NotificationController::class, 'markAsRead']
-//             );
-
-//             Route::patch(
-//                 '/read-all',
-//                 [NotificationController::class, 'markAllAsRead']
-//             );
-//         });
-
-
-
-
-        
+// ---------- Backoffice MVP (authentifié) — T3.5 ----------
+Route::middleware(['auth:web', 'role:admin_cabinet'])->prefix('admin')->group(function () {
+    // Contenu public (thème, pied de page, fonctionnalités)
+    // Utilisateurs, actualités, FAQ — voir tâches T3.5.
+});

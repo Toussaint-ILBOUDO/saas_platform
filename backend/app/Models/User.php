@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Laravel\Sanctum\HasApiTokens;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -13,6 +14,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class User extends Authenticatable implements HasMedia
 {
     use HasApiTokens;
+    use HasPushSubscriptions;
     use HasRoles;
     use Notifiable;
     use SoftDeletes;

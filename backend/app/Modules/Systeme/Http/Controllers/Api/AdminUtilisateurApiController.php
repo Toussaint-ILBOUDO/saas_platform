@@ -57,7 +57,7 @@ class AdminUtilisateurApiController extends Controller
 
         $user = User::create([
             'nom' => $validated['nom'],
-            'prenom' => $validated['prenom'] ?? null,
+            'prenom' => $validated['prenom'] ?? '',
             'email' => $validated['email'],
             'telephone_whatsapp' => $validated['telephone_whatsapp'] ?? null,
             'telephone_appel' => $validated['telephone_appel'] ?? null,

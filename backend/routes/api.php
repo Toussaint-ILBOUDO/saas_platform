@@ -13,6 +13,8 @@ use App\Modules\Pedagogie\Http\Controllers\Api\PublicDemandeCoursApiController;
 use App\Modules\Public\Http\Controllers\Api\AdminContenuPublicApiController;
 use App\Modules\Public\Http\Controllers\Api\CabinetPublicApiController;
 use App\Modules\Systeme\Http\Controllers\Api\AdminUtilisateurApiController;
+use App\Modules\Systeme\Http\Controllers\Api\NotificationApiController;
+use App\Modules\Systeme\Http\Controllers\Api\PushSubscriptionApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -59,6 +61,18 @@ Route::prefix('auth')->group(function () {
         Route::post('changer-mot-de-passe', [AuthApiController::class, 'changerMotDePasse']);
         Route::post('role-actif', [AuthApiController::class, 'roleActif']);
     });
+});
+
+// ---------- Notifications (base) + abonnement push — T3.6 ----------
+Route::middleware('auth:web')->group(function () {
+    Route::get('notifications', [NotificationApiController::class, 'index']);
+    Route::post('notifications/lire-toutes', [NotificationApiController::class, 'lireToutes']);
+    Route::post('notifications/{notification}/lue', [NotificationApiController::class, 'marquerLue']);
+    Route::delete('notifications/{notification}', [NotificationApiController::class, 'destroy']);
+
+    Route::get('abonnement-push', [PushSubscriptionApiController::class, 'index']);
+    Route::post('abonnement-push', [PushSubscriptionApiController::class, 'store']);
+    Route::delete('abonnement-push', [PushSubscriptionApiController::class, 'destroy']);
 });
 
 // ---------- Backoffice MVP (authentifié, staff cabinet) — T3.5 ----------

@@ -8,7 +8,6 @@ use App\Models\JournalPlateforme;
 use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Stancl\Tenancy\TenantDatabaseManagers\PostgreSQLDatabaseManager;
 use Throwable;
@@ -70,10 +69,11 @@ class CreerAdminCabinetEtNotifier implements ShouldQueue
             'identifiants' => ['email' => $email, 'password' => $password],
         ];
 
-        $emailContact = $this->cabinet->email;
-        if ($emailContact) {
-            Mail::to($emailContact)->send(new CabinetIdentifiants($this->cabinet, $email, $password));
-            $contexte['email_envoye_vers'] = $emailContact;
+        // T3.6 : l'envoi de l'e-mail passe par une file d'attente dédiée,
+        // découplée du pipeline (sync en test, database en dev/prod).
+        EnvoyerIdentifiantsCabinet::dispatch($this->cabinet, $email, $password);
+        if ($this->cabinet->email) {
+            $contexte['email_envoye_vers'] = $this->cabinet->email;
         }
 
         JournalPlateforme::ecrire('admin_cabinet.cree', 'info', $this->cabinet, $contexte);

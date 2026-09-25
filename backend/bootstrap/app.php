@@ -87,6 +87,18 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (
+            \Spatie\Permission\Exceptions\UnauthorizedException $e,
+            \Illuminate\Http\Request $request
+        ) {
+            return $request->expectsJson()
+                ? response()->json([
+                    'message' => 'Accès refusé : rôle insuffisant.',
+                    'code' => 'ACCES_REFUSE',
+                ], 403)
+                : null;
+        });
+
+        $exceptions->render(function (
             \Illuminate\Database\Eloquent\ModelNotFoundException $e,
             \Illuminate\Http\Request $request
         ) {

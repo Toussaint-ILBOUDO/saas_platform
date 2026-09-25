@@ -23,6 +23,12 @@ Route::middleware([
     PreventAccessFromCentralDomains::class,
     'cabinet.actif',
 ])->group(function () {
+    // Impersonation (T2.6) : consommation du jeton Landlord en tête de groupe.
+    Route::get('/impersonation/{jeton}', [App\Modules\Impersonation\Http\Controllers\ImpersonationController::class, 'entrer'])
+        ->name('impersonation.entrer');
+    Route::post('/impersonation/sortir', [App\Modules\Impersonation\Http\Controllers\ImpersonationController::class, 'sortir'])
+        ->name('impersonation.sortir');
+
     require __DIR__ . '/web.php';
     require __DIR__ . '/auth.php';
     require __DIR__ . '/pedagogie.php';

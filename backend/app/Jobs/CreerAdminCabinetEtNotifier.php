@@ -58,6 +58,10 @@ class CreerAdminCabinetEtNotifier implements ShouldQueue
                 'statut' => true,
             ]);
             $admin->assignRole('admin_cabinet');
+
+            // Cible d'impersonation (T2.6) : colonne centrale du tenant.
+            $this->cabinet->admin_utilisateur_id = $admin->id;
+            $this->cabinet->save();
         } finally {
             tenancy()->end();
         }

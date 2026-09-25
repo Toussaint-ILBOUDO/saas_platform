@@ -104,6 +104,15 @@
                                 <button class="btn btn-outline-warning btn-sm">Repasser en suspension</button>
                             </form>
                         @endif
+
+                        @if ($cabinet->status === 'actif' && $cabinet->admin_utilisateur_id)
+                            <form method="POST" action="{{ route('landlord.cabinets.impersoner', $cabinet) }}">
+                                @csrf
+                                <button class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-person-badge me-1"></i>Impersonner (admin du cabinet)
+                                </button>
+                            </form>
+                        @endif
                     </div>
 
                     <hr>

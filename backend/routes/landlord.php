@@ -36,6 +36,7 @@ Route::prefix('admin')->name('landlord.')->middleware('central.domain')->group(f
         Route::put('cabinets/{cabinet}', [CabinetController::class, 'update'])->name('cabinets.update');
         Route::put('cabinets/{cabinet}/parametres', [CabinetController::class, 'updateParametres'])->name('cabinets.parametres.update');
         Route::post('cabinets/{cabinet}/statut', [CabinetController::class, 'changeStatut'])->name('cabinets.statut');
+        Route::post('cabinets/{cabinet}/impersoner', [CabinetController::class, 'impersoner'])->name('cabinets.impersoner');
         Route::delete('cabinets/{cabinet}', [CabinetController::class, 'supprimer'])->name('cabinets.destroy');
 
         // Sections (placeholders — implémentation réelle en T2.7/P7)

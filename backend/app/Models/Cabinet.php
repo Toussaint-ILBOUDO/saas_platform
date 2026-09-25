@@ -46,6 +46,7 @@ class Cabinet extends BaseTenant implements TenantWithDatabase
             'status',
             'logo',
             'theme',
+            'admin_utilisateur_id',
         ];
     }
 

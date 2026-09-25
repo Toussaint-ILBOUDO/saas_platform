@@ -27,6 +27,9 @@
 
 <body>
 
+{{-- Impersonation Landlord (T2.6) : bannière + sortie --}}
+@include('panel.partials.impersonation-banniere')
+
 <div class="admin-shell">
 
     <div class="sidebar-backdrop" data-sidebar-close></div>

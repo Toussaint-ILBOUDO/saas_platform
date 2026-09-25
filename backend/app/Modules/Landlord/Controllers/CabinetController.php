@@ -216,6 +216,39 @@ final class CabinetController extends Controller
     }
 
     /**
+     * Émission d'un jeton d'impersonation (T2.6) vers l'admin du cabinet.
+     * Consommé une seule fois sur <domaine>/impersonation/{jeton}.
+     */
+    public function impersoner(Cabinet $cabinet): RedirectResponse
+    {
+        abort_if($cabinet->status !== 'actif', 409, 'Impossible d\'impersonner un cabinet non actif.');
+        abort_unless($cabinet->admin_utilisateur_id, 422, 'Aucun administrateur provisionné à impersonner.');
+
+        $domaine = $cabinet->primary_domain;
+        abort_unless($domaine, 422, 'Aucun domaine configuré pour ce cabinet.');
+
+        $jeton = tenancy()->impersonate(
+            $cabinet,
+            (string) $cabinet->admin_utilisateur_id,
+            "http://{$domaine}/",
+            'web'
+        );
+
+        DB::connection('pgsql')->table('tenant_user_impersonation_tokens')
+            ->where('token', $jeton->token)
+            ->update(['super_admin_id' => auth('landlord')->id()]);
+
+        JournalPlateforme::ecrire('impersonation.emise', 'info', $cabinet, [
+            'super_admin_id' => auth('landlord')->id(),
+            'user_id' => $cabinet->admin_utilisateur_id,
+        ]);
+
+        request()->session()->flash('success', 'Jeton d\'impersonation émis pour « ' . $cabinet->nom . ' ».');
+
+        return redirect()->away("http://{$domaine}/impersonation/{$jeton->token}");
+    }
+
+    /**
      * pg_dump du cabinet vers storage/app/backups avant destruction.
      * Trouver : aucune suppression sans sauvegarde (hook test TENANCY_SKIP_BACKUP).
      */

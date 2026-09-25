@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'landlord.auth' => \App\Http\Middleware\RedirectIfNotLandlord::class,
             'landlord.guest' => \App\Http\Middleware\RedirectIfLandlord::class,
             'central.domain' => \App\Http\Middleware\EnsureCentralDomain::class,
+            'keduc.web' => \App\Http\Middleware\KeducWebAutorise::class,
         ]);
     })
 

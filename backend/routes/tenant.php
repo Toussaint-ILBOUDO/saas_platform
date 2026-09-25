@@ -23,12 +23,23 @@ Route::middleware([
     PreventAccessFromCentralDomains::class,
     'cabinet.actif',
 ])->group(function () {
-    // Impersonation (T2.6) : consommation du jeton Landlord en tête de groupe.
+    // Impersonation (T2.6) : consommation du jeton Landlord — toujours
+    // disponible, indépendante de l'interrupteur web KEduc (T2.10).
     Route::get('/impersonation/{jeton}', [App\Modules\Impersonation\Http\Controllers\ImpersonationController::class, 'entrer'])
         ->name('impersonation.entrer');
     Route::post('/impersonation/sortir', [App\Modules\Impersonation\Http\Controllers\ImpersonationController::class, 'sortir'])
         ->name('impersonation.sortir');
+});
 
+// Web KEduc (référence fonctionnelle — décision B4) : servi uniquement si
+// l'interrupteur du Landlord est activé (par défaut désactivé, T2.10).
+Route::middleware([
+    'web',
+    InitializeTenancyByDomain::class,
+    PreventAccessFromCentralDomains::class,
+    'cabinet.actif',
+    'keduc.web',
+])->group(function () {
     require __DIR__ . '/web.php';
     require __DIR__ . '/auth.php';
     require __DIR__ . '/pedagogie.php';

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Cabinet;
 use App\Models\JournalPlateforme;
 use App\Models\ParametresCabinet;
+use App\Models\ParametresPlateforme;
 use App\Models\SuperAdmin;
 use Illuminate\Support\Facades\DB;
 use PDOException;
@@ -42,7 +43,9 @@ class LandlordCabinetGestionTest extends TenantTestCase
         $this->assertSame('suspendu', Cabinet::find('c1')->status);
         $this->assertDatabaseHas('journal_plateforme', ['action' => 'cabinet.suspendu', 'cabinet_id' => 'c1']);
 
-        // Domaine cabinet bloqué quand suspendu
+        // Domaine cabinet bloqué quand suspendu (web KEduc activé pour atteindre
+        // le middleware cabinet.actif — décision B4, T2.10).
+        ParametresPlateforme::definir(ParametresPlateforme::CLE_ACCES_WEB_KEDUC, true);
         $this->get('http://c1.localhost/')->assertForbidden();
         tenancy()->end();
 

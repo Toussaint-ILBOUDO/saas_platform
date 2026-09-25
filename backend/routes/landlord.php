@@ -4,6 +4,7 @@ use App\Modules\Landlord\Controllers\AuthenticatedSessionController;
 use App\Modules\Landlord\Controllers\CabinetController;
 use App\Modules\Landlord\Controllers\DashboardController;
 use App\Modules\Landlord\Controllers\JournalController;
+use App\Modules\Landlord\Controllers\ParametresController;
 use App\Modules\Landlord\Controllers\SectionPlaceholderController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,10 @@ Route::prefix('admin')->name('landlord.')->middleware('central.domain')->group(f
 
         // Journal (T2.7)
         Route::get('journal', [JournalController::class, 'index'])->name('journal.index');
+
+        // Paramètres de la plateforme (T2.10)
+        Route::get('parametres', [ParametresController::class, 'index'])->name('parametres.index');
+        Route::put('parametres', [ParametresController::class, 'update'])->name('parametres.update');
 
         // Sections (placeholders — implémentation réelle en P7)
         Route::get('facturation', SectionPlaceholderController::class)->defaults('section', 'facturation')->name('facturation.index');

@@ -4,6 +4,7 @@
         ['route' => 'landlord.cabinets.index', 'name' => 'landlord.cabinets.*', 'label' => 'Cabinets', 'icon' => 'bi-buildings'],
         ['route' => 'landlord.facturation.index', 'name' => 'landlord.facturation.*', 'label' => 'Facturation', 'icon' => 'bi-receipt'],
         ['route' => 'landlord.journal.index', 'name' => 'landlord.journal.*', 'label' => 'Journal', 'icon' => 'bi-journal-text'],
+        ['route' => 'landlord.parametres.index', 'name' => 'landlord.parametres.*', 'label' => 'Paramètres', 'icon' => 'bi-gear'],
     ];
 @endphp
 <!DOCTYPE html>

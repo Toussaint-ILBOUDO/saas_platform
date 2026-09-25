@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ParametrePublic;
+use App\Models\ParametresPlateforme;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Spatie\Permission\Models\Role;
@@ -54,6 +55,10 @@ class TenantIsolationTest extends TenantTestCase
         // Le pipeline de création seed automatiquement (jobs CreateDatabase,
         // MigrateDatabase, SeedDatabase) : la page publique répond directement.
         $this->makeCabinet('c1');
+
+        // Le web KEduc n'est servi que si l'interrupteur du Landlord est actif
+        // (décision B4, T2.10) — on l'active pour tester la livraison.
+        ParametresPlateforme::definir(ParametresPlateforme::CLE_ACCES_WEB_KEDUC, true);
 
         $response = $this->get('http://c1.localhost/');
         $response->assertOk();

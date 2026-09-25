@@ -4,6 +4,7 @@ namespace App\Modules\Landlord\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cabinet;
+use App\Models\JournalPlateforme;
 use App\Models\ParametresCabinet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -113,7 +114,7 @@ final class CabinetController extends Controller
         $data = $request->validate([
             'nom' => ['required', 'string', 'max:150'],
             'sous_domaine' => ['nullable', 'string', 'max:40', 'regex:/^[a-z0-9\-]+$/', Rule::unique('tenants', 'sous_domaine')->ignore($cabinet->id)],
-            'status' => ['required', Rule::in(['actif', 'suspendu'])],
+            'status' => ['required', Rule::in(['actif', 'suspendu', 'archive'])],
             'email' => ['nullable', 'email', 'max:150'],
             'telephone' => ['nullable', 'string', 'max:30'],
         ]);
@@ -149,6 +150,107 @@ final class CabinetController extends Controller
         request()->session()->flash('success', 'Tarifs et fonctionnalités du cabinet enregistrés.');
 
         return redirect()->route('landlord.cabinets.show', $cabinet);
+    }
+
+    /**
+     * Suspendre / réactiver / archiver (T2.5). L'accès tenant au domaine est
+     * bloqué par le middleware cabinet.actif dès que status ≠ actif.
+     */
+    public function changeStatut(Cabinet $cabinet, Request $request): RedirectResponse
+    {
+        $statut = $request->validate([
+            'statut' => ['required', Rule::in(['actif', 'suspendu', 'archive'])],
+        ])['statut'];
+
+        $avant = $cabinet->status;
+        $cabinet->update(['status' => $statut]);
+
+        $actions = [
+            'actif' => 'cabinet.reactive',
+            'suspendu' => 'cabinet.suspendu',
+            'archive' => 'cabinet.archive',
+        ];
+
+        JournalPlateforme::ecrire($actions[$statut], 'info', $cabinet, [
+            'avant' => $avant,
+            'apres' => $statut,
+        ]);
+
+        $messages = [
+            'actif' => 'Cabinet réactivé.',
+            'suspendu' => 'Cabinet suspendu : le site et l\'espace sont bloqués.',
+            'archive' => 'Cabinet archivé.',
+        ];
+
+        request()->session()->flash('success', $messages[$statut]);
+
+        return redirect()->route('landlord.cabinets.show', $cabinet);
+    }
+
+    /**
+     * Suppression définitive (T2.5) : sauvegarde pg_dump préalable obligatoire,
+     * puis destruction (base via TenantDeleted/DeleteDatabase, centralement).
+     */
+    public function supprimer(Cabinet $cabinet): RedirectResponse
+    {
+        $sauvegarde = $this->sauvegarderBase($cabinet);
+
+        $id = $cabinet->id;
+        $nom = $cabinet->nom;
+
+        JournalPlateforme::ecrire('cabinet.supprime', 'warning', $cabinet, [
+            'sauvegarde' => $sauvegarde,
+        ]);
+
+        DB::table('parametres_cabinet')->where('cabinet_id', $id)->delete();
+        $cabinet->domains()->delete();
+        $cabinet->delete(); // TenantDeleted → DeleteDatabase (DROP de la base)
+
+        request()->session()->flash(
+            'success',
+            'Cabinet « ' . $nom . ' » supprimé définitivement.'
+            . ($sauvegarde ? ' Sauvegarde : ' . $sauvegarde : '')
+        );
+
+        return redirect()->route('landlord.cabinets.index');
+    }
+
+    /**
+     * pg_dump du cabinet vers storage/app/backups avant destruction.
+     * Trouver : aucune suppression sans sauvegarde (hook test TENANCY_SKIP_BACKUP).
+     */
+    private function sauvegarderBase(Cabinet $cabinet): ?string
+    {
+        if (env('TENANCY_SKIP_BACKUP', false)) {
+            return null;
+        }
+
+        $repertoire = storage_path('app/backups');
+        if (! is_dir($repertoire)) {
+            mkdir($repertoire, 0775, true);
+        }
+
+        $chemin = $repertoire . '/' . $cabinet->id . '-' . now()->format('Y-m-d-Hi') . '.dump';
+
+        $dsn = config('database.connections.pgsql');
+        $cmd = sprintf(
+            'PGPASSWORD=%s pg_dump --host=%s --port=%s --username=%s --format=custom --file="%s" "%s" 2>&1',
+            escapeshellarg($dsn['password']),
+            $dsn['host'],
+            $dsn['port'],
+            $dsn['username'],
+            $chemin,
+            config('tenancy.database.prefix') . $cabinet->id
+        );
+
+        exec($cmd, $sortie, $code);
+
+        if ($code !== 0) {
+            $detail = implode(' | ', $sortie);
+            throw new \RuntimeException('Sauvegarde impossible (pg_dump absent ou en échec) : ' . $detail);
+        }
+
+        return basename($chemin);
     }
 
     private function valider(Request $request): array

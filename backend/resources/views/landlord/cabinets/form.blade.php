@@ -49,8 +49,9 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Statut</label>
                     <select name="status" class="form-select">
-                        <option value="actif" @selected(old('status', $cabinet?->status ?? 'actif') === 'actif')>$cabinet ? Actif : Actif (par défaut)</option>
+                        <option value="actif" @selected(old('status', $cabinet?->status ?? 'actif') === 'actif')>$cabinet ? 'Actif' : 'Actif (par défaut)'</option>
                         <option value="suspendu" @selected(old('status', $cabinet?->status ?? '') === 'suspendu')>Suspendu</option>
+                        <option value="archive" @selected(old('status', $cabinet?->status ?? '') === 'archive')>Archivé</option>
                     </select>
                 </div>
             </div>

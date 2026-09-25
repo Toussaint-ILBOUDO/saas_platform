@@ -15,6 +15,14 @@
         </div>
     </div>
 
+    @if ($cabinet->status !== 'actif')
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Ce cabinet est <strong>{{ $cabinet->status === 'archive' ? 'archivé' : 'suspendu' }}</strong> :
+            son site et son espace sont inaccessibles (403).
+        </div>
+    @endif
+
     <div class="row g-3">
         <div class="col-lg-5">
             <div class="card shadow-sm">
@@ -24,6 +32,8 @@
                         <span class="text-secondary">Statut</span>
                         @if ($cabinet->status === 'actif')
                             <span class="badge text-bg-success">Actif</span>
+                        @elseif ($cabinet->status === 'archive')
+                            <span class="badge text-bg-secondary">Archivé</span>
                         @else
                             <span class="badge text-bg-danger">Suspendu</span>
                         @endif
@@ -53,6 +63,60 @@
                         <span>{{ $cabinet->created_at?->format('d/m/Y H:i') ?: '—' }}</span>
                     </li>
                 </ul>
+            </div>
+
+            {{-- Gestion du cycle de vie (T2.5) --}}
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-white fw-semibold">Gestion du cabinet</div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        @if ($cabinet->status !== 'actif')
+                            <form method="POST" action="{{ route('landlord.cabinets.statut', $cabinet) }}">
+                                @csrf
+                                <input type="hidden" name="statut" value="actif">
+                                <button class="btn btn-success btn-sm" onclick="return confirm('Réactiver ce cabinet ?')">
+                                    <i class="bi bi-play-circle me-1"></i>Réactiver
+                                </button>
+                            </form>
+                        @endif
+
+                        @if ($cabinet->status === 'actif')
+                            <form method="POST" action="{{ route('landlord.cabinets.statut', $cabinet) }}">
+                                @csrf
+                                <input type="hidden" name="statut" value="suspendu">
+                                <button class="btn btn-warning btn-sm" onclick="return confirm('Suspendre ce cabinet ?')">
+                                    <i class="bi bi-pause-circle me-1"></i>Suspendre
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('landlord.cabinets.statut', $cabinet) }}">
+                                @csrf
+                                <input type="hidden" name="statut" value="archive">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="return confirm('Archiver ce cabinet ?')">
+                                    <i class="bi bi-archive me-1"></i>Archiver
+                                </button>
+                            </form>
+                        @endif
+
+                        @if ($cabinet->status === 'archive')
+                            <form method="POST" action="{{ route('landlord.cabinets.statut', $cabinet) }}">
+                                @csrf
+                                <input type="hidden" name="statut" value="suspendu">
+                                <button class="btn btn-outline-warning btn-sm">Repasser en suspension</button>
+                            </form>
+                        @endif
+                    </div>
+
+                    <hr>
+
+                    <form method="POST" action="{{ route('landlord.cabinets.destroy', $cabinet) }}"
+                          onsubmit="return confirm('Supprimer DÉFINITIVEMENT ce cabinet ? La base sera sauvegardée (pg_dump) puis détruite. Action irréversible.')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash me-1"></i>Supprimer définitivement (avec sauvegarde)
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 

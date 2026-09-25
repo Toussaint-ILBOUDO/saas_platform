@@ -58,6 +58,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Documentation OpenAPI (Scramble, T3.7) : accessible hors production
+        // (local, recette, tests). En production, la Gate n'existe pas → 403.
+        // Le premier paramètre null permet l'accès aux invités (docs publics).
+        if (app()->environment() !== 'production') {
+            Gate::define('viewApiDocs', fn ($user = null) => true);
+        }
+
         View::composer('panel.*', function ($view) {
 
             if (!Auth::check()) {

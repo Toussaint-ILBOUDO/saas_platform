@@ -82,4 +82,18 @@ class ApiConventionsTest extends TenantTestCase
         $this->get('http://c1.localhost/')->assertNotFound();
         $this->getJson('http://c1.localhost/api/public/cabinet')->assertOk();
     }
+
+    public function test_documentation_openapi_disponible(): void
+    {
+        // T3.7 : la doc Scramble est servie sur le domaine central (hors prod)
+        // et expose bien la convention OpenAPI 3.1 + les routes API.
+        $response = $this->getJson('/docs/api.json');
+        $response->assertOk();
+        $paths = $response->json('paths');
+        $this->assertSame('3.1.0', $response->json('openapi'));
+        $this->assertSame('SAAS-Cabinet — API des cabinets', $response->json('info.title'));
+        $this->assertStringEndsWith('/api', $response->json('servers.0.url'));
+        $this->assertArrayHasKey('post', $paths['/auth/connexion'] ?? []);
+        $this->assertCount(32, $paths);
+    }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cabinet;
 use App\Models\JournalPlateforme;
 use App\Models\ParametresCabinet;
+use App\Support\SauvegardeCabinet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -193,7 +194,7 @@ final class CabinetController extends Controller
      */
     public function supprimer(Cabinet $cabinet): RedirectResponse
     {
-        $sauvegarde = $this->sauvegarderBase($cabinet);
+        $sauvegarde = (new SauvegardeCabinet())->sauvegarder($cabinet);
 
         $id = $cabinet->id;
         $nom = $cabinet->nom;
@@ -246,44 +247,6 @@ final class CabinetController extends Controller
         request()->session()->flash('success', 'Jeton d\'impersonation émis pour « ' . $cabinet->nom . ' ».');
 
         return redirect()->away("http://{$domaine}/impersonation/{$jeton->token}");
-    }
-
-    /**
-     * pg_dump du cabinet vers storage/app/backups avant destruction.
-     * Trouver : aucune suppression sans sauvegarde (hook test TENANCY_SKIP_BACKUP).
-     */
-    private function sauvegarderBase(Cabinet $cabinet): ?string
-    {
-        if (env('TENANCY_SKIP_BACKUP', false)) {
-            return null;
-        }
-
-        $repertoire = storage_path('app/backups');
-        if (! is_dir($repertoire)) {
-            mkdir($repertoire, 0775, true);
-        }
-
-        $chemin = $repertoire . '/' . $cabinet->id . '-' . now()->format('Y-m-d-Hi') . '.dump';
-
-        $dsn = config('database.connections.pgsql');
-        $cmd = sprintf(
-            'PGPASSWORD=%s pg_dump --host=%s --port=%s --username=%s --format=custom --file="%s" "%s" 2>&1',
-            escapeshellarg($dsn['password']),
-            $dsn['host'],
-            $dsn['port'],
-            $dsn['username'],
-            $chemin,
-            config('tenancy.database.prefix') . $cabinet->id
-        );
-
-        exec($cmd, $sortie, $code);
-
-        if ($code !== 0) {
-            $detail = implode(' | ', $sortie);
-            throw new \RuntimeException('Sauvegarde impossible (pg_dump absent ou en échec) : ' . $detail);
-        }
-
-        return basename($chemin);
     }
 
     private function valider(Request $request): array

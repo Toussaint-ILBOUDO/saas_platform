@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\ParametrePublic;
+use App\Support\FicheCabinet;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -129,7 +130,7 @@ class TenantDatabaseSeeder extends Seeder
                     ],
                 ],
                 'footer' => [],
-                'data' => [],
+                'data' => ['fiche' => FicheCabinet::defaut()],
             ]
         );
     }

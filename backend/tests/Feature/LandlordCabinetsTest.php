@@ -148,6 +148,26 @@ class LandlordCabinetsTest extends TenantTestCase
         $this->assertDatabaseHas('tenants', ['id' => 'c1', 'nom' => 'Après', 'status' => 'suspendu']);
     }
 
+    public function test_un_changement_de_sous_domaine_resynchronise_le_domaine(): void
+    {
+        $this->connecte();
+        $cabinet = $this->insererCabinet('c1', 'Renommage');
+
+        $this->assertDatabaseHas('domains', ['domain' => 'c1.localhost', 'tenant_id' => 'c1']);
+
+        $this->put("http://admin.localhost/admin/cabinets/{$cabinet->id}", [
+            'nom' => 'Renommage',
+            'sous_domaine' => 'nouveau-domaine',
+            'status' => 'actif',
+            'email' => '',
+            'telephone' => '',
+        ])->assertRedirect(route('landlord.cabinets.show', $cabinet));
+
+        $this->assertDatabaseHas('tenants', ['id' => 'c1', 'sous_domaine' => 'nouveau-domaine']);
+        $this->assertDatabaseHas('domains', ['domain' => 'nouveau-domaine.localhost', 'tenant_id' => 'c1']);
+        $this->assertDatabaseMissing('domains', ['domain' => 'c1.localhost', 'tenant_id' => 'c1']);
+    }
+
     public function test_les_tarifs_et_fonctionnalites_sont_modifiables(): void
     {
         $this->connecte();

@@ -1,0 +1,15 @@
+@if (!sansChrome()) {
+  <app-header></app-header>
+}
+<main>
+  <router-outlet />
+</main>
+@if (!sansChrome()) {
+  <app-footer></app-footer>
+}
+
+@if (!sansChrome()) {
+  <button type="button" class="remontee" (click)="versHaut()" [class._visible]="haut" aria-label="Remonter en haut de page">
+    <i class="bi bi-arrow-up"></i>
+  </button>
+}

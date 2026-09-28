@@ -1,0 +1,187 @@
+<div class="espace" [class._replie]="replie()">
+  <aside class="panneau" aria-label="Navigation cabinet">
+    <a class="panneau-logo" routerLink="/espace">
+      <span class="panneau-logo-med" aria-hidden="true">{{ sigle }}</span>
+      <span class="panneau-logo-detail">
+        <b>{{ nom }}</b>
+        <small>Espace cabinet</small>
+      </span>
+    </a>
+
+    <nav class="panneau-nav">
+      @for (rubrique of rubriques(); track rubrique) {
+        @if (rubrique.libelle) {
+          <h3 class="rubrique">{{ rubrique.libelle }}</h3>
+        }
+        @for (item of rubrique.items; track item.route) {
+          <a
+            class="lien"
+            [routerLink]="item.route"
+            routerLinkActive="_actif"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="fermerTiroir()"
+          >
+            <i class="bi {{ item.icone }}"></i>
+            <span class="lien-texte">{{ item.libelle }}</span>
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="panneau-pied">
+      <p class="pied-titre">À venir</p>
+      <ul class="pied-list">
+        @for (m of roadmap(); track m) {
+          <li><i class="bi bi-hourglass-split"></i><span>{{ m }}</span></li>
+        }
+      </ul>
+    </div>
+  </aside>
+
+  <div class="corps">
+    <header class="topbar">
+      <button
+        type="button"
+        class="topbar-burger"
+        (click)="basculerReplie()"
+        aria-label="Replier ou déplier le menu"
+      >
+        <i class="bi" [class.bi-layout-sidebar-inset-reverse]="replie()" [class.bi-layout-sidebar-inset]="!replie()"></i>
+      </button>
+
+      <h1 class="topbar-titre">{{ titre() }}</h1>
+
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="ico"
+          (click)="themes.basculer()"
+          [attr.aria-label]="themes.actif() === 'clair' ? 'Activer le mode sombre' : 'Activer le mode clair'"
+        >
+          <i class="bi" [class.bi-moon-stars-fill]="themes.actif() === 'clair'" [class.bi-sun-fill]="themes.actif() === 'sombre'"></i>
+        </button>
+
+        <a class="ico" routerLink="/espace/notifications" routerLinkActive="_actif" aria-label="Mes notifications">
+          <i class="bi bi-bell"></i>
+          @if (nonLues() > 0) {
+            <span class="pastille">{{ nonLues() }}</span>
+          }
+        </a>
+
+        <div class="profil" [class._ouvert]="profilOuvert()">
+          <button type="button" class="avatar" (click)="basculerProfil()" aria-label="Menu de mon profil">
+            {{ auth.initiales() }}
+          </button>
+
+          @if (profilOuvert()) {
+            <div class="profil-menu">
+              <div class="profil-identite">
+                <b>{{ auth.nomComplet() }}</b>
+                <small>{{ auth.utilisateur()?.email }}</small>
+                <span class="profil-role">{{ roleLibelle(auth.roleActif()) }}</span>
+              </div>
+
+              @if (aPlusieursRoles()) {
+                <button type="button" class="action" (click)="basculerChoixRole()">
+                  <i class="bi bi-arrow-repeat"></i>
+                  Changer de rôle
+                </button>
+                @if (choixRoleOuvert()) {
+                  <div class="roles">
+                    @for (r of auth.utilisateur()?.roles ?? []; track r) {
+                      <button
+                        type="button"
+                        class="rol"
+                        [class._actif]="auth.roleActif() === r"
+                        (click)="choisirRole(r)"
+                      >
+                        <i class="bi" [class.bi-check2-circle]="auth.roleActif() === r" [class.bi-circle]="auth.roleActif() !== r"></i>
+                        {{ roleLibelle(r) }}
+                      </button>
+                    }
+                  </div>
+                }
+              }
+
+              <a class="action" routerLink="/espace/profil" (click)="fermerProfil()">
+                <i class="bi bi-person"></i> Mon profil
+              </a>
+              <a class="action" routerLink="/" (click)="fermerProfil()">
+                <i class="bi bi-globe2"></i> Voir le site public
+              </a>
+              <button type="button" class="action _danger" (click)="deconnexion()">
+                <i class="bi bi-box-arrow-right"></i> Se déconnecter
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+
+    <main class="contenu">
+      <router-outlet />
+    </main>
+  </div>
+
+  <nav class="barre-bas" aria-label="Navigation principale mobile">
+    @for (onglet of onglets(); track onglet.id) {
+      @if (onglet.route) {
+        <a
+          class="barre-item"
+          [routerLink]="onglet.route"
+          routerLinkActive="_actif"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <i class="bi {{ onglet.icone }}"></i>
+          <span>{{ onglet.libelle }}</span>
+        </a>
+      } @else {
+        <button type="button" class="barre-item _plus" (click)="ouvrirTiroir()" aria-label="Toutes les rubriques">
+          <i class="bi {{ onglet.icone }}"></i>
+          <span>{{ onglet.libelle }}</span>
+        </button>
+      }
+    }
+  </nav>
+
+  @if (tiroirOuvert()) {
+    <div class="voile" (click)="fermerTiroir()"></div>
+    <aside class="tiroir" role="dialog" aria-label="Toutes les rubriques">
+      <header class="tiroir-entete">
+        <b>Rubriques</b>
+        <button type="button" class="ico" (click)="fermerTiroir()" aria-label="Fermer le menu">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+
+      <nav class="tiroir-nav">
+        @for (rubrique of rubriques(); track rubrique) {
+          @if (rubrique.libelle) {
+            <h3 class="rubrique">{{ rubrique.libelle }}</h3>
+          }
+          @for (item of rubrique.items; track item.route) {
+            <a
+              class="lien"
+              [routerLink]="item.route"
+              routerLinkActive="_actif"
+              [routerLinkActiveOptions]="{ exact: true }"
+              (click)="fermerTiroir()"
+            >
+              <i class="bi {{ item.icone }}"></i>
+              <span class="lien-texte">{{ item.libelle }}</span>
+            </a>
+          }
+        }
+      </nav>
+
+      <div class="tiroir-pied">
+        <p class="pied-titre">À venir</p>
+        <ul class="pied-list">
+          @for (m of roadmap(); track m) {
+            <li><i class="bi bi-hourglass-split"></i><span>{{ m }}</span></li>
+          }
+        </ul>
+      </div>
+    </aside>
+  }
+</div>

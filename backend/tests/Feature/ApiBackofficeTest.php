@@ -84,6 +84,27 @@ class ApiBackofficeTest extends TenantTestCase
         tenancy()->end();
     }
 
+    public function test_fiche_cabinet_mise_a_jour_via_api(): void
+    {
+        $this->prepareAdmin('c1');
+
+        $this->putJson('http://c1.localhost/api/admin/contenu-public', [
+            'data' => [
+                'fiche' => [
+                    'identite' => ['slogan' => 'Visez l\'excellence'],
+                    'contact' => ['adresse' => 'Avenue de la Liberté', 'horaires' => '24h/24'],
+                    'zones' => ['devise' => 'FCFA', 'localites' => ['Ouagadougou']],
+                ],
+            ],
+        ])->assertOk();
+
+        $this->getJson('http://c1.localhost/api/admin/contenu-public')
+            ->assertOk()
+            ->assertJsonPath('data.data.fiche.identite.slogan', 'Visez l\'excellence')
+            ->assertJsonPath('data.data.fiche.contact.adresse', 'Avenue de la Liberté')
+            ->assertJsonPath('data.data.fiche.zones.localites', ['Ouagadougou']);
+    }
+
     public function test_actualites_crud(): void
     {
         $this->prepareAdmin('c1');
@@ -151,6 +172,12 @@ class ApiBackofficeTest extends TenantTestCase
             'question' => 'Comment s\'inscrire ?',
             'answer' => 'Remplir le formulaire en ligne.',
         ])->assertStatus(201)->assertJsonPath('data.question', 'Comment s\'inscrire ?');
+
+        // Liste des questions d'une section (endpoint backoffice).
+        $this->getJson("http://c1.localhost/api/admin/faq/sections/{$section->id}/questions")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.question', 'Comment s\'inscrire ?');
 
         tenancy()->initialize('c1');
         $question = \App\Models\FaqQuestion::first();

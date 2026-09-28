@@ -103,7 +103,14 @@ class AuthApiController extends Controller
 
     public function motDePasseOublie(MotDePasseOublieApiRequest $request): JsonResponse
     {
-        $statut = Password::broker()->sendResetLink($request->validated());
+        try {
+            Password::broker()->sendResetLink($request->validated());
+        } catch (\Throwable $e) {
+            // En dev, aucun SMTP (MAIL_MAILER=smtp vers 127.0.0.1:1025) :
+            // l'échec d'envoi ne doit jamais remonter en erreur 500. On
+            // journalise et on garde la réponse neutre (pas d'énumération).
+            report($e);
+        }
 
         // Pas d'énumération de comptes : réponse identique qu'on connaisse
         // l'adresse ou non.
@@ -117,7 +124,8 @@ class AuthApiController extends Controller
         $reponse = Password::broker()->reset(
             $request->only('email', 'token', 'password', 'password_confirmation'),
             function ($user, $password) {
-                $user->forceFill(['password' => Hash::make($password)])->save();
+                // Cast « hashed » du modèle : on stocke le clair, haché une fois.
+                $user->forceFill(['password' => $password])->save();
                 Auth::guard('web')->login($user);
                 $request = request();
                 $request->session()->regenerate();

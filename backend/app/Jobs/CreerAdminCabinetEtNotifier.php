@@ -5,7 +5,9 @@ namespace App\Jobs;
 use App\Mail\CabinetIdentifiants;
 use App\Models\Cabinet;
 use App\Models\JournalPlateforme;
+use App\Models\ParametrePublic;
 use App\Models\User;
+use App\Support\FicheCabinet;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -61,6 +63,23 @@ class CreerAdminCabinetEtNotifier implements ShouldQueue
             // Cible d'impersonation (T2.6) : colonne centrale du tenant.
             $this->cabinet->admin_utilisateur_id = $admin->id;
             $this->cabinet->save();
+        } finally {
+            tenancy()->end();
+        }
+
+        // P1 (D-044) : injecte la fiche cabinet (saisie au Landlord) dans les
+        // paramètres publics du site — source unique du frontend.
+        tenancy()->initialize($this->cabinet);
+        try {
+            $public = ParametrePublic::find(1);
+            if ($public) {
+                $public->update([
+                    'data' => array_replace_recursive(
+                        $public->data ?? [],
+                        ['fiche' => FicheCabinet::depuisTenant($this->cabinet)]
+                    ),
+                ]);
+            }
         } finally {
             tenancy()->end();
         }

@@ -1,0 +1,360 @@
+/* ============================================================
+   Magis Plus Center — styles globaux (D-044 / D-047)
+   Thème orange (#e8610c) & bleu (#12305e), sans dégradés ni émojis.
+   Suit les conventions keduc : icônes bootstrap-icons, mobile-first.
+   ============================================================ */
+
+// Palette Magis Plus Center (injectée dans Bootstrap pour cohérence .btn/.text-…).
+// icônes : font CSS bootstrap-icons chargée dans angular.json (styles).
+@use 'bootstrap/scss/bootstrap' with (
+  $primary: #e8610c,
+  $secondary: #12305e,
+  $success: #1d4e89,
+  $info: #1d4e89,
+  $warning: #f6a15c,
+  $danger: #c24f08,
+  $light: #eef3fb,
+  $dark: #12305e,
+  $body-bg: #ffffff,
+  $body-color: #2b2b2b,
+  $border-color: #e5e9f2,
+  $enable-gradients: false,
+  $enable-shadows: false,
+  $border-radius: 0.75rem,
+  $font-family-base: (
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif
+  ),
+  $font-family-sans-serif: (
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif
+  ),
+  $headings-font-family: (
+    'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif
+  ),
+  $headings-font-weight: 700,
+  $headings-color: #12305e,
+  $btn-font-weight: 600,
+  $link-color: #e8610c,
+  $link-decoration: none,
+  $link-hover-decoration: underline
+);
+
+/* ---------- Design tokens ---------- */
+:root {
+  --mpc-primaire: #e8610c;
+  --mpc-primaire-fonce: #c24f08;
+  --mpc-primaire-tint: #fff4ec;
+  --mpc-bleu: #12305e;
+  --mpc-bleu-clair: #1d4e89;
+  --mpc-bleu-tint: #eef3fb;
+  --mpc-accent: #f6a15c;
+  --mpc-fond: #ffffff;
+  --mpc-surface-teintee: #f6f8fc;
+  --mpc-texte: #2b2b2b;
+  --mpc-texte-doux: #5a6779;
+  --mpc-bordure: #e5e9f2;
+
+  --mpc-police-titre: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mpc-police-texte: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ---------- Base ---------- */
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--mpc-police-texte);
+  color: var(--mpc-texte);
+  background: var(--mpc-fond);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--mpc-primaire);
+  color: #fff;
+}
+
+img {
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--mpc-police-titre);
+}
+
+a {
+  color: var(--mpc-primaire);
+}
+
+/* En-tête de section réutilisable par les pages. */
+.surtitre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mpc-primaire);
+  margin-bottom: 0.65rem;
+}
+.surtitre::before {
+  content: '';
+  width: 1.75rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--mpc-primaire);
+  opacity: 0.45;
+}
+.titre-section {
+  font-size: clamp(1.5rem, 4.2vw, 2.2rem);
+  font-weight: 700;
+  color: var(--mpc-bleu);
+  margin-bottom: 0.8rem;
+  letter-spacing: -0.01em;
+}
+.texte-section {
+  color: var(--mpc-texte-doux);
+  font-size: 1.02rem;
+  line-height: 1.75;
+  max-width: 760px;
+}
+
+/* Réduit les largeurs max pour un rendu aéré. */
+.container {
+  max-width: 1200px;
+}
+
+/* ---------- Animations d'apparition (reveal) ---------- */
+.reveal {
+  opacity: 0;
+  animation-duration: 0.7s;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation-fill-mode: both;
+}
+.reveal._visible {
+  animation-name: mpc-apparaitre;
+}
+.reveal-up._visible {
+  animation-name: mpc-monte;
+}
+.reveal-down._visible {
+  animation-name: mpc-descend;
+}
+.reveal-left._visible {
+  animation-name: mpc-gauche;
+}
+.reveal-right._visible {
+  animation-name: mpc-droite;
+}
+
+@keyframes mpc-apparaitre {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes mpc-monte {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes mpc-descend {
+  from {
+    opacity: 0;
+    transform: translateY(-26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes mpc-gauche {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes mpc-droite {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Respecte la préférence d'accessibilité "réduire les animations". */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal {
+    opacity: 1;
+  }
+}
+
+/* Icônes : héritent de la couleur du texte si nécessaire. */
+.bi {
+  vertical-align: -0.125em;
+}
+
+/* Accessibilité : focus visible cohérent. */
+:focus-visible {
+  outline: 3px solid rgba(232, 97, 12, 0.5);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   Backoffice (P5.3) — tokens sémantiques & mode sombre
+   ============================================================ */
+:root {
+  --mpc-surface: #ffffff;
+  --mpc-separateur: #e5e9f2;
+  --mpc-abandon: #f6f8fc;
+  --mpc-succes: #2e9e5b;
+  --mpc-succes-tint: #e7f6ee;
+  --mpc-danger: #d64545;
+  --mpc-danger-tint: #fdecec;
+  --mpc-info: #1d4e89;
+  --mpc-info-tint: #eef3fb;
+  --mpc-attention: #b45309;
+  --mpc-attention-tint: #fdf3e3;
+  --mpc-ordre: #8a7350;
+  --mpc-ordre-tint: #f3ede2;
+  --mpc-ombre: 0 1px 2px rgba(18, 48, 94, 0.05), 0 8px 24px rgba(18, 48, 94, 0.08);
+}
+
+html[data-bs-theme='sombre'] {
+  --mpc-fond: #11131a;
+  --mpc-surface: #1a1d27;
+  --mpc-surface-teintee: #222631;
+  --mpc-texte: #ebeef5;
+  --mpc-texte-doux: #a6adc2;
+  --mpc-bordure: #2b3040;
+  --mpc-separateur: #2b3040;
+  --mpc-abandon: #222631;
+  --mpc-primaire-tint: rgba(232, 97, 12, 0.16);
+  --mpc-bleu-tint: rgba(29, 78, 137, 0.18);
+  --mpc-succes-tint: rgba(46, 158, 91, 0.16);
+  --mpc-danger-tint: rgba(214, 69, 69, 0.16);
+  --mpc-info-tint: rgba(29, 78, 137, 0.18);
+  --mpc-attention-tint: rgba(180, 83, 9, 0.18);
+  --mpc-ordre-tint: rgba(138, 115, 80, 0.16);
+  --mpc-ombre: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+html[data-bs-theme='sombre'] {
+  body {
+    background: var(--mpc-fond);
+    color: var(--mpc-texte);
+  }
+  a {
+    color: var(--mpc-accent);
+  }
+  .titre-section {
+    color: #dfe5f2;
+  }
+}
+
+/* Mode sombre : cohérence des composants Bootstrap utilisés au backoffice. */
+html[data-bs-theme='sombre'] {
+  .btn-primary {
+    --bs-btn-bg: var(--mpc-primaire);
+    --bs-btn-border-color: var(--mpc-primaire);
+    --bs-btn-hover-bg: var(--mpc-primaire-fonce);
+    --bs-btn-hover-border-color: var(--mpc-primaire-fonce);
+    --bs-btn-active-bg: var(--mpc-primaire-fonce);
+    --bs-btn-active-border-color: var(--mpc-primaire-fonce);
+  }
+  .btn-outline-primary {
+    --bs-btn-color: #f6a15c;
+    --bs-btn-border-color: rgba(232, 97, 12, 0.55);
+    --bs-btn-hover-bg: rgba(232, 97, 12, 0.14);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: rgba(232, 97, 12, 0.2);
+  }
+  .btn-secondary,
+  .btn-outline-secondary {
+    --bs-btn-border-color: #3a4060;
+    --bs-btn-hover-bg: #2b3040;
+    --bs-btn-hover-border-color: #3a4060;
+    --bs-btn-active-bg: #2b3040;
+  }
+  .card,
+  .modal-content,
+  .dropdown-menu,
+  .accordion-item,
+  .list-group-item,
+  .table {
+    --bs-body-bg: var(--mpc-surface);
+    --bs-tertiary-bg: var(--mpc-abandon);
+    background-color: var(--mpc-surface);
+    color: var(--mpc-texte);
+    border-color: var(--mpc-separateur);
+  }
+  .table thead th {
+    --bs-table-color: var(--mpc-texte-doux);
+  }
+  .form-control,
+  .form-select {
+    background-color: var(--mpc-abandon);
+    border-color: var(--mpc-separateur);
+    color: var(--mpc-texte);
+    &:focus {
+      background-color: var(--mpc-abandon);
+      color: var(--mpc-texte);
+    }
+    &::placeholder {
+      color: var(--mpc-texte-doux);
+    }
+  }
+  .page-link {
+    background-color: var(--mpc-surface);
+    border-color: var(--mpc-separateur);
+    color: var(--mpc-texte);
+  }
+  .page-item.disabled .page-link {
+    background-color: var(--mpc-abandon);
+    color: var(--mpc-texte-doux);
+  }
+}

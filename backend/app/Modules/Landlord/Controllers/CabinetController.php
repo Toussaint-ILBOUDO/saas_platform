@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cabinet;
 use App\Models\JournalPlateforme;
 use App\Models\ParametresCabinet;
+use App\Support\FicheCabinet;
 use App\Support\SauvegardeCabinet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,29 @@ final class CabinetController extends Controller
         'cms' => 'Pages CMS / FAQ',
     ];
 
+    /**
+     * Champs optionnels de la fiche cabinet (D-044) — source unique du site public.
+     */
+    public const CHAMPS_FICHE = [
+        'slogan' => ['nullable', 'string', 'max:200'],
+        'directeur' => ['nullable', 'string', 'max:120'],
+        'telephone_2' => ['nullable', 'string', 'max:30'],
+        'whatsapp' => ['nullable', 'string', 'max:30'],
+        'adresse' => ['nullable', 'string', 'max:255'],
+        'horaires' => ['nullable', 'string', 'max:80'],
+        'orange_money' => ['nullable', 'string', 'max:30'],
+        'moov_money' => ['nullable', 'string', 'max:30'],
+        'wave' => ['nullable', 'string', 'max:30'],
+        'cash' => ['nullable', 'boolean'],
+        'pays' => ['nullable', 'string', 'max:80'],
+        'devise' => ['nullable', 'string', 'max:10'],
+        'localites' => ['nullable', 'string', 'max:1000'],
+        'facebook' => ['nullable', 'string', 'max:255'],
+        'tiktok' => ['nullable', 'string', 'max:255'],
+        'whatsapp_business' => ['nullable', 'string', 'max:255'],
+        'linkedin' => ['nullable', 'string', 'max:255'],
+    ];
+
     public function index(Request $request): View
     {
         $q = trim((string) $request->query('q'));
@@ -56,6 +80,7 @@ final class CabinetController extends Controller
         return view('landlord.cabinets.form', [
             'cabinet' => null,
             'modules' => self::MODULES,
+            'fiche' => FicheCabinet::defaut(),
         ]);
     }
 
@@ -74,6 +99,9 @@ final class CabinetController extends Controller
                 // est sérialisée dans la colonne json « data » (lu via $cabinet->email).
                 'email' => $data['email'] ?? null,
                 'telephone' => $data['telephone'] ?? null,
+                // Fiche cabinet (D-044) : injectée par le pipeline dans
+                // parametres_publics.data.fiche (base tenant).
+                'fiche' => FicheCabinet::depuisForm($data),
             ]);
 
         $domaine = sprintf('%s.%s', $cabinet->sous_domaine, env('TENANCY_DOMAIN_SUFFIX', 'localhost'));
@@ -107,6 +135,7 @@ final class CabinetController extends Controller
         return view('landlord.cabinets.form', [
             'cabinet' => $cabinet,
             'modules' => self::MODULES,
+            'fiche' => FicheCabinet::depuisTenant($cabinet),
         ]);
     }
 
@@ -118,10 +147,24 @@ final class CabinetController extends Controller
             'status' => ['required', Rule::in(['actif', 'suspendu', 'archive'])],
             'email' => ['nullable', 'email', 'max:150'],
             'telephone' => ['nullable', 'string', 'max:30'],
+            ...self::CHAMPS_FICHE,
         ]);
 
-        // stancl VirtualColumn : email/telephone sérialisés dans la colonne json « data ».
+        // Fiche présente dans le formulaire → on la met à jour (sinon inchangée).
+        if ($request->hasAny(array_keys(self::CHAMPS_FICHE))) {
+            $data['fiche'] = FicheCabinet::depuisForm($data);
+        }
+
+        // stancl VirtualColumn : email/telephone (et fiche) sérialisés dans « data ».
         $cabinet->update($data);
+
+        // P1 : le sous-domaine pilote le premier domaine — on resynchronise la
+        // table « domains » quand il change (le renommage est fait par l'admin).
+        $domaine = sprintf('%s.%s', $cabinet->sous_domaine ?: $cabinet->id, env('TENANCY_DOMAIN_SUFFIX', 'localhost'));
+        if ($cabinet->primary_domain !== $domaine) {
+            DB::table('domains')->where('tenant_id', $cabinet->id)->delete();
+            $cabinet->domains()->create(['domain' => $domaine]);
+        }
 
         request()->session()->flash('success', 'Informations du cabinet mises à jour.');
 
@@ -261,6 +304,7 @@ final class CabinetController extends Controller
             'sous_domaine' => ['nullable', 'string', 'max:40', 'regex:/^[a-z0-9\-]+$/', 'unique:tenants,sous_domaine'],
             'email' => ['nullable', 'email', 'max:150'],
             'telephone' => ['nullable', 'string', 'max:30'],
+            ...self::CHAMPS_FICHE,
         ]);
     }
 }

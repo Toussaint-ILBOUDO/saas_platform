@@ -4,10 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Actualite;
 use App\Models\CategorieProduit;
+use App\Models\EnseignantProfil;
 use App\Models\FaqQuestion;
 use App\Models\FaqSection;
 use App\Models\Produit;
+use App\Models\Temoignage;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Tests\TenantTestCase;
 use Tests\Traits\InteractsWithCabinets;
 
@@ -159,6 +163,95 @@ class ApiPublicTest extends TenantTestCase
         tenancy()->end();
     }
 
+    public function test_stats_publics(): void
+    {
+        $this->init('c1');
+
+        $this->getJson('http://c1.localhost/api/public/stats')
+            ->assertOk()
+            ->assertJsonStructure([
+                'data' => ['nb_enseignants', 'nb_eleves', 'nb_contrats', 'nb_familles'],
+            ])
+            ->assertJsonPath('data.nb_enseignants', 0);
+
+        tenancy()->end();
+    }
+
+    public function test_enseignants_publics_actifs(): void
+    {
+        $this->init('c1');
+
+        $actif = User::create([
+            'nom' => 'Ouédraogo',
+            'prenom' => 'Alice',
+            'email' => 'alice@c1.local',
+            'password' => Hash::make('Secret1234'),
+            'statut' => true,
+        ]);
+        $actif->assignRole('enseignant');
+        EnseignantProfil::create([
+            'user_id' => $actif->id,
+            'diplome_max' => 'Licence en mathématiques',
+            'lieu_de_service' => 'Ouagadougou',
+        ]);
+
+        $inactif = User::create([
+            'nom' => 'Kaboré',
+            'prenom' => 'Boris',
+            'email' => 'boris@c1.local',
+            'password' => Hash::make('Secret1234'),
+            'statut' => false,
+        ]);
+        $inactif->assignRole('enseignant');
+
+        $this->getJson('http://c1.localhost/api/public/enseignants')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.nom_complet', 'Alice Ouédraogo')
+            ->assertJsonPath('data.0.diplome_max', 'Licence en mathématiques')
+            ->assertJsonPath('data.0.lieu_de_service', 'Ouagadougou');
+
+        tenancy()->end();
+    }
+
+    public function test_temoignages_publics_classement(): void
+    {
+        $this->init('c1');
+
+        $auteur = User::create([
+            'nom' => 'Diallo',
+            'prenom' => 'Mariam',
+            'email' => 'mariam@c1.local',
+            'password' => Hash::make('Secret1234'),
+            'statut' => true,
+        ]);
+        $auteur->assignRole('parent');
+
+        Temoignage::create([
+            'user_id' => $auteur->id,
+            'slug' => 'vraiment-top',
+            'contenu' => 'Des progrès remarquables en mathématiques.',
+            'role' => 'parent',
+            'anonyme' => false,
+            'statut' => 'publie',
+            'published_at' => now(),
+            'is_active' => true,
+        ]);
+
+        $this->getJson('http://c1.localhost/api/public/temoignages')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.auteur', 'Mariam D.')
+            ->assertJsonPath('data.0.role_label', 'Parent d\'élève')
+            ->assertJsonPath('data.0.contenu', 'Des progrès remarquables en mathématiques.');
+
+        $this->getJson('http://c1.localhost/api/public/temoignages/vraiment-top')
+            ->assertOk()
+            ->assertJsonPath('auteur', 'Mariam D.');
+
+        tenancy()->end();
+    }
+
     public function test_demande_cours_validated(): void
     {
         $this->init('c1');
@@ -178,6 +271,35 @@ class ApiPublicTest extends TenantTestCase
         ])
             ->assertStatus(201)
             ->assertJsonPath('demande.statut', 'en_attente');
+
+        tenancy()->end();
+    }
+
+    public function test_references_publiques_pour_formulaire(): void
+    {
+        $this->init('c1');
+
+        $matiereId = DB::table('matieres')->insertGetId(['nom' => 'Mathématiques', 'sigle' => 'MATH', 'actif' => true]);
+        $inactifId = DB::table('matieres')->insertGetId(['nom' => 'Latin', 'sigle' => 'LAT', 'actif' => false]);
+        $classeId = DB::table('classes')->insertGetId(['nom' => '6e', 'sigle' => '6e']);
+        $typeCoursId = DB::table('type_cours')->insertGetId(['libelle' => 'Cours à domicile', 'code' => 'DOM', 'actif' => true]);
+        $typeInactifId = DB::table('type_cours')->insertGetId(['libelle' => 'Atelier', 'code' => 'ATL', 'actif' => false]);
+
+        $response = $this->getJson('http://c1.localhost/api/public/references');
+        $response->assertOk();
+
+        $data = $response->json('data');
+        $matiereIds = array_column($data['matieres'], 'id');
+        $typeIds = array_column($data['type_cours'], 'id');
+        $classeIds = array_column($data['classes'], 'id');
+
+        $this->assertContains($matiereId, $matiereIds);
+        $this->assertNotContains($inactifId, $matiereIds, 'Les matières inactives ne doivent pas remonter.');
+
+        $this->assertContains($typeCoursId, $typeIds);
+        $this->assertNotContains($typeInactifId, $typeIds, 'Les types de cours inactifs ne doivent pas remonter.');
+
+        $this->assertContains($classeId, $classeIds);
 
         tenancy()->end();
     }

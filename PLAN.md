@@ -12,10 +12,10 @@
 |---|---|---|
 | P0 | Préparation et inventaire | ☐ |
 | P1 | Multi-tenancy (stancl) opérationnel | ☐ |
-| P2 | Landlord : super-admin et création de cabinet | ☐ |
-| P3 | API cabinet : socle | En cours |
-| P4 | Core Angular + PWA | ☐ |
-| P5 | Frontend du cabinet 1 (MVP) | ☐ |
+| P2 | Landlord : super-admin et création de cabinet | Clôturée |
+| P3 | API cabinet : socle | Clôturée |
+| P4 | Core Angular + PWA | En cours |
+| P5 | Frontend du cabinet 1 (MVP) | En cours |
 | P6 | Déploiement et exploitation | ☐ |
 | P7 | Modules métier : API + Angular (cycle répété) | ☐ |
 | P8 | Facturation plateforme (Landlord) | ☐ |
@@ -68,8 +68,20 @@
 - [x] **T3.6** Envoi email des identifiants (notification en queue) et notifications `database` + `webpush` (abonnement push). (job `EnvoyerIdentifiantsCabinet` (queue) dispatché par le pipeline T2.4 au lieu de l'envoi synchrone ; API `/api/notifications` (liste + `non_lues`, marquer lue, lire toutes, supprimer — uniquement ses propres) ; package `laravel-notification-channels/webpush` ^13 installé, migration `push_subscriptions` → dossier tenant (connexion par défaut = cabinet, D-041), trait push sur `User`, API `/api/abonnement-push` (GET/POST/DELETE) ; clés VAPID à générer au déploiement. 3 tests — 80 verts, 341 assertions)
 - [x] **T3.7** Documentation OpenAPI générée (Scramble `dedoc/scramble` ^0.13). *Fin : le frontend peut se baser dessus.* (serveur `/docs/api` + spec `/docs/api.json` sur le domaine central, base `api` → paths sans préfixe ; 32 routes ; Gate `viewApiDocs` ouverte hors production — 403 en prod ; export `api.json` gitignoré — test `documentation openapi disponible`)
 - [x] **T3.8** Tests API + isolation. (suites vertes : conventions + auth + public + backoffice + notifications + tenant isolation)
+- [x] **T3.9** Endpoints publics complémentaires pour le frontend cabinet. (`GET /api/public/stats`, `enseignants`, `temoignages`(+`/{slug}`) et `references` (options formulaires) — D-046 ; OpenAPI passe à 37 routes. Suite complète : 88 tests / 397 assertions verts.)
 
 ## P4 — Core Angular et PWA
+
+> **Cycle d'un cabinet (D-043)** : créer le cabinet + son admin (backend provisionné) **puis**
+> coder son frontend sur mesure sur le `core`, et **publier seulement après validation**. En dev :
+> tenant pilote (`dev1`) d'abord, frontend contre lui, publication sur validation. Pas de gabarit
+> d'apparence imposé — chaque frontend cabinet est dessiné et codé pour lui (identité propre).
+
+> **Adaptation (27/09, D-047)** : le socle Angular est posé directement dans `frontend/magis`
+> (Angular 22 signal-based, zoneless, lazy-loading, SEO dynamique, Bootstrap 5 SAAS + tokens
+> `--mpc-*`) et sert de base réutilisable pour les cabinets suivants. Les items ci-dessous qui
+> décrivent un monorepo de bibliothèque (`projects/core`, gabarit/copie) sont en attente de
+> refactorisation éventuelle ; la PWA (T4.4-T4.6) reste à faire.
 
 - [ ] **T4.1** Créer `frontend/` : workspace Angular (dernière version stable), Tailwind, ESLint/Prettier, TypeScript strict.
 - [ ] **T4.2** Bibliothèque `projects/core` : client API, intercepteurs (XSRF, erreurs 401/403/422/503, `CABINET_SUSPENDU`), `AuthService`, guards par rôle.
@@ -83,9 +95,15 @@
 
 ## P5 — Frontend du cabinet 1 (MVP)
 
-- [ ] **T5.1** Créer le cabinet 1 depuis le Landlord (P2), puis `cabinet-<slug>` à partir du gabarit.
-- [ ] **T5.2** **Page publique** : accueil (hero), à propos, actualités (liste + détail), FAQ, formulaire de demande de cours, pied de page ; sections activables selon la configuration. Design soigné, mobile d'abord.
-- [ ] **T5.3** **Backoffice** : connexion, changement de mot de passe, coquille avec navigation par rôle, tableau de bord (squelette).
+> **Réalisé (27/09)** : le cabinet « Magis Plus Center » a été créé depuis le Landlord par
+> l'utilisateur (`magis-plus-center`, domaine `magis-plus-center.localhost`), et le frontend
+> cabinet a été **codé sur mesure** dans `frontend/magis` (Angular 22, D-047) — la stratégie
+> « gabarit puis copie » (T4.8) a été inversée : le socle Angular pose une base réutilisable
+> pour les cabinets suivants. Build vérifié ; suite backend verte (88 tests / 397 assertions).
+
+- [x] **T5.1** Créer le cabinet 1 depuis le Landlord (P2), puis `cabinet-<slug>` à partir du gabarit. (✍️ cabinet **Magis Plus Center** créé par l'utilisateur — données du dossier en `docs/PLAN_CABINET_1.md` ; frontend codé sur mesure dans `frontend/magis`, pas de gabarit/D-043)
+- [x] **T5.2** **Page publique** : accueil (hero), à propos, actualités (liste + détail), FAQ, formulaire de demande de cours, pied de page ; sections activables selon la configuration. Design soigné, mobile d'abord. (livré : 8 pages — accueil, actualités(+détail), bibliothèque, boutique, FAQ, demande de cours, contact — textes depuis `src/content.ts` (D-044), données via l'API publique (fiche, actualités, FAQ, documents, produits, stats, enseignants, témoignages, references) ; hero/à propos/services/zones/stats/solutions/enseignants/témoignages/FAQ/bandeau rendez-vous/contact ; header collant + tiroir mobile, footer 4 colonnes, bouton remontée ; palette orange `#e8610c` + bleu `#12305e`, icônes bootstrap-icons, sans dégradés ni émojis ; formulaires demande de cours → `POST demandes-cours` et commande boutique → WhatsApp)
+- [ ] **T5.3** **Backoffice** : connexion, changement de mot de passe, coquille avec navigation par rôle, tableau de bord (squelette). (l'admin cabinet passe pour l'instant par l'API backoffice + les écrans web KEduc backend ; le frontend backoffice Angular viendra à P5 bis)
 - [ ] **T5.4** Écrans admin : gestion du contenu public (thème, pied de page, actualités, FAQ) et des utilisateurs.
 - [ ] **T5.5** Manifest, icônes et couleurs PWA propres au cabinet ; test d'installation et de lancement hors ligne.
 - [ ] **T5.6** Test de bout en bout manuel : création du cabinet → email → connexion → modification du contenu → visible sur la page publique.

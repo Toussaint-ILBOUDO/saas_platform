@@ -82,6 +82,53 @@ class LandlordPipelineTest extends TenantTestCase
         ]);
     }
 
+    public function test_creation_injecte_la_fiche_cabinet_dans_le_site(): void
+    {
+        Mail::fake();
+        $this->connecte();
+
+        $this->post('http://admin.localhost/admin/cabinets', [
+            'id' => 'cabinet-magis',
+            'nom' => 'Magis Plus Center',
+            'sous_domaine' => 'magis-plus-center',
+            'email' => 'contact@magis.example',
+            'telephone' => '+22670000001',
+            'slogan' => 'L\'excellence pour tous',
+            'directeur' => 'M. K. Yao',
+            'telephone_2' => '+22670000002',
+            'orange_money' => '55000001',
+            'wave' => '55000002',
+            'cash' => '1',
+            'pays' => 'Burkina Faso',
+            'devise' => 'FCFA',
+            'localites' => "Ouagadougou\nBobo-Dioulasso",
+            'horaires' => 'Lun-Ven 8h-18h',
+        ])->assertRedirect(route('landlord.cabinets.show', 'cabinet-magis'));
+
+        $cabinet = Cabinet::findOrFail('cabinet-magis');
+        $this->createdCabinets[] = $cabinet;
+
+        // Fiche stockée sur le tenant (virtual column → tenants.data.fiche).
+        $this->assertSame('L\'excellence pour tous', $cabinet->fiche['identite']['slogan']);
+
+        // Fiche injectée dans parametres_publics de la base tenant (D-044).
+        $config = array_merge(config('database.connections.pgsql'), ['database' => 'keduc_test_cabinet-magis']);
+        config(['database.connections.tenant_fiche_check' => $config]);
+        $donnees = DB::connection('tenant_fiche_check')->table('parametres_publics')->value('data');
+        $fiche = json_decode((string) $donnees, true)['fiche'];
+        DB::purge('tenant_fiche_check');
+
+        $this->assertSame('L\'excellence pour tous', $fiche['identite']['slogan']);
+        $this->assertSame('M. K. Yao', $fiche['identite']['directeur']);
+        $this->assertSame('+22670000001', $fiche['contact']['telephone']);
+        $this->assertSame('Lun-Ven 8h-18h', $fiche['contact']['horaires']);
+        $this->assertSame('55000001', $fiche['paiements']['orange_money']);
+        $this->assertSame('55000002', $fiche['paiements']['wave']);
+        $this->assertTrue($fiche['paiements']['cash']);
+        $this->assertSame('FCFA', $fiche['zones']['devise']);
+        $this->assertSame(['Ouagadougou', 'Bobo-Dioulasso'], $fiche['zones']['localites']);
+    }
+
     public function test_un_echec_du_pipeline_rollback_tout(): void
     {
         putenv('TENANCY_SIMULATE_ECHEC=1');

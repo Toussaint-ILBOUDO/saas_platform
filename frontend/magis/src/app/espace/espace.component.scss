@@ -1,0 +1,518 @@
+/* ============================================================
+   Coquille espace cabinet — sidebar / rail / barre mobile / tiroir
+   ============================================================ */
+.espace {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--mpc-fond);
+  color: var(--mpc-texte);
+}
+
+/* ---------- Panneau (sidebar desktop / rail tablette) ---------- */
+.panneau {
+  flex: 0 0 264px;
+  display: flex;
+  flex-direction: column;
+  background: var(--mpc-surface);
+  border-right: 1px solid var(--mpc-separateur);
+  overflow-y: auto;
+  transition: flex-basis 0.18s ease;
+}
+
+.panneau-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1rem 1.1rem;
+  color: var(--mpc-texte);
+  text-decoration: none;
+  border-bottom: 1px solid var(--mpc-separateur);
+}
+
+.panneau-logo-med {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 0.9rem;
+  background: var(--mpc-primaire);
+  color: #fff;
+  font-family: var(--mpc-police-titre);
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.panneau-logo-detail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.panneau-logo-detail b {
+  font-family: var(--mpc-police-titre);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+.panneau-logo-detail small {
+  color: var(--mpc-texte-doux);
+  font-size: 0.72rem;
+}
+
+.panneau-nav {
+  flex: 1;
+  padding: 0.75rem 0.7rem;
+}
+
+.rubrique {
+  margin: 1.1rem 0.6rem 0.4rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mpc-texte-doux);
+}
+.rubrique:first-child {
+  margin-top: 0;
+}
+
+.lien {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.62rem 0.8rem;
+  margin: 2px 0;
+  border-radius: 0.75rem;
+  color: var(--mpc-texte);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.lien i {
+  font-size: 1.2rem;
+  color: var(--mpc-texte-doux);
+  transition: color 0.15s ease;
+}
+.lien:hover {
+  background: var(--mpc-abandon);
+  color: var(--mpc-primaire);
+}
+.lien:hover i {
+  color: var(--mpc-primaire);
+}
+.lien._actif {
+  background: var(--mpc-primaire-tint);
+  color: var(--mpc-primaire);
+}
+.lien._actif i {
+  color: var(--mpc-primaire);
+}
+
+.panneau-pied {
+  padding: 0.85rem 1rem 1.25rem;
+  border-top: 1px solid var(--mpc-separateur);
+}
+.pied-titre {
+  margin: 0 0 0.45rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mpc-texte-doux);
+}
+.pied-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.pied-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--mpc-texte-doux);
+  background: var(--mpc-abandon);
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+}
+.pied-list i {
+  font-size: 0.75rem;
+}
+
+/* State "rail" (icônes seules) — déclenché par le bouton sur desktop. */
+.espace._replie .panneau {
+  flex-basis: 84px;
+}
+.espace._replie .panneau-logo-detail,
+.espace._replie .lien-texte,
+.espace._replie .rubrique,
+.espace._replie .panneau-pied,
+.espace._replie .panneau-logo .panneau-logo-detail {
+  display: none;
+}
+.espace._replie .panneau-logo,
+.espace._replie .lien {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+.espace._replie .panneau-logo {
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.espace._replie .panneau-pied {
+  padding: 0.85rem 0;
+}
+
+/* ---------- Colonne principale ---------- */
+.corps {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  flex: 0 0 64px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1.1rem;
+  background: var(--mpc-surface);
+  border-bottom: 1px solid var(--mpc-separateur);
+}
+
+.topbar-burger {
+  display: none;
+}
+
+.topbar-titre {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ico {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--mpc-texte);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+.ico:hover {
+  background: var(--mpc-abandon);
+  color: var(--mpc-primaire);
+}
+.ico._actif {
+  color: var(--mpc-primaire);
+  background: var(--mpc-primaire-tint);
+}
+
+.pastille {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--mpc-primaire);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+/* ---------- Menu profil (avatar) ---------- */
+.profil {
+  position: relative;
+}
+.avatar {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: var(--mpc-bleu);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.avatar:hover {
+  background: var(--mpc-bleu-clair);
+}
+
+.profil-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 264px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--mpc-surface);
+  border: 1px solid var(--mpc-separateur);
+  border-radius: 1rem;
+  box-shadow: var(--mpc-ombre);
+  padding: 0.6rem;
+  z-index: 60;
+}
+.profil-identite {
+  display: flex;
+  flex-direction: column;
+  padding: 0.55rem 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--mpc-separateur);
+  margin-bottom: 0.45rem;
+}
+.profil-identite b {
+  font-family: var(--mpc-police-titre);
+  font-size: 0.95rem;
+}
+.profil-identite small {
+  color: var(--mpc-texte-doux);
+  font-size: 0.78rem;
+}
+.profil-role {
+  align-self: flex-start;
+  margin-top: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--mpc-primaire);
+  background: var(--mpc-primaire-tint);
+  border-radius: 999px;
+  padding: 0.18rem 0.65rem;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: none;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--mpc-texte);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.action i {
+  color: var(--mpc-texte-doux);
+  font-size: 1.05rem;
+}
+.action:hover {
+  background: var(--mpc-abandon);
+  color: var(--mpc-primaire);
+}
+.action._danger:hover {
+  color: var(--mpc-danger);
+  background: var(--mpc-danger-tint);
+}
+
+.roles {
+  display: grid;
+  gap: 2px;
+  padding: 0.35rem 0 0.2rem;
+}
+.rol {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--mpc-texte-doux);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rol._actif {
+  background: var(--mpc-primaire-tint);
+  color: var(--mpc-primaire);
+}
+.rol:hover {
+  background: var(--mpc-abandon);
+}
+
+/* ---------- Contenu ---------- */
+.contenu {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.6rem 1.8rem;
+}
+
+/* ---------- Barre d'onglets mobile ---------- */
+.barre-bas {
+  display: none;
+}
+
+/* ---------- Tiroir mobile ---------- */
+.voile {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 26, 0.55);
+  z-index: 70;
+}
+
+.tiroir {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(84vw, 340px);
+  display: flex;
+  flex-direction: column;
+  background: var(--mpc-surface);
+  border-left: 1px solid var(--mpc-separateur);
+  z-index: 80;
+  animation: tiroir-glisse 0.22s ease;
+}
+@keyframes tiroir-glisse {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.tiroir-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid var(--mpc-separateur);
+}
+.tiroir-entete b {
+  font-family: var(--mpc-police-titre);
+  font-size: 1rem;
+}
+
+.tiroir-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 0.7rem 1rem;
+}
+
+.tiroir-pied {
+  padding: 0.85rem 1.1rem 1.4rem;
+  border-top: 1px solid var(--mpc-separateur);
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+
+/* Tablette (768–1199) : le panneau devient un rail d'icônes. */
+@media (max-width: 1199px) {
+  .panneau {
+    flex-basis: 84px;
+  }
+  .panneau-logo {
+    flex-direction: column;
+    gap: 0.2rem;
+    padding-left: 0;
+  }
+  .panneau-logo-detail,
+  .lien-texte,
+  .rubrique,
+  .panneau-pied {
+    display: none;
+  }
+  .lien {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .topbar-burger {
+    display: none;
+  }
+}
+
+/* Mobile (<768) : panneau masqué, barre basse + tiroir. */
+@media (max-width: 767px) {
+  .panneau {
+    display: none;
+  }
+  .contenu {
+    padding: 1.1rem 1rem calc(84px + env(safe-area-inset-bottom));
+  }
+  .topbar {
+    flex-basis: 56px;
+    padding: 0 0.9rem;
+  }
+  .topbar-titre {
+    font-size: 1rem;
+  }
+  .topbar-burger {
+    display: none;
+  }
+
+  .barre-bas {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 65;
+    height: 68px;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--mpc-surface);
+    border-top: 1px solid var(--mpc-separateur);
+  }
+  .barre-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none;
+    background: transparent;
+    color: var(--mpc-texte-doux);
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .barre-item i {
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+  .barre-item._actif {
+    color: var(--mpc-primaire);
+  }
+  .barre-item._plus {
+    border-left: 1px solid var(--mpc-separateur);
+  }
+}

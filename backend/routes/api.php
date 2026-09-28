@@ -12,9 +12,13 @@ use App\Modules\Librairie\Http\Controllers\Api\PublicProduitApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\PublicDemandeCoursApiController;
 use App\Modules\Public\Http\Controllers\Api\AdminContenuPublicApiController;
 use App\Modules\Public\Http\Controllers\Api\CabinetPublicApiController;
+use App\Modules\Public\Http\Controllers\Api\PublicEnseignantApiController;
+use App\Modules\Public\Http\Controllers\Api\PublicReferencesApiController;
+use App\Modules\Public\Http\Controllers\Api\PublicStatsApiController;
 use App\Modules\Systeme\Http\Controllers\Api\AdminUtilisateurApiController;
 use App\Modules\Systeme\Http\Controllers\Api\NotificationApiController;
 use App\Modules\Systeme\Http\Controllers\Api\PushSubscriptionApiController;
+use App\Modules\Temoignages\Http\Controllers\Api\PublicTemoignageApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,6 +43,13 @@ Route::prefix('public')->group(function () {
     Route::get('documents/{slug}', [PublicDocumentApiController::class, 'show']);
 
     Route::get('produits', [PublicProduitApiController::class, 'index']);
+
+    // Statistiques, enseignants, témoignages — P2 (page publique frontend).
+    Route::get('stats', [PublicStatsApiController::class, 'index']);
+    Route::get('enseignants', [PublicEnseignantApiController::class, 'index']);
+    Route::get('temoignages', [PublicTemoignageApiController::class, 'index']);
+    Route::get('temoignages/{slug}', [PublicTemoignageApiController::class, 'show']);
+    Route::get('references', [PublicReferencesApiController::class, 'index']);
 
     Route::post('demandes-cours', [PublicDemandeCoursApiController::class, 'store'])
         ->middleware('throttle:10,1');
@@ -95,6 +106,7 @@ Route::middleware(['auth:web', 'role:admin_cabinet'])->prefix('admin')->name('ad
     Route::put('faq/sections/{faqSection}', [AdminFaqSectionApiController::class, 'update']);
     Route::delete('faq/sections/{faqSection}', [AdminFaqSectionApiController::class, 'destroy']);
 
+    Route::get('faq/sections/{faqSection}/questions', [AdminFaqQuestionApiController::class, 'index']);
     Route::post('faq/questions', [AdminFaqQuestionApiController::class, 'store']);
     Route::get('faq/questions/{faqQuestion}', [AdminFaqQuestionApiController::class, 'show']);
     Route::put('faq/questions/{faqQuestion}', [AdminFaqQuestionApiController::class, 'update']);

@@ -144,6 +144,133 @@ class ApiBackofficeTest extends TenantTestCase
             ->assertStatus(404);
     }
 
+    public function test_actualite_statut_et_publication_via_api(): void
+    {
+        $this->prepareAdmin('c1');
+
+        // Sans statut → brouillon par défaut (invisible publiquement).
+        $this->postJson('http://c1.localhost/api/admin/actualites', [
+            'titre' => 'Création sans statut',
+            'contenu' => 'Contenu.',
+        ])->assertStatus(201)->assertJsonPath('data.statut', 'brouillon');
+
+        tenancy()->initialize('c1');
+        $idBrouillon = \App\Models\Actualite::where('slug', 'creation-sans-statut')->firstOrFail()->id;
+        tenancy()->end();
+
+        // Création publiée → statut publish + published_at défini + active.
+        $this->postJson('http://c1.localhost/api/admin/actualites', [
+            'titre' => 'Rentrée publiable',
+            'contenu' => 'Informations de rentrée.',
+            'statut' => 'publie',
+        ])->assertStatus(201)
+            ->assertJsonPath('data.statut', 'publie')
+            ->assertJsonPath('data.is_active', true)
+            ->assertJsonPath('data.est_publiee', true)
+            ->assertJsonStructure(['data' => ['published_at']]);
+
+        tenancy()->initialize('c1');
+        $idPubliee = \App\Models\Actualite::where('slug', 'rentree-publiable')->firstOrFail()->id;
+        tenancy()->end();
+
+        // La publiée remonte publiquement, le brouillon reste caché.
+        $this->getJson('http://c1.localhost/api/public/actualites')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1);
+
+        // Repasser en brouillon → plus visible publiquement.
+        $this->putJson("http://c1.localhost/api/admin/actualites/{$idPubliee}", [
+            'titre' => 'Rentrée publiable',
+            'contenu' => 'Informations de rentrée.',
+            'statut' => 'brouillon',
+        ])->assertOk()->assertJsonPath('data.statut', 'brouillon');
+
+        $this->getJson('http://c1.localhost/api/public/actualites')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0);
+
+        $this->deleteJson("http://c1.localhost/api/admin/actualites/{$idBrouillon}")->assertOk();
+    }
+
+    public function test_logo_cabinet_upload_et_publication(): void
+    {
+        $this->prepareAdmin('c1');
+
+        // Aucun logo au départ.
+        $this->getJson('http://c1.localhost/api/public/cabinet')
+            ->assertOk()
+            ->assertJsonPath('logo_url', null);
+
+        // Upload via le backoffice (multipart POST — comme le navigateur ;
+        // PHP < 8.4 ignore les fichiers d'un multipart en PUT).
+        $this->call(
+            'POST',
+            'http://c1.localhost/api/admin/contenu-public/logo',
+            [],
+            [],
+            ['logo' => \Illuminate\Http\UploadedFile::fake()->image('logo.png', 200, 200)],
+            ['HTTP_ACCEPT' => 'application/json']
+        )->assertOk()->assertJsonPath('message', 'Logo mis à jour.');
+
+        // Flux public et URL exposée au frontend.
+        $repCab = $this->getJson('http://c1.localhost/api/public/cabinet')
+            ->assertOk()
+            ->assertJsonStructure(['logo_url']);
+        $urlLogo = $repCab->json('logo_url');
+        $this->assertIsString($urlLogo);
+        $this->assertStringStartsWith('/api/public/logo', $urlLogo);
+
+        $this->get('http://c1.localhost/api/public/logo')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/png');
+
+        // Une sauvegarde de fiche (data.fiche uniquement) ne doit pas écraser le logo.
+        $this->putJson('http://c1.localhost/api/admin/contenu-public', [
+            'data' => ['fiche' => ['identite' => ['slogan' => 'Votre avenir']]],
+        ])->assertOk();
+
+        $this->getJson('http://c1.localhost/api/public/cabinet')
+            ->assertOk()
+            ->assertJsonPath('logo_url', $urlLogo);
+    }
+
+    public function test_actualite_mise_a_jour_multipart_post(): void
+    {
+        $this->prepareAdmin('c1');
+
+        // Création (brouillon).
+        $this->postJson('http://c1.localhost/api/admin/actualites', [
+            'titre' => 'Sujet à mettre à jour',
+            'contenu' => 'Version initiale.',
+            'resume' => 'Résumé.',
+        ])->assertStatus(201);
+
+        tenancy()->initialize('c1');
+        $id = \App\Models\Actualite::where('slug', 'sujet-a-mettre-a-jour')->firstOrFail()->id;
+        tenancy()->end();
+
+        // Mise à jour multipart POST (comme le navigateur) : champs texte +
+        // fichier image + passage en « publie » en une seule requête.
+        $this->call(
+            'POST',
+            "http://c1.localhost/api/admin/actualites/{$id}",
+            ['titre' => 'Sujet à mettre à jour (màj)', 'contenu' => 'Version corrigée.', 'statut' => 'publie'],
+            [],
+            ['image_principale' => \Illuminate\Http\UploadedFile::fake()->image('couverture.png', 800, 400)],
+            ['HTTP_ACCEPT' => 'application/json']
+        )->assertOk()
+            ->assertJsonPath('data.titre', 'Sujet à mettre à jour (màj)')
+            ->assertJsonPath('data.statut', 'publie')
+            ->assertJsonPath('data.is_active', true)
+            ->assertJsonStructure(['data' => ['image_url']]);
+
+        // L'actualité publiée remonte sur la page publique.
+        $this->getJson('http://c1.localhost/api/public/actualites')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.titre', 'Sujet à mettre à jour (màj)');
+    }
+
     public function test_faq_sections_et_questions_crud(): void
     {
         $this->prepareAdmin('c1');

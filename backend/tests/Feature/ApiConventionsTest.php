@@ -94,11 +94,11 @@ class ApiConventionsTest extends TenantTestCase
         $this->assertSame('SAAS-Cabinet — API des cabinets', $response->json('info.title'));
         $this->assertStringEndsWith('/api', $response->json('servers.0.url'));
         $this->assertArrayHasKey('post', $paths['/auth/connexion'] ?? []);
-        // 38 = routes existantes (auth, notifications, rôles, contenu public,
-        // FAQ sections + questions, API publique : cabinet, actualités, faq,
-        // documents, produits, stats, enseignants, témoignages, références,
-        // demandes, commandes).
-        $this->assertCount(38, $paths);
+        // 40 = routes existantes (auth, notifications, rôles, contenu public
+        // + logo, FAQ sections + questions, API publique : cabinet, logo,
+        // actualités, faq, documents, produits, stats, enseignants,
+        // témoignages, références, demandes, commandes).
+        $this->assertCount(40, $paths);
         $this->assertTrue(
             collect(array_keys($paths))->contains(fn (string $cle) => str_contains($cle, '/public/references')),
             'La route /api/public/references doit figurer dans la doc OpenAPI.'

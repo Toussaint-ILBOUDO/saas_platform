@@ -47,6 +47,9 @@ class ActualiteService
         ?UploadedFile $document = null
     ): Actualite {
         return DB::transaction(function () use ($data, $userId, $image, $galerie, $document) {
+            $statut = $data['statut'] ?? ActualiteStatut::BROUILLON;
+            $publiee = $statut === ActualiteStatut::PUBLIE;
+
             $actualite = Actualite::create([
                 'user_id' => $userId,
                 'titre' => $data['titre'],
@@ -57,7 +60,9 @@ class ActualiteService
                 'contenu' => $data['contenu'],
                 'video_url' => $data['video_url'] ?? null,
                 'lien_externe' => $data['lien_externe'] ?? null,
-                'is_active' => $data['is_active'] ?? true,
+                'statut' => $statut,
+                'published_at' => $publiee ? now() : null,
+                'is_active' => $publiee ? true : ($data['is_active'] ?? true),
             ]);
 
             $this->attachMedias($actualite, $image, $galerie, $document);
@@ -76,6 +81,9 @@ class ActualiteService
         ?UploadedFile $document = null
     ): Actualite {
         return DB::transaction(function () use ($actualite, $data, $image, $galerie, $document) {
+            $statut = $data['statut'] ?? $actualite->statut;
+            $publiee = $statut === ActualiteStatut::PUBLIE;
+
             $actualite->update([
                 'titre' => $data['titre'],
                 'slug' => $this->uniqueSlug(
@@ -86,7 +94,11 @@ class ActualiteService
                 'contenu' => $data['contenu'],
                 'video_url' => $data['video_url'] ?? null,
                 'lien_externe' => $data['lien_externe'] ?? null,
-                'is_active' => $data['is_active'] ?? $actualite->is_active,
+                'statut' => $statut,
+                'published_at' => $publiee
+                    ? ($actualite->published_at ?? now())
+                    : $actualite->published_at,
+                'is_active' => $publiee ? true : ($data['is_active'] ?? $actualite->is_active),
             ]);
 
             $this->attachMedias($actualite, $image, $galerie, $document);

@@ -28,8 +28,20 @@ class CabinetPublicResource extends JsonResource
             'theme' => $this->themes,
             'pied_de_page' => $this->piedDePage,
             'donnees' => $this->donnees,
+            'logo_url' => $this->logoUrl(),
             'fonctionnalites_actives' => $this->fonctionnalitesActives(),
         ];
+    }
+
+    protected function logoUrl(): ?string
+    {
+        $logo = $this->donnees['logo'] ?? null;
+        if (! is_array($logo) || empty($logo['path'])) {
+            return null;
+        }
+        $v = $logo['updated_at'] ?? null;
+
+        return '/api/public/logo'.($v ? "?v={$v}" : '');
     }
 
     protected function fonctionnalitesActives(): array

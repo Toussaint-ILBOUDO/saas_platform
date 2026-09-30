@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Route;
 // ---------- Public (aucune connexion) — T3.3 ----------
 Route::prefix('public')->group(function () {
     Route::get('cabinet', [CabinetPublicApiController::class, 'index']);
+    Route::get('logo', [CabinetPublicApiController::class, 'logo']);
 
     Route::get('actualites', [PublicActualiteApiController::class, 'index']);
     Route::get('actualites/{slug}', [PublicActualiteApiController::class, 'show']);
@@ -91,12 +92,15 @@ Route::middleware(['auth:web', 'role:admin_cabinet'])->prefix('admin')->name('ad
     // Contenu public (thème, pied de page, données)
     Route::get('contenu-public', [AdminContenuPublicApiController::class, 'show']);
     Route::put('contenu-public', [AdminContenuPublicApiController::class, 'update']);
+    // POST en plus de PUT : PHP < 8.4 ne peuple pas $_POST/$_FILES pour un
+    // multipart en PUT — le navigateur envoie donc l'upload en POST.
+    Route::match(['put', 'post'], 'contenu-public/logo', [AdminContenuPublicApiController::class, 'mettreAJourLogo']);
 
     // Actualités
     Route::get('actualites', [AdminActualiteApiController::class, 'index']);
     Route::post('actualites', [AdminActualiteApiController::class, 'store']);
     Route::get('actualites/{actualite}', [AdminActualiteApiController::class, 'show']);
-    Route::put('actualites/{actualite}', [AdminActualiteApiController::class, 'update']);
+    Route::match(['put', 'post'], 'actualites/{actualite}', [AdminActualiteApiController::class, 'update']);
     Route::delete('actualites/{actualite}', [AdminActualiteApiController::class, 'destroy']);
 
     // FAQ

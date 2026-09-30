@@ -24,6 +24,7 @@ class StoreActualiteRequest extends FormRequest
             'galerie' => 'nullable|array',
             'galerie.*' => 'image|mimes:jpeg,png,webp,gif|max:10240',
             'document' => 'nullable|file|mimes:pdf,doc,docx,ppt,pptx|max:10240',
+            'statut' => 'nullable|string|in:brouillon,publie',
             'is_active' => 'nullable|boolean',
         ];
     }
@@ -49,6 +50,7 @@ class StoreActualiteRequest extends FormRequest
             'document.file' => 'Le document doit être un fichier.',
             'document.mimes' => 'Le document doit être au format PDF, DOC, DOCX, PPT ou PPTX.',
             'document.max' => 'Le document ne doit pas dépasser 10 Mo.',
+            'statut.in' => 'Le statut doit être « brouillon » ou « publie ».',
         ];
     }
 }

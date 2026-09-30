@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CONTENT } from '../../content';
@@ -147,15 +147,19 @@ import { ApiService } from '../services/api.service';
         <div class="col-12 col-lg-4">
           <div class="pied-bloc">
             <a class="d-flex align-items-center gap-2 text-decoration-none mb-3" routerLink="/" style="color: #fff">
-              <span class="logo-carre" style="width:2.4rem;height:2.4rem;border-radius:11px;background:var(--mpc-primaire);display:grid;place-items:center;font-weight:800;font-size:1.05rem">{{ initiales }}</span>
+              @if (logoUrl()) {
+                <img class="logo-img" [src]="logoUrl()" alt="Logo {{ nom }}" style="width:2.4rem;height:2.4rem;border-radius:11px;object-fit:cover;background:#fff" />
+              } @else {
+                <span class="logo-carre" style="width:2.4rem;height:2.4rem;border-radius:11px;background:var(--mpc-primaire);display:grid;place-items:center;font-weight:800;font-size:1.05rem">{{ initiales }}</span>
+              }
               <span class="fw-bold" style="font-size:1.1rem">{{ nom }}</span>
             </a>
             <p>{{ CONTENT.footer.aPropos }}</p>
             <div class="pied-reseaux">
-              <a *ngIf="facebook" [href]="facebook" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-              <a *ngIf="tiktok" [href]="tiktok" target="_blank" rel="noopener" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
-              <a *ngIf="whatsapp" [href]="whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
-              <a *ngIf="linkedin" [href]="linkedin" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+              <a *ngIf="facebook()" [href]="facebook()" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+              <a *ngIf="tiktok()" [href]="tiktok()" target="_blank" rel="noopener" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
+              <a *ngIf="whatsapp()" [href]="whatsapp()" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
+              <a *ngIf="linkedin()" [href]="linkedin()" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
             </div>
           </div>
         </div>
@@ -184,27 +188,27 @@ import { ApiService } from '../services/api.service';
         <!-- Contact -->
         <div class="col-12 col-lg-3">
           <h4 class="pied-titre">Contact</h4>
-          <div class="pied-contact" *ngIf="telephone">
+          <div class="pied-contact" *ngIf="telephone()">
             <i class="bi bi-telephone"></i>
-            <p><a [href]="'tel:+' + telephone.replace(/\\D/g, '')">{{ telephone }}</a></p>
+            <p><a [href]="'tel:+' + telephone().replace(/\\D/g, '')">{{ telephone() }}</a></p>
           </div>
-          <div class="pied-contact" *ngIf="email">
+          <div class="pied-contact" *ngIf="email()">
             <i class="bi bi-envelope"></i>
-            <p><a [href]="'mailto:' + email">{{ email }}</a></p>
+            <p><a [href]="'mailto:' + email()">{{ email() }}</a></p>
           </div>
-          <div class="pied-contact" *ngIf="adresse">
+          <div class="pied-contact" *ngIf="adresse()">
             <i class="bi bi-geo-alt"></i>
-            <p>{{ adresse }}</p>
+            <p>{{ adresse() }}</p>
           </div>
-          <div class="pied-contact" *ngIf="horaires">
+          <div class="pied-contact" *ngIf="horaires()">
             <i class="bi bi-clock"></i>
-            <p>{{ horaires }}</p>
+            <p>{{ horaires() }}</p>
           </div>
           <div class="pied-paiement mt-3" *ngIf="afficherPaiements">
-            <span class="badge-paiement" *ngIf="paiements.orange_money"><i class="bi bi-phone"></i>Orange Money</span>
-            <span class="badge-paiement" *ngIf="paiements.moov_money"><i class="bi bi-phone"></i>Moov Money</span>
-            <span class="badge-paiement" *ngIf="paiements.wave"><i class="bi bi-phone"></i>Wave</span>
-            <span class="badge-paiement" *ngIf="paiements.cash"><i class="bi bi-cash-coin"></i>Espèces</span>
+            <span class="badge-paiement" *ngIf="paiements().orange_money"><i class="bi bi-phone"></i>Orange Money</span>
+            <span class="badge-paiement" *ngIf="paiements().moov_money"><i class="bi bi-phone"></i>Moov Money</span>
+            <span class="badge-paiement" *ngIf="paiements().wave"><i class="bi bi-phone"></i>Wave</span>
+            <span class="badge-paiement" *ngIf="paiements().cash"><i class="bi bi-cash-coin"></i>Espèces</span>
           </div>
         </div>
       </div>
@@ -227,22 +231,23 @@ export class FooterComponent implements OnInit {
   protected readonly CONTENT = CONTENT;
   protected nom = CONTENT.cabinet.nom;
   protected initiales = CONTENT.cabinet.sigle;
+  protected readonly logoUrl = signal<string | null>(null);
   protected anne = new Date().getFullYear();
 
-  protected telephone = '';
-  protected email = '';
-  protected adresse = '';
-  protected horaires = '';
-  protected facebook?: string;
-  protected tiktok?: string;
-  protected whatsapp?: string;
-  protected linkedin?: string;
-  protected paiements: {
+  protected readonly telephone = signal('');
+  protected readonly email = signal('');
+  protected readonly adresse = signal('');
+  protected readonly horaires = signal('');
+  protected readonly facebook = signal<string | undefined>(undefined);
+  protected readonly tiktok = signal<string | undefined>(undefined);
+  protected readonly whatsapp = signal<string | undefined>(undefined);
+  protected readonly linkedin = signal<string | undefined>(undefined);
+  protected readonly paiements = signal<{
     orange_money?: string | null;
     moov_money?: string | null;
     wave?: string | null;
     cash?: boolean;
-  } = {};
+  }>({});
 
   protected liens: { libelle: string; route: string; fragment?: string }[] = CONTENT.nav.liens.map(
     (lien) => ({
@@ -253,26 +258,27 @@ export class FooterComponent implements OnInit {
   );
 
   protected get afficherPaiements(): boolean {
-    return Object.values(this.paiements).some(Boolean);
+    return Object.values(this.paiements()).some(Boolean);
   }
 
   ngOnInit(): void {
     this.api.getCabinetPublic().subscribe((cabinet) => {
       const fiche: FicheCabinet | null = cabinet.donnees?.fiche ?? null;
-      this.telephone = fiche?.contact?.telephone ?? '';
-      this.email = fiche?.contact?.email ?? '';
-      this.adresse = fiche?.contact?.adresse ?? '';
-      this.horaires = fiche?.contact?.horaires ?? '';
-      this.facebook = fiche?.reseaux?.facebook || undefined;
-      this.tiktok = fiche?.reseaux?.tiktok || undefined;
-      this.whatsapp = fiche?.reseaux?.whatsapp_business || undefined;
-      this.linkedin = fiche?.reseaux?.linkedin || undefined;
-      this.paiements = {
+      this.telephone.set(fiche?.contact?.telephone ?? '');
+      this.email.set(fiche?.contact?.email ?? '');
+      this.adresse.set(fiche?.contact?.adresse ?? '');
+      this.horaires.set(fiche?.contact?.horaires ?? '');
+      this.facebook.set(fiche?.reseaux?.facebook || undefined);
+      this.tiktok.set(fiche?.reseaux?.tiktok || undefined);
+      this.whatsapp.set(fiche?.reseaux?.whatsapp_business || undefined);
+      this.linkedin.set(fiche?.reseaux?.linkedin || undefined);
+      this.paiements.set({
         orange_money: fiche?.paiements?.orange_money,
         moov_money: fiche?.paiements?.moov_money,
         wave: fiche?.paiements?.wave,
         cash: fiche?.paiements?.cash,
-      };
+      });
+      this.logoUrl.set(cabinet.logo_url ?? null);
     });
   }
 }

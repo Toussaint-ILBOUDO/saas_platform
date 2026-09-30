@@ -1,7 +1,11 @@
 <div class="espace" [class._replie]="replie()">
   <aside class="panneau" aria-label="Navigation cabinet">
     <a class="panneau-logo" routerLink="/espace">
-      <span class="panneau-logo-med" aria-hidden="true">{{ sigle }}</span>
+      @if (logoUrl()) {
+        <img class="panneau-logo-med" [src]="logoUrl()" [alt]="'Logo ' + nom" />
+      } @else {
+        <span class="panneau-logo-med" aria-hidden="true">{{ sigle }}</span>
+      }
       <span class="panneau-logo-detail">
         <b>{{ nom }}</b>
         <small>Espace cabinet</small>

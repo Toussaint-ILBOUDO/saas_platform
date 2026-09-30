@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { CONTENT } from '../../content';
@@ -164,7 +164,7 @@ import {
     <section class="py-5">
       <div class="container">
         <div class="formulaire" appReveal>
-          <div class="alerte-success" *ngIf="envoye">
+          <div class="alerte-success" *ngIf="envoye()">
             <i class="bi bi-check-circle-fill"></i>
             <div>
               <strong>Votre demande a bien été reçue.</strong>
@@ -172,7 +172,7 @@ import {
             </div>
           </div>
 
-          <form #formul="ngForm" (ngSubmit)="soumettre(formul)" *ngIf="!envoye">
+          <form #formul="ngForm" (ngSubmit)="soumettre(formul)" *ngIf="!envoye()">
 
             <div class="etape-titre"><span class="etape-num">1</span>{{ CONTENT.demandeCours.etapesForm[0] }}</div>
             <div class="row g-0" style="column-gap: 1rem">
@@ -200,14 +200,14 @@ import {
                 <label for="type">Type de cours <span class="obligatoire">*</span></label>
                 <select class="champ" id="type" name="type_cours_id" required [(ngModel)]="typeCoursId">
                   <option value="" disabled selected>Choisir…</option>
-                  <option *ngFor="let type of types" [value]="type.id">{{ type.libelle }}</option>
+                  <option *ngFor="let type of types()" [value]="type.id">{{ type.libelle }}</option>
                 </select>
               </div>
               <div class="col-12 col-sm-6">
                 <label for="classe">Classe <span class="obligatoire">*</span></label>
                 <select class="champ" id="classe" name="classe_id" required [(ngModel)]="classeId">
                   <option value="" disabled selected>Choisir…</option>
-                  <option *ngFor="let classe of classes" [value]="classe.id">{{ classe.nom }}</option>
+                  <option *ngFor="let classe of classes()" [value]="classe.id">{{ classe.nom }}</option>
                 </select>
               </div>
             </div>
@@ -218,7 +218,7 @@ import {
 
             <label>Matières souhaitées <span class="obligatoire">*</span></label>
             <div class="case-matiere">
-              <ng-container *ngFor="let matiere of matieres">
+              <ng-container *ngFor="let matiere of matieres()">
                 <input type="checkbox" [id]="'mat-' + matiere.id" [value]="matiere.id"
                        (change)="basculerMatiere(matiere.id, $event)"/>
                 <label [attr.for]="'mat-' + matiere.id"><i class="bi bi-bookmark-check"></i>{{ matiere.nom }}</label>
@@ -232,8 +232,8 @@ import {
                       placeholder="Précisions utiles : situation de l'élève, disponibilités, objectifs…"
                       [(ngModel)]="demande.message"></textarea>
 
-            <button type="submit" class="envoyer" [disabled]="envoiEnCours">
-              <i class="bi bi-send-fill"></i>{{ envoiEnCours ? 'Envoi en cours…' : CONTENT.demandeCours.envoi }}
+            <button type="submit" class="envoyer" [disabled]="envoiEnCours()">
+              <i class="bi bi-send-fill"></i>{{ envoiEnCours() ? 'Envoi en cours…' : CONTENT.demandeCours.envoi }}
             </button>
           </form>
         </div>
@@ -247,9 +247,9 @@ export class DemandeCoursComponent implements OnInit {
 
   protected readonly CONTENT = CONTENT;
 
-  protected types: ReferenceTypeCours[] = [];
-  protected classes: ReferenceClasse[] = [];
-  protected matieres: ReferenceMatiere[] = [];
+  protected readonly types = signal<ReferenceTypeCours[]>([]);
+  protected readonly classes = signal<ReferenceClasse[]>([]);
+  protected readonly matieres = signal<ReferenceMatiere[]>([]);
 
   protected typeCoursId = 0;
   protected classeId = 0;
@@ -263,16 +263,16 @@ export class DemandeCoursComponent implements OnInit {
     message?: string;
   } = { nom_parent: '', prenom_parent: '', telephone: '', volume_horaire_estime: null, message: '' };
 
-  protected envoye = false;
-  protected envoiEnCours = false;
+  protected readonly envoye = signal(false);
+  protected readonly envoiEnCours = signal(false);
   protected tente = false;
 
   ngOnInit(): void {
     this.seo.definir('Demande de cours | Magis Plus Center', CONTENT.demandeCours.sousTitre);
     this.api.getReferences().subscribe((references) => {
-      this.types = references.type_cours;
-      this.classes = references.classes;
-      this.matieres = references.matieres;
+      this.types.set(references.type_cours);
+      this.classes.set(references.classes);
+      this.matieres.set(references.matieres);
     });
   }
 
@@ -295,7 +295,7 @@ export class DemandeCoursComponent implements OnInit {
     ) {
       return;
     }
-    this.envoiEnCours = true;
+    this.envoiEnCours.set(true);
     this.api
       .envoyerDemandeCours({
         nom_parent: this.demande.nom_parent,
@@ -309,11 +309,11 @@ export class DemandeCoursComponent implements OnInit {
       })
       .subscribe({
         next: () => {
-          this.envoye = true;
-          this.envoiEnCours = false;
+          this.envoye.set(true);
+          this.envoiEnCours.set(false);
         },
         error: () => {
-          this.envoiEnCours = false;
+          this.envoiEnCours.set(false);
           this.tente = true;
         },
       });

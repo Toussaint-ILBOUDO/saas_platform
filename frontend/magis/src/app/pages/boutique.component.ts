@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CONTENT } from '../../content';
@@ -149,13 +149,13 @@ import { Produit } from '../models';
                  [(ngModel)]="recherche" (ngModelChange)="surRecherche()" aria-label="Rechercher un produit" />
         </div>
 
-        <p class="text-center" style="color: var(--mpc-texte-doux)" *ngIf="produits.length === 0 && charge">
+        <p class="text-center" style="color: var(--mpc-texte-doux)" *ngIf="produits().length === 0 && charge()">
           <i class="bi bi-bag" style="color:var(--mpc-texte-doux); font-size:2.2rem; display:block; margin-bottom:.5rem"></i>
           {{ CONTENT.boutique.vide }}
         </p>
 
-        <div class="row g-4" *ngIf="produits.length > 0">
-          <div class="col-12 col-sm-6 col-lg-4" *ngFor="let produit of produits" appReveal>
+        <div class="row g-4" *ngIf="produits().length > 0">
+          <div class="col-12 col-sm-6 col-lg-4" *ngFor="let produit of produits()" appReveal>
             <article class="produit-carte">
               <div class="produit-illustration">
                 <ng-container *ngIf="produit.image_url; else sansImage">
@@ -191,10 +191,10 @@ export class BoutiqueComponent implements OnInit {
 
   protected readonly CONTENT = CONTENT;
 
-  protected produits: Produit[] = [];
+  protected readonly produits = signal<Produit[]>([]);
   protected recherche = '';
-  protected charge = false;
-  protected page = 1;
+  protected readonly charge = signal(false);
+  protected readonly page = signal(1);
   protected panier: Produit[] = [];
   private timer?: ReturnType<typeof setTimeout>;
   private whatsapp = '';
@@ -209,9 +209,9 @@ export class BoutiqueComponent implements OnInit {
         ? 'https://wa.me/' + (chiffres.startsWith('226') ? chiffres : '226' + chiffres)
         : '';
     });
-    this.api.getProduits(this.page, 12).subscribe(({ data }) => {
-      this.produits = data;
-      this.charge = true;
+    this.api.getProduits(this.page(), 12).subscribe(({ data }) => {
+      this.produits.set(data);
+      this.charge.set(true);
     });
   }
 
@@ -219,7 +219,7 @@ export class BoutiqueComponent implements OnInit {
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       this.api.getProduits(1, 12, this.recherche).subscribe(({ data }) => {
-        this.produits = data;
+        this.produits.set(data);
       });
     }, 350);
   }

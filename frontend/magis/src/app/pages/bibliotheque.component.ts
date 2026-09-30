@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CONTENT } from '../../content';
@@ -133,13 +133,13 @@ import { DocumentBibliotheque } from '../models';
                  [(ngModel)]="recherche" (ngModelChange)="surRecherche()" aria-label="Rechercher un document" />
         </div>
 
-        <p class="text-center" style="color: var(--mpc-texte-doux)" *ngIf="documents.length === 0 && charge">
+        <p class="text-center" style="color: var(--mpc-texte-doux)" *ngIf="documents().length === 0 && charge()">
           <i class="bi bi-inbox" style="color:var(--mpc-texte-doux); font-size:2.2rem; display:block; margin-bottom:.5rem"></i>
           {{ CONTENT.bibliotheque.vide }}
         </p>
 
-        <div class="row g-4" *ngIf="documents.length > 0">
-          <div class="col-12 col-sm-6 col-lg-4" *ngFor="let document of documents" appReveal>
+        <div class="row g-4" *ngIf="documents().length > 0">
+          <div class="col-12 col-sm-6 col-lg-4" *ngFor="let document of documents()" appReveal>
             <article class="doc-carte">
               <div class="doc-emblem"><i class="bi bi-file-earmark-text"></i></div>
               <h2>{{ document.titre }}</h2>
@@ -171,11 +171,11 @@ export class BibliothequeComponent implements OnInit {
 
   protected readonly CONTENT = CONTENT;
 
-  protected documents: DocumentBibliotheque[] = [];
-  protected recherches: DocumentBibliotheque[] = [];
+  protected readonly documents = signal<DocumentBibliotheque[]>([]);
+  protected readonly recherches = signal<DocumentBibliotheque[]>([]);
   protected recherche = '';
-  protected charge = false;
-  protected page = 1;
+  protected readonly charge = signal(false);
+  protected readonly page = signal(1);
   private timer?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {
@@ -184,16 +184,16 @@ export class BibliothequeComponent implements OnInit {
   }
 
   protected charger(): void {
-    this.api.getDocuments(this.page, 12, this.recherche).subscribe(({ data }) => {
-      this.documents = this.page === 1 ? data : [...this.documents, ...data];
-      this.charge = true;
+    this.api.getDocuments(this.page(), 12, this.recherche).subscribe(({ data }) => {
+      this.documents.set(this.page() === 1 ? data : [...this.documents(), ...data]);
+      this.charge.set(true);
     });
   }
 
   protected surRecherche(): void {
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => {
-      this.page = 1;
+      this.page.set(1);
       this.charger();
     }, 350);
   }

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CONTENT } from '../../content';
@@ -55,7 +55,7 @@ import { FicheCabinet } from '../models';
         <div class="row g-4 justify-content-center">
           <!-- Coordonnées dynamiques (fiche cabinet) -->
           <div class="col-12 col-lg-6" appReveal>
-            <app-contact-info [fiche]="fiche"></app-contact-info>
+            <app-contact-info [fiche]="fiche()"></app-contact-info>
           </div>
 
           <!-- Actions rapides -->
@@ -76,21 +76,21 @@ import { FicheCabinet } from '../models';
                   </a>
                 </div>
                 <div class="col-12 col-sm-6">
-                  <a class="carte-cta text-decoration-none" [href]="lienWhatsapp || '#'" target="_blank" rel="noopener">
+                  <a class="carte-cta text-decoration-none" [href]="lienWhatsapp() || '#'" target="_blank" rel="noopener">
                     <span class="ic"><i class="bi bi-whatsapp"></i></span>
                     <span><strong style="color: var(--mpc-bleu)">WhatsApp</strong><br />
                       <span style="color: var(--mpc-texte-doux); font-size:.86rem">{{ CONTENT.contact.whatsapp }}</span></span>
                   </a>
                 </div>
                 <div class="col-12 col-sm-6">
-                  <a class="carte-cta text-decoration-none" [href]="lienTelephone || '#'">
+                  <a class="carte-cta text-decoration-none" [href]="lienTelephone() || '#'">
                     <span class="ic"><i class="bi bi-telephone-fill"></i></span>
                     <span><strong style="color: var(--mpc-bleu)">Appeler</strong><br />
                       <span style="color: var(--mpc-texte-doux); font-size:.86rem">{{ CONTENT.contact.appeler }}</span></span>
                   </a>
                 </div>
                 <div class="col-12 col-sm-6">
-                  <a class="carte-cta text-decoration-none" [href]="lienEmail || '#'">
+                  <a class="carte-cta text-decoration-none" [href]="lienEmail() || '#'">
                     <span class="ic"><i class="bi bi-envelope-fill"></i></span>
                     <span><strong style="color: var(--mpc-bleu)">Email</strong><br />
                       <span style="color: var(--mpc-texte-doux); font-size:.86rem">{{ CONTENT.contact.envoyerEmail }}</span></span>
@@ -110,24 +110,25 @@ export class ContactComponent implements OnInit {
 
   protected readonly CONTENT = CONTENT;
 
-  protected fiche: FicheCabinet | null = null;
-  protected lienWhatsapp = '';
-  protected lienTelephone = '';
-  protected lienEmail = '';
+  protected readonly fiche = signal<FicheCabinet | null>(null);
+  protected readonly lienWhatsapp = signal('');
+  protected readonly lienTelephone = signal('');
+  protected readonly lienEmail = signal('');
 
   ngOnInit(): void {
     this.seo.definir('Contact | Magis Plus Center', CONTENT.contact.sousTitre);
     this.api.getCabinetPublic().subscribe((cabinet) => {
-      this.fiche = cabinet.donnees?.fiche ?? null;
-      const contact = this.fiche?.contact ?? {};
+      this.fiche.set(cabinet.donnees?.fiche ?? null);
+      const contact = this.fiche()?.contact ?? {};
       if (contact.telephone) {
-        this.lienTelephone = 'tel:+' + contact.telephone.replace(/\D/g, '');
+        this.lienTelephone.set('tel:+' + contact.telephone.replace(/\D/g, ''));
         const chiffres = (contact.whatsapp || contact.telephone).replace(/\D/g, '');
-        this.lienWhatsapp =
-          'https://wa.me/' + (chiffres.startsWith('226') ? chiffres : '226' + chiffres);
+        this.lienWhatsapp.set(
+          'https://wa.me/' + (chiffres.startsWith('226') ? chiffres : '226' + chiffres)
+        );
       }
       if (contact.email) {
-        this.lienEmail = 'mailto:' + contact.email;
+        this.lienEmail.set('mailto:' + contact.email);
       }
     });
   }

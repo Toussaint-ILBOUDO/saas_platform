@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CONTENT } from '../../content';
@@ -92,12 +92,12 @@ import { Actualite } from '../models';
 
     <section class="py-5">
       <div class="container">
-        <p class="text-center" style="color: var(--mpc-texte-doux)" *ngIf="articles.length === 0 && charge">
+        <p class="text-center" style="color: var(--mpc-texte-doux)" *ngIf="articles().length === 0 && charge()">
           Aucune actualité publiée pour le moment.
         </p>
 
-        <div class="row g-4" *ngIf="articles.length > 0">
-          <div class="col-12 col-sm-6 col-lg-4" *ngFor="let article of articles" appReveal>
+        <div class="row g-4" *ngIf="articles().length > 0">
+          <div class="col-12 col-sm-6 col-lg-4" *ngFor="let article of articles()" appReveal>
             <article class="article-carte">
               <div class="article-illustration">
                 <ng-container *ngIf="article.image_url; else sansImage">
@@ -122,9 +122,9 @@ import { Actualite } from '../models';
 
         <div class="charger" *ngIf="aPlus">
           <button type="button" class="btn" style="background: var(--mpc-bleu); color:#fff; border-radius:999px; padding:.8rem 2rem; font-weight:700"
-                  (click)="chargerPlus()" [disabled]="chargement">
-            <i class="bi bi-arrow-clockwise" *ngIf="chargement"></i>
-            {{ chargement ? 'Chargement…' : 'Afficher plus' }}
+                  (click)="chargerPlus()" [disabled]="chargement()">
+            <i class="bi bi-arrow-clockwise" *ngIf="chargement()"></i>
+            {{ chargement() ? 'Chargement…' : 'Afficher plus' }}
           </button>
         </div>
       </div>
@@ -137,14 +137,14 @@ export class ActualitesComponent implements OnInit {
 
   protected readonly CONTENT = CONTENT;
 
-  protected articles: Actualite[] = [];
-  protected charge = false;
-  protected chargement = false;
-  protected page = 1;
-  protected dernierePage = 1;
+  protected readonly articles = signal<Actualite[]>([]);
+  protected readonly charge = signal(false);
+  protected readonly chargement = signal(false);
+  protected readonly page = signal(1);
+  protected readonly dernierePage = signal(1);
 
   protected get aPlus(): boolean {
-    return !this.chargement && this.page < this.dernierePage;
+    return !this.chargement() && this.page() < this.dernierePage();
   }
 
   ngOnInit(): void {
@@ -153,13 +153,13 @@ export class ActualitesComponent implements OnInit {
   }
 
   protected chargerPlus(): void {
-    this.chargement = true;
-    this.api.getActualites(this.page, 9).subscribe(({ data, meta }) => {
-      this.articles = [...this.articles, ...data];
-      this.page = meta.current_page + 1;
-      this.dernierePage = meta.last_page;
-      this.charge = true;
-      this.chargement = false;
+    this.chargement.set(true);
+    this.api.getActualites(this.page(), 9).subscribe(({ data, meta }) => {
+      this.articles.set([...this.articles(), ...data]);
+      this.page.set(meta.current_page + 1);
+      this.dernierePage.set(meta.last_page);
+      this.charge.set(true);
+      this.chargement.set(false);
     });
   }
 

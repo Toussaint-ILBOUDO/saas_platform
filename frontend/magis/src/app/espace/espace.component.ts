@@ -33,6 +33,7 @@ export class EspaceComponent implements OnInit {
   protected readonly roleLibelle = libelleRole;
   protected readonly sigle = CONTENT.cabinet.sigle;
   protected readonly nom = CONTENT.cabinet.nom;
+  protected readonly logoUrl = signal<string | null>(null);
 
   protected readonly replie = signal(false);
   protected readonly tiroirOuvert = signal(false);
@@ -66,6 +67,9 @@ export class EspaceComponent implements OnInit {
     });
     this.api.getNotifications(1, 1).subscribe({
       next: (r) => this.nonLues.set(r.meta.non_lues ?? 0),
+    });
+    this.api.getCabinetPublic().subscribe((cabinet) => {
+      this.logoUrl.set(cabinet.logo_url ?? null);
     });
   }
 

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map, shareReplay, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, filter, map } from 'rxjs';
 import {
   ApiReponse,
   CabinetPublic,
@@ -31,12 +31,25 @@ export class ApiService {
   private readonly http = inject(HttpClient);
 
   /** Cache court terme des informations publiques du cabinet (D-044). */
-  private readonly cabinetCache$ = this.http
-    .get<CabinetPublic>(`${API_BASE}/public/cabinet`)
-    .pipe(shareReplay(1));
+  private readonly cabinetCache = new BehaviorSubject<CabinetPublic | null>(null);
+  private cabinetCherche = false;
 
   getCabinetPublic(): Observable<CabinetPublic> {
-    return this.cabinetCache$;
+    if (!this.cabinetCherche) {
+      this.cabinetCherche = true;
+      this.rafraichirCabinetPublic();
+    }
+    return this.cabinetCache.pipe(filter((d): d is CabinetPublic => d !== null));
+  }
+
+  /** Recharge les informations publiques (fiche, logo…) après une sauvegarde. */
+  rafraichirCabinetPublic(): void {
+    this.http.get<CabinetPublic>(`${API_BASE}/public/cabinet`).subscribe({
+      next: (donnees) => this.cabinetCache.next(donnees),
+      error: () => {
+        /* conserve le cache existant si le rechargement échoue */
+      },
+    });
   }
 
   getStats(): Observable<StatsCabinet> {
@@ -163,6 +176,13 @@ export class ApiService {
     );
   }
 
+  mettreAJourLogo(form: FormData): Observable<{ message: string; data: ContenuPublicBackoffice }> {
+    return this.http.post<{ message: string; data: ContenuPublicBackoffice }>(
+      `${API_BASE}/admin/contenu-public/logo`,
+      form
+    );
+  }
+
   /* ============================================================
      Backoffice — actualités
      ============================================================ */
@@ -189,7 +209,7 @@ export class ApiService {
   }
 
   majActualite(id: number, form: FormData): Observable<ApiReponse> {
-    return this.http.put<ApiReponse>(`${API_BASE}/admin/actualites/${id}`, form);
+    return this.http.post<ApiReponse>(`${API_BASE}/admin/actualites/${id}`, form);
   }
 
   supprimerActualite(id: number): Observable<ApiReponse> {

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CONTENT } from '../../content';
@@ -15,7 +15,7 @@ import { FaqSection } from '../models';
     <app-page-hero [titre]="CONTENT.faq.titre" [sousTitre]="CONTENT.faq.sousTitre"></app-page-hero>
     <section class="py-5">
       <div class="container">
-        <app-faq-block [sections]="sections" idFacteur="page-faq"></app-faq-block>
+        <app-faq-block [sections]="sections()" idFacteur="page-faq"></app-faq-block>
         <div class="text-center mt-4">
           <a class="btn" routerLink="/contact" style="display:inline-flex; gap:.5rem; align-items:center; background: var(--mpc-primaire-tint); color: var(--mpc-primaire); border-radius:999px; padding:.75rem 1.6rem; font-weight:700; text-decoration:none">
             <i class="bi bi-chat-dots"></i>Une autre question ? Contactez-nous
@@ -30,12 +30,12 @@ export class FaqComponent implements OnInit {
   private readonly seo = inject(SeoService);
 
   protected readonly CONTENT = CONTENT;
-  protected sections: FaqSection[] = [];
+  protected readonly sections = signal<FaqSection[]>([]);
 
   ngOnInit(): void {
     this.seo.definir('Questions fréquentes | Magis Plus Center', CONTENT.faq.sousTitre);
     this.api.getFaq().subscribe((sections) => {
-      this.sections = sections;
+      this.sections.set(sections);
     });
   }
 }

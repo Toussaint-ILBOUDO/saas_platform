@@ -52,6 +52,7 @@ export interface CabinetPublic {
     fiche?: FicheCabinet;
     [cle: string]: unknown;
   };
+  logo_url?: string | null;
   fonctionnalites_actives: string[];
 }
 

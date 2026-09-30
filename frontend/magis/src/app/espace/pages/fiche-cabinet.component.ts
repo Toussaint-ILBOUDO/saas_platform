@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { ApiService } from '../../services/api.service';
+import { ApiService, API_BASE } from '../../services/api.service';
 import { ContenuPublicBackoffice } from '../../models';
 import { messageErreurApi, messageSuccesApi } from '../../services/messages';
 
@@ -189,6 +189,56 @@ const VIDE = (): FicheEditable => ({
         color: var(--mpc-texte-doux);
         margin-top: 0.35rem;
       }
+      .logo-ligne {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .logo-apercu {
+        width: 92px;
+        height: 92px;
+        border-radius: 1rem;
+        border: 1px solid var(--mpc-separateur);
+        background: var(--mpc-fond);
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        flex: 0 0 92px;
+      }
+      .logo-apercu img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .logo-placeholder {
+        color: var(--mpc-texte-doux);
+        font-size: 2rem;
+      }
+      .logo-controles {
+        min-width: 0;
+        flex: 1;
+      }
+      .btn-fichier {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.6rem 1rem;
+        border-radius: 0.8rem;
+        border: 1px solid var(--mpc-separateur);
+        background: var(--mpc-fond);
+        color: var(--mpc-bleu);
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: border-color 0.15s ease;
+      }
+      .btn-fichier:hover {
+        border-color: var(--mpc-primaire);
+      }
+      .logo-publier {
+        margin-top: 0.6rem;
+      }
       .toast {
         display: flex;
         align-items: flex-start;
@@ -256,6 +306,41 @@ const VIDE = (): FicheEditable => ({
       </div>
 
       <div class="sections">
+        <section class="carte">
+          <h2 class="carte-titre"><i class="bi bi-image"></i> Logo du cabinet</h2>
+          <div class="logo-ligne">
+            <div class="logo-apercu">
+              @if (apercuLogo()) {
+                <img [src]="apercuLogo()" alt="Aperçu du nouveau logo" />
+              } @else if (logoUrl()) {
+                <img [src]="logoUrl()" alt="Logo actuel du cabinet" />
+              } @else {
+                <span class="logo-placeholder"><i class="bi bi-image"></i></span>
+              }
+            </div>
+            <div class="logo-controles">
+              <p class="hint">
+                JPEG, PNG, WEBP ou GIF — 2 Mo maximum. Affiché sur le site public (en-tête, pied de page) et à la connexion.
+              </p>
+              <label class="btn-fichier">
+                <i class="bi bi-upload"></i> Choisir une image
+                <input type="file" accept="image/*" (change)="surFichierLogo($event)" hidden />
+              </label>
+              @if (logoACharger()) {
+                <div class="logo-publier">
+                  <button type="button" class="btn-save" (click)="enregistrerLogo()" [disabled]="sauvegardeLogo()">
+                    @if (sauvegardeLogo()) {
+                      <i class="bi bi-arrow-repeat spin"></i> Publication…
+                    } @else {
+                      <i class="bi bi-cloud-arrow-up"></i> Publier le logo
+                    }
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
         <section class="carte">
           <h2 class="carte-titre"><i class="bi bi-building"></i> Identité</h2>
           <div class="grille">
@@ -375,6 +460,12 @@ export class FicheCabinetComponent implements OnInit {
   protected readonly toast = signal('');
   protected readonly succes = signal(true);
 
+  protected readonly logoUrl = signal<string | null>(null);
+  protected readonly apercuLogo = signal<string | null>(null);
+  protected readonly logoACharger = signal(false);
+  protected readonly sauvegardeLogo = signal(false);
+  private fichierLogo: File | null = null;
+
   protected fiche: FicheEditable = VIDE();
   private theme: Record<string, unknown> = {};
   private footer: Record<string, unknown> = {};
@@ -385,6 +476,7 @@ export class FicheCabinetComponent implements OnInit {
         this.theme = contenu.theme ?? {};
         this.footer = contenu.footer ?? {};
         this.remplir(contenu.data?.fiche);
+        this.majLogo(contenu);
         this.charge.set(false);
       },
       error: (e) => {
@@ -418,12 +510,69 @@ export class FicheCabinetComponent implements OnInit {
       this.toast.set(messageSuccesApi(reponse, 'Fiche enregistrée et publiée.'));
       this.succes.set(true);
       if (reponse.data) this.remplir(reponse.data.data?.fiche);
+      this.majLogo(reponse.data);
+      this.api.rafraichirCabinetPublic();
     } catch (e) {
       this.toast.set(messageErreurApi(e));
       this.succes.set(false);
     } finally {
       this.sauvegarde.set(false);
     }
+  }
+
+  protected surFichierLogo(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fichier = input.files?.[0];
+    if (!fichier) return;
+
+    const types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!types.includes(fichier.type)) {
+      this.toast.set('Format non supporté : utilisez JPEG, PNG, WEBP ou GIF.');
+      this.succes.set(false);
+      input.value = '';
+      return;
+    }
+    if (fichier.size > 2 * 1024 * 1024) {
+      this.toast.set('Image trop lourde (2 Mo maximum).');
+      this.succes.set(false);
+      input.value = '';
+      return;
+    }
+
+    this.fichierLogo = fichier;
+    this.logoACharger.set(true);
+    const lecteur = new FileReader();
+    lecteur.onload = () => this.apercuLogo.set(String(lecteur.result));
+    lecteur.readAsDataURL(fichier);
+  }
+
+  protected async enregistrerLogo(): Promise<void> {
+    if (!this.fichierLogo) return;
+    this.sauvegardeLogo.set(true);
+    const form = new FormData();
+    form.set('logo', this.fichierLogo);
+    try {
+      const reponse = await firstValueFrom(this.api.mettreAJourLogo(form));
+      this.toast.set(messageSuccesApi(reponse, 'Logo publié.'));
+      this.succes.set(true);
+      this.majLogo(reponse.data);
+      this.apercuLogo.set(null);
+      this.logoACharger.set(false);
+      this.fichierLogo = null;
+      this.api.rafraichirCabinetPublic();
+    } catch (e) {
+      this.toast.set(messageErreurApi(e));
+      this.succes.set(false);
+    } finally {
+      this.sauvegardeLogo.set(false);
+    }
+  }
+
+  private majLogo(contenu?: ContenuPublicBackoffice | null): void {
+    const logo = (contenu?.data as { logo?: { updated_at?: number | null } | null } | undefined)?.logo;
+    this.logoUrl.set(
+      logo?.updated_at ? `${API_BASE}/public/logo?v=${logo.updated_at}` : null
+    );
   }
 
   private remplir(fiche?: unknown): void {

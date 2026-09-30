@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { ApiService } from '../../services/api.service';
 import { CONTENT } from '../../../content';
 
 /** Carte d'authentification : logo, contenu projeté, retour au site public. */
@@ -43,6 +44,15 @@ import { CONTENT } from '../../../content';
         gap: 0.75rem;
         text-decoration: none;
         justify-content: center;
+      }
+      .logo-img {
+        width: 2.9rem;
+        height: 2.9rem;
+        border-radius: 13px;
+        object-fit: cover;
+        background: #fff;
+        border: 1px solid var(--mpc-separateur);
+        flex-shrink: 0;
       }
       .logo-carre {
         width: 2.9rem;
@@ -94,7 +104,11 @@ import { CONTENT } from '../../../content';
     <div class="page-auth">
       <div class="carte">
         <a class="logo" routerLink="/">
-          <span class="logo-carre">{{ sigle }}</span>
+          @if (logoUrl()) {
+            <img class="logo-img" [src]="logoUrl()" alt="Logo {{ nom }}" />
+          } @else {
+            <span class="logo-carre">{{ sigle }}</span>
+          }
           <span class="logo-texte">
             <span class="logo-nom">{{ nom }}</span>
             <span class="logo-slogan">{{ slogan }}</span>
@@ -108,8 +122,17 @@ import { CONTENT } from '../../../content';
     </div>
   `,
 })
-export class CadreAuthComponent {
+export class CadreAuthComponent implements OnInit {
+  private readonly api = inject(ApiService);
+
   protected nom = CONTENT.cabinet.nom;
   protected sigle = CONTENT.cabinet.sigle;
   protected slogan = CONTENT.cabinet.slogan;
+  protected readonly logoUrl = signal<string | null>(null);
+
+  ngOnInit(): void {
+    this.api.getCabinetPublic().subscribe((cabinet) => {
+      this.logoUrl.set(cabinet.logo_url ?? null);
+    });
+  }
 }

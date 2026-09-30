@@ -78,6 +78,15 @@ interface LienNav {
         font-size: 1.15rem;
         flex-shrink: 0;
       }
+      .logo-img {
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 12px;
+        object-fit: cover;
+        background: #fff;
+        border: 1px solid var(--mpc-separateur);
+        flex-shrink: 0;
+      }
       .logo-texte {
         display: flex;
         flex-direction: column;
@@ -295,19 +304,19 @@ interface LienNav {
     <div class="barre-top">
       <div class="container d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center flex-wrap gap-1">
-          <a *ngIf="telephone" [href]="'tel:+' + telephone.replace(/\\D/g, '')" class="d-flex align-items-center gap-1">
-            <i class="bi bi-telephone-fill"></i>{{ telephone }}
+          <a *ngIf="telephone()" [href]="'tel:+' + telephone().replace(/\\D/g, '')" class="d-flex align-items-center gap-1">
+            <i class="bi bi-telephone-fill"></i>{{ telephone() }}
           </a>
-          <span class="sep" *ngIf="telephone && email">|</span>
-          <a *ngIf="email" [href]="'mailto:' + email" class="d-flex align-items-center gap-1">
-            <i class="bi bi-envelope-fill"></i>{{ email }}
+          <span class="sep" *ngIf="telephone() && email()">|</span>
+          <a *ngIf="email()" [href]="'mailto:' + email()" class="d-flex align-items-center gap-1">
+            <i class="bi bi-envelope-fill"></i>{{ email() }}
           </a>
         </div>
         <div class="reseaux-top d-flex align-items-center gap-3">
-          <a *ngIf="facebook" [href]="facebook" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-          <a *ngIf="tiktok" [href]="tiktok" target="_blank" rel="noopener" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
-          <a *ngIf="whatsapp" [href]="whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
-          <a *ngIf="linkedin" [href]="linkedin" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+          <a *ngIf="facebook()" [href]="facebook()" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+          <a *ngIf="tiktok()" [href]="tiktok()" target="_blank" rel="noopener" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
+          <a *ngIf="whatsapp()" [href]="whatsapp()" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
+          <a *ngIf="linkedin()" [href]="linkedin()" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
         </div>
       </div>
     </div>
@@ -316,7 +325,11 @@ interface LienNav {
     <header class="entete" [class._deplie]="deplie()">
       <div class="container entete-inner">
         <a class="logo" routerLink="/">
-          <span class="logo-carre">{{ initiales }}</span>
+          @if (logoUrl()) {
+            <img class="logo-img" [src]="logoUrl()" alt="Logo {{ nom }}" />
+          } @else {
+            <span class="logo-carre">{{ initiales }}</span>
+          }
           <span class="logo-texte">
             <span class="logo-nom">{{ nom }}</span>
             <span class="logo-slogan">{{ slogan }}</span>
@@ -342,7 +355,11 @@ interface LienNav {
     <aside class="tiroir" [class._ouvert]="menuOuvert" aria-hidden="!menuOuvert ? true : null">
       <div class="tiroir-entete">
         <a class="logo" routerLink="/" (click)="menuOuvert = false">
-          <span class="logo-carre">{{ initiales }}</span>
+          @if (logoUrl()) {
+            <img class="logo-img" [src]="logoUrl()" alt="Logo {{ nom }}" />
+          } @else {
+            <span class="logo-carre">{{ initiales }}</span>
+          }
           <span class="logo-texte"><span class="logo-nom">{{ nom }}</span></span>
         </a>
         <button type="button" class="tiroir-fermer" (click)="menuOuvert = false" aria-label="Fermer le menu">
@@ -364,10 +381,10 @@ interface LienNav {
         <i class="bi bi-send"></i>Demander un cours
       </a>
       <div class="reseau-tiroir">
-        <a *ngIf="facebook" [href]="facebook" target="_blank" rel="noopener"><i class="bi bi-facebook"></i></a>
-        <a *ngIf="tiktok" [href]="tiktok" target="_blank" rel="noopener"><i class="bi bi-tiktok"></i></a>
-        <a *ngIf="whatsapp" [href]="whatsapp" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i></a>
-        <a *ngIf="linkedin" [href]="linkedin" target="_blank" rel="noopener"><i class="bi bi-linkedin"></i></a>
+        <a *ngIf="facebook()" [href]="facebook()" target="_blank" rel="noopener"><i class="bi bi-facebook"></i></a>
+        <a *ngIf="tiktok()" [href]="tiktok()" target="_blank" rel="noopener"><i class="bi bi-tiktok"></i></a>
+        <a *ngIf="whatsapp()" [href]="whatsapp()" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i></a>
+        <a *ngIf="linkedin()" [href]="linkedin()" target="_blank" rel="noopener"><i class="bi bi-linkedin"></i></a>
       </div>
     </aside>
   `,
@@ -386,13 +403,14 @@ export class HeaderComponent implements OnInit {
   protected nom = CONTENT.cabinet.nom;
   protected initiales = CONTENT.cabinet.sigle;
   protected slogan = CONTENT.cabinet.slogan;
+  protected readonly logoUrl = signal<string | null>(null);
 
-  protected telephone = '';
-  protected email = '';
-  protected facebook?: string;
-  protected tiktok?: string;
-  protected whatsapp?: string;
-  protected linkedin?: string;
+  protected readonly telephone = signal('');
+  protected readonly email = signal('');
+  protected readonly facebook = signal<string | undefined>(undefined);
+  protected readonly tiktok = signal<string | undefined>(undefined);
+  protected readonly whatsapp = signal<string | undefined>(undefined);
+  protected readonly linkedin = signal<string | undefined>(undefined);
 
   protected liens: LienNav[] = CONTENT.nav.liens.map((lien) => {
     const fragment = lien.cible.startsWith('/#') ? lien.cible.slice(2) : undefined;
@@ -413,12 +431,13 @@ export class HeaderComponent implements OnInit {
     });
     this.api.getCabinetPublic().subscribe((cabinet) => {
       const fiche: FicheCabinet | null = cabinet.donnees?.fiche ?? null;
-      this.telephone = fiche?.contact?.telephone ?? '';
-      this.email = fiche?.contact?.email ?? '';
-      this.facebook = fiche?.reseaux?.facebook || undefined;
-      this.tiktok = fiche?.reseaux?.tiktok || undefined;
-      this.whatsapp = fiche?.reseaux?.whatsapp_business || undefined;
-      this.linkedin = fiche?.reseaux?.linkedin || undefined;
+      this.telephone.set(fiche?.contact?.telephone ?? '');
+      this.email.set(fiche?.contact?.email ?? '');
+      this.facebook.set(fiche?.reseaux?.facebook || undefined);
+      this.tiktok.set(fiche?.reseaux?.tiktok || undefined);
+      this.whatsapp.set(fiche?.reseaux?.whatsapp_business || undefined);
+      this.linkedin.set(fiche?.reseaux?.linkedin || undefined);
+      this.logoUrl.set(cabinet.logo_url ?? null);
     });
     requestAnimationFrame(() => this.mettreAJourSection());
   }

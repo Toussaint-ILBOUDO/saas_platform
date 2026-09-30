@@ -100,11 +100,50 @@
 > cabinet a été **codé sur mesure** dans `frontend/magis` (Angular 22, D-047) — la stratégie
 > « gabarit puis copie » (T4.8) a été inversée : le socle Angular pose une base réutilisable
 > pour les cabinets suivants. Build vérifié ; suite backend verte (88 tests / 397 assertions).
+>
+> **Backoffice livré (29/09)** : connexion + mot de passe oublié/réinitialisation, coquille
+> responsive (bottom-nav mobile / rail tablette / sidebar PC), navigation par rôle + gardes,
+> choix de rôle multi-comptes, mode sombre, et écrans admin phase 1 (voir T5.3/T5.4). Le bug
+> de double hachage du mot de passe (cast `hashed` du modèle `User`) et les erreurs « Une
+> erreur est survenue » (code `IDENTIFIANTS_INCORRECTS` mal orthographié en front, mail non
+> configuré sur mot de passe oublié) ont été corrigés le 29/09 ; le proxy de dev cible
+> `127.0.0.1:8080` en forçant l'en-tête `Host` du tenant (`proxy.conf.js`) — plus besoin du
+> fichier `hosts` Windows. Commande de réinitialisation d'admin : `artisan
+> cabinet:reset-admin-password <tenant>`.
+>
+> **Second tour backoffice (29/09)** : les modifications admin ne remontaient pas sur la page
+> publique. Causes corrigées : (1) actualités — le backend ignorait `statut` → tout partait en
+> « brouillon » et restait invisible (`ActualiteService::create/update` appliquent désormais
+> `statut`, fixent `published_at`/`is_active` à la publication, rules `statut` ajoutées aux
+> FormRequests) ; (2) fiche/logo — cache front `shareReplay` figé remplacé par un cache
+> rafraîchissable (`rafraichirCabinetPublic()`) appelé après chaque sauvegarde, et sauvegarde
+> fiche fusionne `data` (`array_replace_recursive`) pour ne plus écraser les clés annexes ;
+> (3) **nouveau : logo du cabinet** — upload admin multipart `PUT /api/admin/contenu-public/logo`
+> (stockage disque public tenant `logos/`, conservé dans `parametres_publics.data.logo`), flux
+> public `GET /api/public/logo`, `logo_url` exposé par `/api/public/cabinet`, affiché dans le
+> header/footer publics, la sidebar backoffice et le cadre d'authentification (repli monogramme
+> si absent). Tests ajoutés (`statut + publication via l'API`, `logo upload/stream/préservation`)
+> ; suite backend verte : 90 tests, 431 assertions.
+>
+> **Troisième tour (30/09) — cause racine des deux bugs restants** : la page d'édition
+> renvoyait « Le titre est obligatoire » et le logo « Le fichier logo est obligatoire » alors
+> que les champs étaient remplis. Cause : **PHP < 8.4 ne peuple jamais `$_POST`/`$_FILES` pour un
+> `multipart/form-data` envoyé en PUT/PATCH** (Symfony ne lit que `application/x-www-form-urlencoded`
+> en PUT, `vendor/symfony/http-foundation/Request.php:288-302`) → les champs ET les fichiers
+> d'un « multipart PUT » sont silencieusement perdus. Correctif : les routes
+> `PUT /api/admin/actualites/{actualite}` et `PUT /api/admin/contenu-public/logo` acceptent
+> désormais aussi **POST** (PHP peuple alors les super-globales), et le frontend (`majActualite`,
+> `mettreAJourLogo`) envoie en POST. Tests de régression ajoutés (`mise à jour multipart POST`
+> d'une actualité avec image + passage en « publie » visible publiquement ; upload logo en POST).
+> Suite backend verte : **91 tests, 442 assertions**. La FAQ publique a été auditée de bout en bout
+> (écritures → `flushCache` de `faq.public` → reconstruction à la lecture) ; backend sain — si la
+> création n'apparaît toujours pas publiquement, refaire le test **backend redémarré** + accueil
+> public rechargé.
 
 - [x] **T5.1** Créer le cabinet 1 depuis le Landlord (P2), puis `cabinet-<slug>` à partir du gabarit. (✍️ cabinet **Magis Plus Center** créé par l'utilisateur — données du dossier en `docs/PLAN_CABINET_1.md` ; frontend codé sur mesure dans `frontend/magis`, pas de gabarit/D-043)
 - [x] **T5.2** **Page publique** : accueil (hero), à propos, actualités (liste + détail), FAQ, formulaire de demande de cours, pied de page ; sections activables selon la configuration. Design soigné, mobile d'abord. (livré : 8 pages — accueil, actualités(+détail), bibliothèque, boutique, FAQ, demande de cours, contact — textes depuis `src/content.ts` (D-044), données via l'API publique (fiche, actualités, FAQ, documents, produits, stats, enseignants, témoignages, references) ; hero/à propos/services/zones/stats/solutions/enseignants/témoignages/FAQ/bandeau rendez-vous/contact ; header collant + tiroir mobile, footer 4 colonnes, bouton remontée ; palette orange `#e8610c` + bleu `#12305e`, icônes bootstrap-icons, sans dégradés ni émojis ; formulaires demande de cours → `POST demandes-cours` et commande boutique → WhatsApp)
-- [ ] **T5.3** **Backoffice** : connexion, changement de mot de passe, coquille avec navigation par rôle, tableau de bord (squelette). (l'admin cabinet passe pour l'instant par l'API backoffice + les écrans web KEduc backend ; le frontend backoffice Angular viendra à P5 bis)
-- [ ] **T5.4** Écrans admin : gestion du contenu public (thème, pied de page, actualités, FAQ) et des utilisateurs.
+- [x] **T5.3** **Backoffice** : connexion, changement de mot de passe, coquille avec navigation par rôle, tableau de bord (squelette). (livré dans `frontend/magis` : connexion + mot de passe oublié/réinitialisation, coquille responsive mobile-first (bottom-nav/tiroir, rail tablette, sidebar PC), navigation par rôle + gardes + choix de rôle multi-comptes, mode sombre, tableau de bord, profil. Validé en bout en bout le 29/09.)
+- [x] **T5.4** Écrans admin : gestion du contenu public (thème, pied de page, actualités, FAQ) et des utilisateurs. (écrans Fiche cabinet, Actualités (CRUD + édition, statuts brouillon/publiée), FAQ sections+questions, Utilisateurs et Notifications — branchés sur `/api/admin/*`.)
 - [ ] **T5.5** Manifest, icônes et couleurs PWA propres au cabinet ; test d'installation et de lancement hors ligne.
 - [ ] **T5.6** Test de bout en bout manuel : création du cabinet → email → connexion → modification du contenu → visible sur la page publique.
 

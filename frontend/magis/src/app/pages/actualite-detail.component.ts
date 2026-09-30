@@ -1,6 +1,6 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CONTENT } from '../../content';
 import { ApiService } from '../services/api.service';
@@ -101,28 +101,28 @@ import { Actualite } from '../models';
     `,
   ],
   template: `
-    <app-page-hero [titre]="article?.titre ?? 'Actualité'"
-                   [sousTitre]="article?.resume ?? 'Découvrez cette actualité.'"></app-page-hero>
+    <app-page-hero [titre]="article()?.titre ?? 'Actualité'"
+                   [sousTitre]="article()?.resume ?? 'Découvrez cette actualité.'"></app-page-hero>
 
     <section class="py-5">
       <div class="container" style="max-width: 900px">
         <a class="retour" routerLink="/actualites"><i class="bi bi-arrow-left"></i>Retour aux actualités</a>
 
-        <ng-container *ngIf="article">
+        <ng-container *ngIf="article()">
           <div class="meta mb-3">
-            <span *ngIf="article.published_at"><i class="bi bi-calendar3"></i>{{ dateLongue }}</span>
-            <span *ngIf="article.auteur"><i class="bi bi-person"></i>{{ article.auteur }}</span>
-            <span class="ms-auto"><i class="bi bi-eye"></i>{{ article.nb_vues ?? 0 }} vues</span>
+            <span *ngIf="article()!.published_at"><i class="bi bi-calendar3"></i>{{ dateLongue }}</span>
+            <span *ngIf="article()!.auteur"><i class="bi bi-person"></i>{{ article()!.auteur }}</span>
+            <span class="ms-auto"><i class="bi bi-eye"></i>{{ article()!.nb_vues ?? 0 }} vues</span>
           </div>
 
           <div class="article-vignette mb-4">
-            <ng-container *ngIf="article.image_url; else sansImage">
-              <img [src]="article.image_url" [alt]="article.titre" loading="lazy" />
+            <ng-container *ngIf="article()!.image_url; else sansImage">
+              <img [src]="article()!.image_url" [alt]="article()!.titre" loading="lazy" />
             </ng-container>
             <ng-template #sansImage><i class="bi bi-newspaper"></i></ng-template>
           </div>
 
-          <div class="contenu" [innerHTML]="corpsHtml"></div>
+          <div class="contenu" [innerHTML]="corpsHtml()"></div>
 
           <div class="d-flex flex-wrap align-items-center gap-3 mt-5 pt-4" style="border-top:1px solid var(--mpc-bordure)">
             <span style="font-weight:700; color: var(--mpc-bleu)">Partager :</span>
@@ -148,12 +148,12 @@ export class ActualiteDetailComponent implements OnInit {
 
   protected readonly CONTENT = CONTENT;
 
-  protected article: Actualite | null = null;
-  protected corpsHtml: SafeHtml = '';
+  protected readonly article = signal<Actualite | null>(null);
+  protected readonly corpsHtml = signal<SafeHtml>('');
 
   protected get dateLongue(): string {
-    if (!this.article?.published_at) return '';
-    return new Date(this.article.published_at).toLocaleDateString('fr-FR', {
+    if (!this.article()?.published_at) return '';
+    return new Date(this.article()!.published_at!).toLocaleDateString('fr-FR', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -163,9 +163,9 @@ export class ActualiteDetailComponent implements OnInit {
   ngOnInit(): void {
     const slug = this.route.snapshot.paramMap.get('slug') ?? '';
     this.api.getActualite(slug).subscribe((article) => {
-      this.article = article;
+      this.article.set(article);
       this.seo.definir(`${article.titre} | Magis Plus Center`, article.resume ?? CONTENT.seo.description);
-      this.corpsHtml = this.sanitizer.bypassSecurityTrustHtml(article.contenu ?? '');
+      this.corpsHtml.set(this.sanitizer.bypassSecurityTrustHtml(article.contenu ?? ''));
     });
   }
 
@@ -173,7 +173,7 @@ export class ActualiteDetailComponent implements OnInit {
     const url = encodeURIComponent(
       typeof window !== 'undefined' ? window.location.href : ''
     );
-    const texte = encodeURIComponent(this.article?.titre ?? 'Magis Plus Center');
+    const texte = encodeURIComponent(this.article()?.titre ?? 'Magis Plus Center');
     if (reseau === 'facebook') return `https://www.facebook.com/sharer/sharer.php?u=${url}`;
     if (reseau === 'linkedin') return `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
     return `https://wa.me/?text=${texte}%20%0A${url}`;

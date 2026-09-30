@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CONTENT } from '../../content';
@@ -648,10 +648,10 @@ interface OngletSolution {
     </section>
 
     <!-- ============ STATISTIQUES (API) ============ -->
-    <section class="stats" *ngIf="stats">
+    <section class="stats" *ngIf="stats()">
       <div class="container">
         <div class="row g-4">
-          <div class="col-6 col-lg-3 stats-tuile" *ngFor="let stat of stats" appReveal>
+          <div class="col-6 col-lg-3 stats-tuile" *ngFor="let stat of stats()" appReveal>
             <div class="ic"><i class="bi {{ stat.icone }}"></i></div>
             <div class="num"><app-counter [fin]="stat.valeur" suffixe="+"></app-counter></div>
             <div class="lab">{{ stat.libelle }}</div>
@@ -705,7 +705,7 @@ interface OngletSolution {
                 <p style="color: var(--mpc-texte-doux); font-size:.93rem; line-height:1.7; margin-top:.5rem">{{ CONTENT.zones.horsZones.lignes[1] }}</p>
                 <div class="d-flex flex-wrap gap-2 mt-2">
                   <a class="btn" style="background: var(--mpc-primaire); color:#fff; border-radius:999px; padding:.6rem 1.3rem; font-weight:700; text-decoration:none" routerLink="/demande-cours"><i class="bi bi-send-fill"></i>{{ CONTENT.zones.horsZones.cta }}</a>
-                  <a class="btn" style="border:1px solid var(--mpc-primaire); color: var(--mpc-primaire); border-radius:999px; padding:.6rem 1.3rem; font-weight:700; text-decoration:none" [href]="lienWhatsapp" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i>{{ CONTENT.zones.horsZones.whatsapp }}</a>
+                  <a class="btn" style="border:1px solid var(--mpc-primaire); color: var(--mpc-primaire); border-radius:999px; padding:.6rem 1.3rem; font-weight:700; text-decoration:none" [href]="lienWhatsapp()" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i>{{ CONTENT.zones.horsZones.whatsapp }}</a>
                 </div>
               </div>
             </div>
@@ -737,8 +737,8 @@ interface OngletSolution {
       <div class="container">
         <app-section-title surtitre="Notre réseau" [titre]="CONTENT.enseignants.titre" [sousTitre]="CONTENT.enseignants.sousTitre"></app-section-title>
 
-        <div class="row g-4" *ngIf="enseignants.length > 0">
-          <div class="col-12 col-sm-6 col-lg-4" *ngFor="let enseignant of enseignants | slice:0:6" appReveal>
+<div class="row g-4" *ngIf="enseignants().length > 0">
+         <div class="col-12 col-sm-6 col-lg-4" *ngFor="let enseignant of enseignants() | slice:0:6" appReveal>
             <article class="enseignant-carte">
               <div class="enseignant-front">
                 <img class="avatar" *ngIf="enseignant.photo_url" [src]="enseignant.photo_url" alt="{{ enseignant.nom_complet }}" loading="lazy" />
@@ -759,7 +759,7 @@ interface OngletSolution {
           </div>
         </div>
 
-        <p class="text-center" style="color: var(--mpc-texte-doux)" *ngIf="enseignants.length === 0 && enseignantsCharge">{{ CONTENT.enseignants.vide }}</p>
+        <p class="text-center" style="color: var(--mpc-texte-doux)" *ngIf="enseignants().length === 0 && enseignantsCharge()">{{ CONTENT.enseignants.vide }}</p>
 
         <div class="cta-bande mt-5">
           <div class="cta-bande-inner" appReveal>
@@ -792,7 +792,7 @@ interface OngletSolution {
     <section id="faq" class="py-5">
       <div class="container">
         <app-section-title surtitre="Besoin d'aide ?" [titre]="CONTENT.faq.titre" [sousTitre]="CONTENT.faq.sousTitre"></app-section-title>
-        <app-faq-block [sections]="sectionsFaq" idFacteur="accueil"></app-faq-block>
+        <app-faq-block [sections]="sectionsFaq()" idFacteur="accueil"></app-faq-block>
       </div>
     </section>
 
@@ -819,7 +819,7 @@ interface OngletSolution {
         <app-section-title surtitre="Contact" [titre]="CONTENT.contact.titre" [sousTitre]="CONTENT.contact.sousTitre"></app-section-title>
         <div class="row g-4 justify-content-center">
           <div class="col-12 col-lg-7" appReveal>
-            <app-contact-info [fiche]="fiche"></app-contact-info>
+            <app-contact-info [fiche]="fiche()"></app-contact-info>
           </div>
           <div class="col-12 col-lg-5" appReveal>
             <div class="zone-carte">
@@ -836,7 +836,7 @@ interface OngletSolution {
               </div>
               <div class="d-flex flex-wrap gap-2 mt-3">
                 <a class="btn" style="background: var(--mpc-primaire); color:#fff; border-radius:999px; padding:.65rem 1.3rem; font-weight:700; text-decoration:none" routerLink="/demande-cours"><i class="bi bi-send-fill"></i>{{ CONTENT.contact.demandeCours }}</a>
-                <a class="btn" [href]="lienWhatsapp || '#'" target="_blank" rel="noopener" style="border:1px solid var(--mpc-primaire); color: var(--mpc-primaire); border-radius:999px; padding:.65rem 1.3rem; font-weight:700; text-decoration:none"><i class="bi bi-whatsapp"></i>{{ CONTENT.contact.whatsapp }}</a>
+                <a class="btn" [href]="lienWhatsapp() || '#'" target="_blank" rel="noopener" style="border:1px solid var(--mpc-primaire); color: var(--mpc-primaire); border-radius:999px; padding:.65rem 1.3rem; font-weight:700; text-decoration:none"><i class="bi bi-whatsapp"></i>{{ CONTENT.contact.whatsapp }}</a>
               </div>
             </div>
           </div>
@@ -851,13 +851,13 @@ export class AccueilComponent implements OnInit {
 
   protected readonly CONTENT = CONTENT;
 
-  protected fiche: FicheCabinet | null = null;
-  protected lienWhatsapp = '#';
-  protected enseignants: Enseignant[] = [];
-  protected temoignages: Temoignage[] = [];
-  protected sectionsFaq: FaqSection[] = [];
-  protected stats: { icone: string; valeur: number; libelle: string }[] | null = null;
-  protected enseignantsCharge = false;
+  protected readonly fiche = signal<FicheCabinet | null>(null);
+  protected readonly lienWhatsapp = signal('#');
+  protected readonly enseignants = signal<Enseignant[]>([]);
+  protected readonly temoignages = signal<Temoignage[]>([]);
+  protected readonly sectionsFaq = signal<FaqSection[]>([]);
+  protected readonly stats = signal<{ icone: string; valeur: number; libelle: string }[] | null>(null);
+  protected readonly enseignantsCharge = signal(false);
   protected indiceSolution = 0;
 
   protected readonly ongletsSolutions: readonly OngletSolution[] = CONTENT.solutions.onglets;
@@ -867,7 +867,7 @@ export class AccueilComponent implements OnInit {
   }
 
   protected get temoignagesHaut(): Temoignage[] {
-    return this.temoignages.slice(0, 6);
+    return this.temoignages().slice(0, 6);
   }
 
   protected get villesPrincipales(): string[] {
@@ -889,36 +889,36 @@ export class AccueilComponent implements OnInit {
     this.seo.definir(CONTENT.seo.titre, CONTENT.seo.description);
 
     this.api.getCabinetPublic().subscribe((cabinet) => {
-      this.fiche = cabinet.donnees?.fiche ?? null;
-      const reseaux = this.fiche?.reseaux ?? {};
-      if (this.fiche?.contact?.whatsapp || this.fiche?.contact?.telephone) {
-        const chiffres = (this.fiche.contact.whatsapp || this.fiche.contact.telephone || '').replace(/\D/g, '');
-        this.lienWhatsapp = 'https://wa.me/' + (chiffres.startsWith('226') ? chiffres : '226' + chiffres);
-      } else if (this.fiche?.reseaux?.whatsapp_business) {
-        this.lienWhatsapp = this.fiche.reseaux.whatsapp_business;
+      this.fiche.set(cabinet.donnees?.fiche ?? null);
+      const reseaux = this.fiche()?.reseaux ?? {};
+      if (this.fiche()?.contact?.whatsapp || this.fiche()?.contact?.telephone) {
+        const chiffres = (this.fiche()!.contact!.whatsapp || this.fiche()!.contact!.telephone || '').replace(/\D/g, '');
+        this.lienWhatsapp.set('https://wa.me/' + (chiffres.startsWith('226') ? chiffres : '226' + chiffres));
+      } else if (this.fiche()?.reseaux?.whatsapp_business) {
+        this.lienWhatsapp.set(this.fiche()!.reseaux!.whatsapp_business!);
       }
     });
 
     this.api.getEnseignants(1).subscribe(({ data }) => {
-      this.enseignants = data;
-      this.enseignantsCharge = true;
+      this.enseignants.set(data);
+      this.enseignantsCharge.set(true);
     });
 
     this.api.getTemoignages(1).subscribe(({ data }) => {
-      this.temoignages = data;
+      this.temoignages.set(data);
     });
 
     this.api.getFaq().subscribe((sections) => {
-      this.sectionsFaq = sections;
+      this.sectionsFaq.set(sections);
     });
 
     this.api.getStats().subscribe((stats) => {
-      this.stats = [
+      this.stats.set([
         { icone: 'bi-person-workspace', valeur: stats.nb_enseignants, libelle: 'Enseignants qualifiés' },
         { icone: 'bi-people-fill', valeur: stats.nb_eleves, libelle: 'Élèves accompagnés' },
         { icone: 'bi-card-checklist', valeur: stats.nb_contrats, libelle: 'Contrats de cours' },
         { icone: 'bi-house-heart-fill', valeur: stats.nb_familles, libelle: 'Familles partenaires' },
-      ];
+      ]);
     });
   }
 

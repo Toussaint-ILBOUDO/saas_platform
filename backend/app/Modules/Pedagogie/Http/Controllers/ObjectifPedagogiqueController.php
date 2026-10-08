@@ -20,12 +20,19 @@ class ObjectifPedagogiqueController extends Controller
     {
         $objectifs = $this->service->paginateForUser(
             auth()->user(),
-            request()->only(['search', 'periode'])
+            request()->only(['search', 'periode_id'])
         );
+
+        // D-050 : le filtre porte sur des périodes COMPTABLES, pas des
+        // libellés libres. On en propose toutes (pas seulement les ouvertes)
+        // pour pouvoir retrouver les objectifs d'une période close.
+        $periodes = \App\Models\PeriodeComptable::query()
+            ->orderByDesc('date_debut')
+            ->get();
 
         return view(
             'pedagogie.objectifs-pedagogiques.index',
-            compact('objectifs')
+            compact('objectifs', 'periodes')
         );
     }
 
@@ -36,9 +43,13 @@ class ObjectifPedagogiqueController extends Controller
         $eleves = $this->service->getElevesForTeacher(auth()->user());
         $matieres = Matiere::where('actif', true)->orderBy('nom')->get();
 
+        // D-050 : on ne propose que des périodes COMPTABLES ouvertes — un
+        // objectif sur une période close ne serait pas modifiable ensuite.
+        $periodes = $this->service->periodesOuvertes();
+
         return view(
             'pedagogie.objectifs-pedagogiques.create',
-            compact('eleves', 'matieres')
+            compact('eleves', 'matieres', 'periodes')
         );
     }
 
@@ -60,6 +71,8 @@ class ObjectifPedagogiqueController extends Controller
         $objectif = $objectifPedagogique->load([
             'eleve.user',
             'eleve.classe',
+            'periode',
+            'enseignant.user',
             'objectifsMatieres.matiere',
         ]);
 
@@ -76,14 +89,17 @@ class ObjectifPedagogiqueController extends Controller
         $objectif = $objectifPedagogique->load([
             'eleve.user',
             'eleve.classe',
+            'periode',
+            'enseignant.user',
             'objectifsMatieres.matiere',
         ]);
 
         $matieres = Matiere::where('actif', true)->orderBy('nom')->get();
+        $periodes = $this->service->periodesOuvertes();
 
         return view(
             'pedagogie.objectifs-pedagogiques.edit',
-            compact('objectif', 'matieres')
+            compact('objectif', 'matieres', 'periodes')
         );
     }
 

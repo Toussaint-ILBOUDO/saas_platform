@@ -14,7 +14,7 @@ class UpdateObjectifPedagogiqueRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'periode' => ['sometimes', 'required', 'string'],
+            'periode_id' => ['sometimes', 'required', 'exists:periode_comptables,id'],
             'moyenne_visee' => ['nullable', 'numeric', 'min:0', 'max:20'],
             'moyenne_obtenue' => ['nullable', 'numeric', 'min:0', 'max:20'],
             'materiel_disponible' => ['nullable', 'string'],

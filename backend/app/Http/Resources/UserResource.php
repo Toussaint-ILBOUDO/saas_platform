@@ -21,6 +21,14 @@ class UserResource extends JsonResource
             'roles' => $this->getRoleNames()->sort()->values(),
             'active_role' => session('active_role'),
             'photo_url' => $this->photo_profil_url,
+
+            // `eleves.id` n'est pas `users.id`. L'élève en a besoin pour ouvrir
+            // « son » historique pédagogique (`/api/mes-enfants/{eleve}/…`) :
+            // sans cet identifiant, le client ne peut pas construire l'URL et
+            // l'écran de consultation lui reste inaccessible.
+            'eleve' => $this->whenLoaded('eleve', fn () => $this->eleve ? [
+                'id' => $this->eleve->id,
+            ] : null),
         ];
     }
 }

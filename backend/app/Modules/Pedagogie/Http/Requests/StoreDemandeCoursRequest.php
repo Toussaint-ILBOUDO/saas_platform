@@ -32,6 +32,14 @@ class StoreDemandeCoursRequest extends FormRequest
                 'max:20'
             ],
 
+            // Optionnel : le parent peut n'avoir qu'un fixe. L'administration
+            // retombe alors sur `telephone` pour le contact WhatsApp.
+            'telephone_whatsapp' => [
+                'nullable',
+                'string',
+                'max:20'
+            ],
+
             'type_cours_id' => [
                 'required',
                 'exists:type_cours,id'
@@ -66,6 +74,7 @@ class StoreDemandeCoursRequest extends FormRequest
             'nom_parent.required' => 'Le nom du parent est obligatoire.',
             'prenom_parent.required' => 'Le prénom du parent est obligatoire.',
             'telephone.required' => 'Le téléphone est obligatoire.',
+            'telephone_whatsapp.max' => 'Le numéro WhatsApp est trop long.',
 
             'type_cours_id.required' => 'Le type de cours est obligatoire.',
             'type_cours_id.exists' => 'Le type de cours sélectionné est invalide.',

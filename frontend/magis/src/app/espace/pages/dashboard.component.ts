@@ -6,7 +6,8 @@ import { StatsCabinet } from '../../models';
 import { ROADMAP_PAR_ROLE, RUBRIQUES_PAR_ROLE } from '../menu';
 
 const SOUS_TITRE: Record<string, string> = {
-  '/espace/finance': 'Caisse, factures et paiements',
+  '/espace/finance': 'Factures et paiements',
+  '/espace/finance/periodes': 'Cadre d’écriture des périodes comptables',
   '/espace/rapports': 'Rapports mensuels et objectifs',
   '/espace/utilisateurs': 'Enseignants, élèves, parents, librairie',
   '/espace/actualites': 'Publier et gérer les actualités',
@@ -15,7 +16,10 @@ const SOUS_TITRE: Record<string, string> = {
   '/espace/notifications': 'Vos dernières alertes',
   '/espace/profil': 'Informations et mot de passe',
   '/espace/modules/planning': 'Emplois du temps',
-  '/espace/modules/cours': 'Cours et séances',
+  '/espace/modules/mes-cours': 'Vos contrats, matières et heures prévues',
+  '/espace/modules/cahier-de-texte': 'Séances saisies et suivi des cours',
+  '/espace/pedagogie/referentiels': 'Classes, matières, types de cours et enseignants',
+  '/espace/pedagogie/contrats': 'Contrats de cours et affectations des enseignants',
   '/espace/modules/boutique': 'Catalogue et commandes',
   '/espace': 'Aperçu général',
 };

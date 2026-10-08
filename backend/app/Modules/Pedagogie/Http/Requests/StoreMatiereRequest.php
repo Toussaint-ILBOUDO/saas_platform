@@ -8,10 +8,9 @@ class StoreMatiereRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->user()->hasAnyRole([
-            'admin',
-            'super-admin'
-        ]);
+        // Rôle canonique du cabinet (D-007) : les anciens rôles « admin » /
+        // « super-admin » ont disparu du seed tenant.
+        return auth()->user()->hasRole('admin_cabinet');
     }
 
     public function rules(): array

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\BulletinPaie;
 use App\Models\User;
+use App\Support\Roles;
 
 class BulletinPaiePolicy
 {
@@ -14,7 +15,7 @@ class BulletinPaiePolicy
         User $user,
         string $ability
     ): ?bool {
-        if ($user->hasAnyRole(['super-admin', 'admin'])) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
@@ -31,7 +32,7 @@ class BulletinPaiePolicy
 
     public function view(User $user, BulletinPaie $bulletin): bool
     {
-        if ($user->hasAnyRole(['super-admin', 'admin'])) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
@@ -44,7 +45,7 @@ class BulletinPaiePolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['super-admin', 'admin']);
+        return Roles::estAdmin($user);
     }
 
     /**
@@ -52,7 +53,7 @@ class BulletinPaiePolicy
      */
     public function update(User $user, BulletinPaie $bulletin): bool
     {
-        if ($user->hasAnyRole(['super-admin', 'admin'])) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
@@ -62,12 +63,12 @@ class BulletinPaiePolicy
 
     public function delete(User $user): bool
     {
-        return $user->hasAnyRole(['super-admin', 'admin']);
+        return Roles::estAdmin($user);
     }
 
     public function payer(User $user): bool
     {
-        return $user->hasAnyRole(['super-admin', 'admin']);
+        return Roles::estAdmin($user);
     }
 
     public function contester(User $user, BulletinPaie $bulletin): bool

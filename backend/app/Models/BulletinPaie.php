@@ -10,6 +10,26 @@ class BulletinPaie extends Model
 {
     protected $table = 'bulletins_paie';
 
+    /**
+     * D-052 — Catégories de contestation (liste fermée).
+     *
+     * Un commentaire libre de 1 000 caractères ne permet ni de trier les
+     * contestations, ni de voir d'où viennent les litiges récurrents (taux
+     * faux, séance manquante, retenue contestée…). La catégorie est contrôlée
+     * par l'application ; le détail reste libre.
+     *
+     * @var array<string, string>
+     */
+    public const MOTIFS_CONTESTATION = [
+        'heures' => 'Heures retenues incorrectes',
+        'taux' => 'Taux horaire incorrect',
+        'seance_manquante' => 'Séance non enregistrée',
+        'seance_en_double' => 'Séance comptée deux fois',
+        'ajustement' => 'Prime ou retenue contestée',
+        'periode' => 'Mauvaise période de rattachement',
+        'autre' => 'Autre motif',
+    ];
+
     protected $fillable = [
         'numero',
         'enseignant_id',
@@ -20,11 +40,14 @@ class BulletinPaie extends Model
         'montant_net',
         'statut',
         'commentaire_enseignant',
+        'motif_contestation',
         'date_consultation',
         'date_validation',
         'date_paiement',
         'mode_paiement',
         'reference_paiement',
+        'date_reception',
+        'recu_par',
     ];
 
     protected $casts = [
@@ -35,6 +58,7 @@ class BulletinPaie extends Model
         'date_consultation' => 'datetime',
         'date_validation'   => 'datetime',
         'date_paiement'     => 'date',
+        'date_reception'    => 'datetime',
     ];
 
     // ======================
@@ -70,6 +94,17 @@ class BulletinPaie extends Model
         return $this->hasMany(
             BulletinPaieAjustement::class,
             'bulletin_paie_id'
+        );
+    }
+
+    /**
+     * L'enseignant qui a confirmé avoir reçu le paiement (D-052).
+     */
+    public function recaperePar(): BelongsTo
+    {
+        return $this->belongsTo(
+            User::class,
+            'recu_par'
         );
     }
 
@@ -110,6 +145,39 @@ class BulletinPaie extends Model
     public function estCorrige(): bool
     {
         return $this->statut === 'corrige';
+    }
+
+    /**
+     * D-052 — Le paiement a-t-il été réceptionné par l'enseignant ?
+     *
+     * Un bulletin versé n'est pas « terminé » : tant que l'enseignant n'a pas
+     * confirmé la réception, l'administration doit pouvoir retrouver les
+     * versements en attente (espèces versées mais non remises, virement non
+     * parvenu…).
+     */
+    public function estRecu(): bool
+    {
+        return $this->statut === 'verse'
+            && $this->date_reception !== null;
+    }
+
+    /**
+     * Versé, mais réception non confirmée : à relancer.
+     */
+    public function enAttenteReception(): bool
+    {
+        return $this->statut === 'verse'
+            && $this->date_reception === null;
+    }
+
+    /**
+     * Libellé lisible de la catégorie de contestation.
+     */
+    public function getLibelleMotifContestationAttribute(): ?string
+    {
+        return $this->motif_contestation
+            ? (self::MOTIFS_CONTESTATION[$this->motif_contestation] ?? 'Autre motif')
+            : null;
     }
 
     public function getTotalPrimesAttribute(): int

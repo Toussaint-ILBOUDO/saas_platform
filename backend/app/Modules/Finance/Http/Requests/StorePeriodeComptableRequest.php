@@ -9,10 +9,7 @@ class StorePeriodeComptableRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->user()->hasAnyRole([
-            'admin',
-            'super-admin'
-        ]);
+        return auth()->user()->hasRole('admin_cabinet');
     }
 
     public function rules(): array
@@ -22,7 +19,8 @@ class StorePeriodeComptableRequest extends FormRequest
             'date_debut' => ['required', 'date'],
             'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
             'type' => ['required', 'string', 'in:mensuel,trimestriel,annuel'],
-            'statut' => ['nullable', 'string', 'in:ouverte,cloturee'],
+            // Le statut n'est pas saisissable : une période naît ouverte et
+            // se clôture via l'action dédiée (D-051).
         ];
     }
 }

@@ -4,12 +4,13 @@ namespace App\Policies;
 
 use App\Models\Facture;
 use App\Models\User;
+use App\Support\Roles;
 
 class FacturePolicy
 {
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('super-admin')) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
@@ -24,7 +25,7 @@ class FacturePolicy
     public function view(User $user, Facture $facture): bool
     {
         if (
-            $user->hasRole('admin')
+            Roles::estAdmin($user)
             && $user->can('facture.view')
         ) {
             return true;
@@ -32,7 +33,7 @@ class FacturePolicy
 
         // parent concerné
         if (
-            $user->hasRole('parent')
+            Roles::estParent($user)
             && $facture->parent_id == $user->id
         ) {
             return true;
@@ -47,6 +48,17 @@ class FacturePolicy
     }
 
     public function update(User $user, Facture $facture): bool
+    {
+        return $user->can('facture.update');
+    }
+
+    /**
+     * Enregistrement d'un règlement : un acte administratif. Le parent ne
+     * règle pas « lui-même » une facture dans l'API — l'écran parent est en
+     * lecture seule. L'état réel (facture déjà payée) reste tranché par le
+     * service `FacturationService::marquerPaye()`.
+     */
+    public function payer(User $user, Facture $facture): bool
     {
         return $user->can('facture.update');
     }

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Cabinet;
+use App\Models\ParametrePublic;
 
 /**
  * Fiche cabinet (D-044) : données essentielles saisies à la création (Landlord)
@@ -109,5 +110,35 @@ final class FicheCabinet
     public static function depuisTenant(Cabinet $cabinet): array
     {
         return array_replace_recursive(self::defaut(), (array) ($cabinet->fiche ?? []));
+    }
+
+    /**
+     * Identité du cabinet COURANT (tenant initialisé), source des documents
+     * (PDF, en-têtes). S'appuie sur la même donnée que le front
+     * (`parametres_publics.data`) : nom du cabinet, logo et fiche.
+     *
+     * Ne JAMAIS compléter par la config legacy `keduc.cabinet` : un document
+     * émis depuis un cabinet ne doit jamais porter les coordonnées d'un autre.
+     */
+    public static function courante(): array
+    {
+        if (! tenancy()->initialized) {
+            return [
+                'nom' => null,
+                'logo' => null,
+                'fiche' => self::defaut(),
+            ];
+        }
+
+        $public = ParametrePublic::query()->first();
+
+        return [
+            'nom' => tenant()?->nom,
+            'logo' => $public?->data['logo']['path'] ?? null,
+            'fiche' => array_replace_recursive(
+                self::defaut(),
+                (array) ($public?->data['fiche'] ?? [])
+            ),
+        ];
     }
 }

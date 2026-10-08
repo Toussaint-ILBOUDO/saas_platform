@@ -155,6 +155,8 @@ class RapportMensuelWebController extends Controller
             'volume_horaire' => $stats['volume_horaire'],
             'nombre_seances' => $stats['nombre_seances'],
             'bilan' => $stats['bilan'],
+            // D-049 : détail par matière, identique à ce qui sera enregistré.
+            'ventilation' => $stats['ventilation'],
         ]);
     }
 
@@ -198,6 +200,8 @@ class RapportMensuelWebController extends Controller
             'contratCours.eleve.user',
             'contratCours.affectations.matiere',
             'periode',
+            'valideur',
+            'lignes.affectation.matiere',
         ]);
 
         return view(
@@ -231,12 +235,28 @@ class RapportMensuelWebController extends Controller
 
     /**
      * Mise à jour.
+     *
+     * D-051 : le cycle autorise deux corrections seulement —
+     *   - rapport « soumis »  → correction avant validation ;
+     *   - rapport « rejeté »  → re-soumission.
+     * Un rapport « validé » n'est plus modifiable : ses heures sont déjà
+     * facturées au parent et payées à l'enseignant.
      */
     public function update(
         StoreRapportMensuelRequest $request,
         RapportMensuelEnseignant $rapport
     ): RedirectResponse {
-        $rapport->update($request->validated());
+        $this->authorize('update', $rapport);
+
+        if ($rapport->estRejete()) {
+            $this->service->resoumettre($rapport, $request->validated());
+
+            return redirect()
+                ->route('rapports-mensuels.show', $rapport)
+                ->with('success', 'Rapport re-soumis : il attend une nouvelle validation.');
+        }
+
+        $this->service->corriger($rapport, $request->validated());
 
         return redirect()
             ->route('rapports-mensuels.show', $rapport)
@@ -245,11 +265,17 @@ class RapportMensuelWebController extends Controller
 
     /**
      * Suppression.
+     *
+     * Un rapport VALIDÉ ne peut pas être supprimé : il a produit une facture et
+     * un bulletin. Supprimer les lignes « soumises » ou « rejetées » reste
+     * possible tant que la période est ouverte.
      */
     public function destroy(
         RapportMensuelEnseignant $rapport
     ): RedirectResponse {
-        $rapport->delete();
+        $this->authorize('delete', $rapport);
+
+        $this->service->supprimer($rapport);
 
         return redirect()
             ->route('rapports-mensuels.index')
@@ -257,29 +283,36 @@ class RapportMensuelWebController extends Controller
     }
 
     /**
-     * Validation d'un rapport par l'administration.
+     * Validation d'un rapport par l'administration (D-051).
      */
     public function valider(
         RapportMensuelEnseignant $rapport
     ): RedirectResponse {
-        $rapport->update(['statut' => 'valide']);
+        $this->service->valider($rapport);
 
         return redirect()
             ->route('rapports-mensuels.show', $rapport)
-            ->with('success', 'Rapport validé.');
+            ->with('success', 'Rapport validé : la facturation et la paie sont débloquées.');
     }
 
     /**
-     * Rejet d'un rapport par l'administration.
+     * Rejet motivé d'un rapport par l'administration (D-051).
      */
     public function reject(
+        Request $request,
         RapportMensuelEnseignant $rapport
     ): RedirectResponse {
-        $rapport->update(['statut' => 'rejete']);
+        $request->validate([
+            'motif_rejet' => ['required', 'string', 'min:5', 'max:1000'],
+        ], [
+            'motif_rejet.required' => 'Le motif du rejet est obligatoire : l\'enseignant doit savoir quoi corriger.',
+        ]);
+
+        $this->service->rejeter($rapport, $request->string('motif_rejet')->toString());
 
         return redirect()
             ->route('rapports-mensuels.show', $rapport)
-            ->with('success', 'Rapport rejeté.');
+            ->with('success', 'Rapport rejeté : l\'enseignant a été notifié du motif.');
     }
 
     /**

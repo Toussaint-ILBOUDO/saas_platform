@@ -61,7 +61,7 @@ class AuthApiController extends Controller
 
         return response()->json([
             'message' => 'Connexion réussie.',
-            'user' => new UserResource($user),
+            'user' => new UserResource($user->load('eleve')),
         ]);
     }
 
@@ -78,7 +78,7 @@ class AuthApiController extends Controller
     public function moi(Request $request): JsonResponse
     {
         return response()->json([
-            'user' => new UserResource($request->user('web')),
+            'user' => new UserResource($request->user('web')->load('eleve')),
         ]);
     }
 

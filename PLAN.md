@@ -139,13 +139,26 @@
 > (écritures → `flushCache` de `faq.public` → reconstruction à la lecture) ; backend sain — si la
 > création n'apparaît toujours pas publiquement, refaire le test **backend redémarré** + accueil
 > public rechargé.
+>
+> **Quatrième tour (30/09) — la page publique n'affichait rien : app Angular *zoneless***. Les API
+> renvoyaient 200 avec les bonnes données (vérifié en direct sur 8080 et via le proxy 4200) mais la
+> vue restait vide. Cause : `provideZonelessChangeDetection()` (`app.config.ts:13`) — en zoneless,
+> une affectation de propriété simple dans un `.subscribe()` (ex. `this.sections = sections`) ne
+> déclenche **aucune** détection de changement ; seules les écritures de `signal` (ou les
+> événements de template) en déclenchent une. La `RevealDirective` n'était pas en cause (elle ne
+> fait qu'ajouter les classes `reveal`/`_visible`). Correctif : passage en `signal` de tous les
+> champs chargés en asynchrone dans les pages publiques (`faq`, `actualites`,
+> `actualite-detail`, `accueil`, `bibliotheque`, `boutique`, `contact`, `demande-cours`) et les
+> composants partagés (`header`, `footer`) ; les champs pilotés par clic restent des propriétés.
+> Le backoffice était déjà en `signal` (d'où son fonctionnement). Recette validée par
+> l'utilisateur le 30/09 (T5.6).
 
 - [x] **T5.1** Créer le cabinet 1 depuis le Landlord (P2), puis `cabinet-<slug>` à partir du gabarit. (✍️ cabinet **Magis Plus Center** créé par l'utilisateur — données du dossier en `docs/PLAN_CABINET_1.md` ; frontend codé sur mesure dans `frontend/magis`, pas de gabarit/D-043)
 - [x] **T5.2** **Page publique** : accueil (hero), à propos, actualités (liste + détail), FAQ, formulaire de demande de cours, pied de page ; sections activables selon la configuration. Design soigné, mobile d'abord. (livré : 8 pages — accueil, actualités(+détail), bibliothèque, boutique, FAQ, demande de cours, contact — textes depuis `src/content.ts` (D-044), données via l'API publique (fiche, actualités, FAQ, documents, produits, stats, enseignants, témoignages, references) ; hero/à propos/services/zones/stats/solutions/enseignants/témoignages/FAQ/bandeau rendez-vous/contact ; header collant + tiroir mobile, footer 4 colonnes, bouton remontée ; palette orange `#e8610c` + bleu `#12305e`, icônes bootstrap-icons, sans dégradés ni émojis ; formulaires demande de cours → `POST demandes-cours` et commande boutique → WhatsApp)
 - [x] **T5.3** **Backoffice** : connexion, changement de mot de passe, coquille avec navigation par rôle, tableau de bord (squelette). (livré dans `frontend/magis` : connexion + mot de passe oublié/réinitialisation, coquille responsive mobile-first (bottom-nav/tiroir, rail tablette, sidebar PC), navigation par rôle + gardes + choix de rôle multi-comptes, mode sombre, tableau de bord, profil. Validé en bout en bout le 29/09.)
 - [x] **T5.4** Écrans admin : gestion du contenu public (thème, pied de page, actualités, FAQ) et des utilisateurs. (écrans Fiche cabinet, Actualités (CRUD + édition, statuts brouillon/publiée), FAQ sections+questions, Utilisateurs et Notifications — branchés sur `/api/admin/*`.)
 - [ ] **T5.5** Manifest, icônes et couleurs PWA propres au cabinet ; test d'installation et de lancement hors ligne.
-- [ ] **T5.6** Test de bout en bout manuel : création du cabinet → email → connexion → modification du contenu → visible sur la page publique.
+- [x] **T5.6** Test de bout en bout manuel : création du cabinet → email → connexion → modification du contenu → visible sur la page publique. (✅ validé le 30/09 : connexion, réinitialisation de mot de passe, édition/ publication d'actualités, sections + questions FAQ, logo du cabinet, fiche cabinet — modifications visibles sur la page publique. Trois bugs corrigés au passage : statut d'actualité, uploads en multipart `PUT` (PHP < 8.4 perd `$_POST`/`$_FILES`) et affichage public en app zoneless — voir les notes de tour ci-dessus.)
 
 ## P6 — Déploiement et exploitation
 
@@ -165,20 +178,42 @@ Les modules existent côté cabinet. Pour **chacun**, appliquer ce cycle **court
 Controller API + Resource + routes  →  tests API  →  écrans Angular  →  test hors-ligne si concerné
 ```
 
-Ordre recommandé (cocher un module quand son cycle est complet) :
+### P7.A — Chaîne financière et pédagogique (cœur du système)
 
-- [ ] **M1** IAM complet (import CSV enseignants, profils, photo)
-- [ ] **M2** Académique (classes, matières, types de cours/documents, périodes)
+> Spécification de référence : **`docs/CONCEPTION_FINANCE.md`** (à lire avant tout code de ce bloc).
+> Décisions : D-048 (une seule chaîne de paie), D-049 (ventilation par matière), D-050 (objectifs
+> remodelés), D-051 (validation au rapport mensuel + gel des périodes).
+> Constat de départ : la logique métier existe et est bonne, mais **sans aucune route API**
+> (contrôleurs web gelés par D-037 → 404), avec des **rôles incohérents** (`admin` au lieu de
+> `admin_cabinet` → 403 partout), **sans aucun test**, et 15 défauts métier documentés.
+
+- [x] **T7A.0 Socle** — rôles `admin_cabinet` dans policies + `routes/{finance,pedagogie}.php` ; suppression des 6 contrôleurs morts ; migrations de structure (ventilation rapport, objectifs remodelés, index uniques, gel des périodes, archivage de la chaîne `paiement_enseignants`) ; numérotation atomique `FAC-`/`BP-` (maximum + verrou consultatif PostgreSQL) ; garde-fous de période close sur les services d'écriture ; cycle de vie des périodes (clôture/réouverture tracées) ; `ReglesMetierFinanceTest` (29 tests sur les invariants §4). Cycle de paie clôturé : contestation motivée par catégorie, confirmation de réception du paiement par l'enseignant (D-052), notifications de bulletin cliquables.
+- [x] **T7A.1 Périodes comptables** — API CRUD `api/finance/periodes` (index/show/store/update) + `close`/`reopen` sous `auth:web` + `role:admin_cabinet`, `PeriodeComptableResource` (contrat exposé : statut, `est_ouverte`, `est_cloturee`, clôture tracée), `PeriodeComptableApiTest` (8 tests : 401/403, contrat d'index, création ouverte d'un tenant, chevauchement refusé 422, bornes + type, cycle close/reopen tracé, show/404, update). Les invariants D-051 passent par le service existant — l'API n'a rien dupliqué. **Écran Angular livré** : `periodes.component.ts` (bandeau « période ouverte », bornes en toutes lettres, édition désactivée sur une période close, confirmation explicite des conséquences avant clôture/réouverture).
+- [x] **T7A.2 Référentiels** — API `api/pedagogie/{classes,matieres,type-cours,enseignants}` (18 routes) + 4 Resources. Classes et matières : suppression refusée en 409 si l'élément est utilisé (`CLASSE_UTILISEE` / `MATIERE_UTILISEE`) — on désactive, on ne casse pas l'historique. Types de cours : pas de DELETE, seulement `activer`/`desactiver` (les contrats de cours les référencent). Enseignants : pas de DELETE (rapports, bulletins, contrats), le rôle `enseignant` est posé par le service et jamais par la requête. `ReferentielApiTest` (13 tests). **Bug corrigé au passage** : les 4 FormRequests classes/matières autorisaient encore les rôles `admin`/`super-admin`, supprimés du seed tenant par D-007 → la création web était bloquée pour tout admin réel ; et `MatiereService::create()` ne relisait pas la ligne, donc l'API renvoyait `actif: false` à tort. **Bascules d'état matière ajoutées** (`activer`/`desactiver`) : les matières sont référencées par les contrats, la seule manière de les retirer d'une liste de sélection était le DELETE, refusé en 409 dès qu'un contrat les utilise — un usage courant (matière archivée en fin d'année, matière d'un seul professeur) n'avait aucune issue. **Écran Angular livré** : `referentiels.component.ts` (4 onglets classes/matières/types/enseignants, création/édition, recherche, pagination, filtre actif/inactif sur les matières, bascule d'état avec confirmation). **Deux défauts corrigés au passage** : (1) la suppression d'une classe utilisée renvoyait un message promettant une désactivation que le service ne fait pas ; (2) la recherche était sensible aux accents (`Recherche` : `LOWER` + repli `translate()`, `%`/`_` échappés) — chercher « mathematiques » ne trouvait plus rien.
+- [x] **T7A.3 Contrats & affectations** — API `api/pedagogie/contrats` (index/show/store/update + `PATCH /statut`) et `api/pedagogie/contrats/{contrat}/affectations` (store/update + `PATCH /statut`), plus `api/mes-cours` (écran enseignant/élève). Nouveau `AffectationService` : compétence enseignant-matière exigée, refus du doublon (même enseignant + même matière sur un contrat), matière **immuable**, taux horaire **gelé dès qu'une ligne de facture ou de bulletin existe**, terminaison refusée si heures facturées. `ContratCoursService` gagne `update()` + `changerStatut()` (un contrat suspendu gèle ses affectations). **Aucun DELETE** : la cascade `contrat_cours` → `affectation_enseignants` → `cahier_textes`/`ligne_factures`/`bulletin_paie_lignes` effacerait des heures facturées et payées. `ContratAffectationApiTest` (16 tests). **Écrans Angular livrés** : `contrats.component.ts` (admin — liste des contrats avec recherche par élève, filtres statut et type de cours, volet détail avec les affectations, création/édition d'un contrat et de ses lignes, cycles de vie actif/suspendu/terminé, aucun bouton de suppression) et `mes-cours.component.ts` (un seul écran enseignant/élève qui change seulement ses libellés : l'enseignant lit ce qu'il donne, l'élève ce qu'il suit ; aucun filtre, le périmètre étant déjà déduit du profil connecté côté serveur). Le parent en est volontairement exclu. **Corrigé au passage** : (1) `getMesPlanning()` était typé en intersection alors que le contrôleur renvoie une union selon le rôle — la destructuration aurait laissé passer une régression du contrat de réponse ; (2) les six contrôleurs Pédagogie lisaient `par_page` alors que le frontend envoie `per_page` : la taille de page demandée était **silencieusement ignorée** sur cinq endpoints, sans erreur (D-058, alias conservé + test de non-régression sur `meta.per_page`).
+- [x] **T7A.4 Planning enseignant** — API `api/pedagogie/planning` (index = `mes_creneaux` + `creneaux_partages` + `affectations` disponibles, store/update/delete) et `api/mes-planning` (consultation parent/élève), `PlanningCoursResource` (créneau présenté avec son contexte : élève, matière, enseignant, jour libellé, tranche horaire). **Conflit horaire corrigé** (D-055) : le chevauchement était une égalité d'heure de début, il devient un **intervalle** (`debut_A < fin_B ET fin_A > debut_B`) et il est contrôlé **des deux côtés** — l'enseignant ne peut pas être chez deux élèves, et l'**élève** ne peut pas suivre deux cours dans la même tranche, sur **tous ses contrats** (le contrôle portait sur la seule affectation). Les créneaux jointifs restent acceptés (journée continue). **Visibilité** : parent → enfants (même si le compte enfant est inactif), élève → son planning **si son compte est activé** (`eleves.statut` ET `users.statut`, revérifié à chaque appel car `AuthService` ne bloque que la connexion), autres enseignants → **uniquement ceux du même contrat** (et non du même élève). Propriété vérifiée dans le contrôleur (403) : un identifiant devinable ne donne aucun droit. `DELETE` autorisé — `planning_cours` n'est référencée par aucune table, à la différence d'un contrat (D-054). `PlanningApiTest` (16 tests). **Bug applicatif corrigé au passage** : `abort(403)` sur une route JSON tombait dans le gestionnaire générique et renvoyait **500** au lieu de 403 (`bootstrap/app.php` ne traitait que 404/405/429) — tout le web en dépendait. **Écrans Angular livrés** : `planning.component.ts` (un seul écran pour les trois rôles — grille semaine mono/7 colonnes, liste empilée sous 900 px, créneaux propres vs pointillés des collègues, synthèse hebdo, raccourcis horaires, erreurs de conflit 422 affichées sous le champ).
+- [x] **T7A.5 Cahier de texte** — API `api/enseignant/cahiers-textes` (index/show/store/update/delete + PDF séance), `api/enseignant/cahiers-textes/affectations` (cours navigables pour la saisie), `api/mes-enfants` (sélecteur d'enfant) et `api/mes-enfants/{eleve}/cahiers-textes` (+ `historique-pdf`) pour la lecture parent/élève. `CahierTexteService` désormais **explicite sur l'utilisateur connecté** : même règle pour le web et l'API, aucune requête ne décide seule de son périmètre. **Idempotence hors-ligne** (D-060) : `uuid_client` unique, reprise à `200` au lieu de `201`, `422` si le même uuid appartient à un autre enseignant (répondre « ok » en renvoyant la séance d'un collègue serait une fuite déguisée), et **course_between deux réémissions simultanées** rattrapée sur violation de contrainte. **Immuabilité** : `date_seance` et `uuid_client` ne se corrigent pas ; `affectation_enseignant_id` est refusée en modification (D-054) ; le passage dans le passé reste possible (ratifier une séance oubliée), le futur non. Gel de période délégué à `GardePeriodeOuverte` (D-051) : ni saisie, ni correction, ni suppression une fois la période close. `CahierTexteApiTest` (27 tests) + `IdentiteParentTest` (3 tests). **Fuite inter-familles corrigée** (D-059) : `eleves.parent_id` référence `users.id` et non `parent_profils.id` — trois écrans (planning, cahier de texte, contrats) lisaient le mauvais identifiant, ce qui exposait les données d'une famille à une autre dès que les identifiants divergeaient. `valide_admin` (code mort KEduc) retiré du modèle, de la Resource et du service. **Écran Angular livré** : `cahier-de-texte.component.ts` (un seul écran enseignant/parent/élève — l'enseignant saisit et corrige, la famille consulte et exporte ; correction désactivée avec son explication hors du jour même, erreurs 422 affichées sous le champ, garde `rolePedagogieGuard` renommé depuis `rolePlanningGuard` — mêmes rôles, donc un seul garde pour les deux écrans).
+- [ ] **T7A.6 Objectifs pédagogiques** — modèle remodelé (D-050) + API + écrans enseignant/admin (M6).
+- [ ] **T7A.7 Rapport mensuel** — ventilation par matière (D-049), fenêtre de dépôt, validation/rejet, PDF, notifications (M7).
+- [ ] **T7A.8 Facturation parent** — prérequis, prévisualisation, génération, règlement, PDF, portail parent (`/api/mes-factures`) (M8).
+- [ ] **T7A.9 Bulletins de paie** — prévisualisation, génération, ajustements, cycle de validation, versement, PDF, portail enseignant (M9).
+- [ ] **T7A.10 Notifications** — URLs Angular, canal mail sur événements financiers, push (dépend de VAPID/P6) (M12).
+- [ ] **T7A.11 Gel du web KEduc** — retrait des contrôleurs web redondants `finance.php`/`pedagogie.php` une fois le cycle API complet (T9.4).
+
+### P7.B — Modules restants
+
+- [ ] **M1** IAM complet (import CSV enseignants, profils, photo) — partiellement couvert par T7A.2
+- [ ] **M2** Académique (classes, matières, types de cours/documents, périodes) — couvert par T7A.1/T7A.2
 - [ ] **M3** Scolarité (parents, élèves, comptes élèves)
 - [ ] **M4** Demandes de cours → conversion en contrat
-- [ ] **M5** Contrats, affectations, planning
-- [ ] **M6** Cahier de texte **avec hors-ligne** + objectifs pédagogiques
-- [ ] **M7** Rapports mensuels enseignants (+ PDF)
-- [ ] **M8** Facturation parents (+ PDF)
-- [ ] **M9** Paie enseignants
+- [x] **M5** Contrats, affectations, planning — API **et** écrans couverts par T7A.2/T7A.3/T7A.4 (référentiels, contrats & affectations, « mes cours », planning)
+- [ ] **M6** Cahier de texte **avec hors-ligne** + objectifs pédagogiques — couvert par T7A.5/T7A.6 (hors-ligne : T4.5)
+- [ ] **M7** Rapports mensuels enseignants (+ PDF) — couvert par T7A.7
+- [ ] **M8** Facturation parents (+ PDF) — couvert par T7A.8
+- [ ] **M9** Paie enseignants — couvert par T7A.9
 - [ ] **M10** Bibliothèque
 - [ ] **M11** Librairie
-- [ ] **M12** Notifications automatiques
+- [ ] **M12** Notifications automatiques — couvert par T7A.10
 - [ ] **M13** Audit (`historique_activites`)
 - [ ] **M14** Dashboards (admin, enseignant, parent)
 

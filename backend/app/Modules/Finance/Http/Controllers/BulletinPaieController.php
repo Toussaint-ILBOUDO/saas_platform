@@ -213,6 +213,7 @@ class BulletinPaieController extends Controller
             'lignes.matiere',
             'lignes.affectation',
             'ajustements',
+            'recaperePar',
         ]);
 
         $totalPrimes = $bulletin->ajustements
@@ -330,37 +331,6 @@ class BulletinPaieController extends Controller
     /**
      * Vue contestation.
      */
-    public function contesterForm(BulletinPaie $bulletin): View
-    {
-        $bulletin->load(['enseignant.user', 'periode']);
-
-        return view(
-            'finances.bulletins-paie.contester',
-            compact('bulletin')
-        );
-    }
-
-    /**
-     * Soumettre une contestation.
-     */
-    public function contester(
-        Request $request,
-        BulletinPaie $bulletin
-    ): RedirectResponse {
-        $request->validate([
-            'commentaire_enseignant' => 'required|string|max:1000',
-        ]);
-
-        $this->validationService->contester(
-            $bulletin,
-            $request->commentaire_enseignant
-        );
-
-        return redirect()
-            ->route('finance.bulletins-paie.show', $bulletin)
-            ->with('success', 'Contestation soumise.');
-    }
-
     /**
      * Marquer comme consulte.
      */

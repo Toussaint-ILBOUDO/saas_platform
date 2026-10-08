@@ -4,12 +4,13 @@ namespace App\Policies;
 
 use App\Models\ObjectifPedagogique;
 use App\Models\User;
+use App\Support\Roles;
 
 class ObjectifPedagogiquePolicy
 {
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('super-admin')) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
@@ -23,11 +24,11 @@ class ObjectifPedagogiquePolicy
 
     public function view(User $user, ObjectifPedagogique $objectif): bool
     {
-        if ($user->hasRole('admin')) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
-        if ($user->hasRole('enseignant') && $user->enseignantProfil) {
+        if (Roles::estEnseignant($user) && $user->enseignantProfil) {
             return \App\Models\AffectationEnseignant::query()
                 ->where('enseignant_id', $user->enseignantProfil->id)
                 ->whereHas('contrat.eleve', fn ($q) =>
@@ -36,14 +37,14 @@ class ObjectifPedagogiquePolicy
                 ->exists();
         }
 
-        if ($user->hasRole('parent')) {
+        if (Roles::estParent($user)) {
             return \App\Models\Eleve::query()
                 ->where('id', $objectif->eleve_id)
                 ->where('parent_id', $user->id)
                 ->exists();
         }
 
-        if ($user->hasRole('eleve')) {
+        if (Roles::estEleve($user)) {
             return $user->eleve && $user->eleve->id === $objectif->eleve_id;
         }
 
@@ -52,16 +53,16 @@ class ObjectifPedagogiquePolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole('enseignant') && $user->enseignantProfil !== null;
+        return Roles::estEnseignant($user) && $user->enseignantProfil !== null;
     }
 
     public function update(User $user, ObjectifPedagogique $objectif): bool
     {
-        if ($user->hasRole('admin')) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
-        if ($user->hasRole('enseignant') && $user->enseignantProfil) {
+        if (Roles::estEnseignant($user) && $user->enseignantProfil) {
             return \App\Models\AffectationEnseignant::query()
                 ->where('enseignant_id', $user->enseignantProfil->id)
                 ->whereHas('contrat.eleve', fn ($q) =>
@@ -75,6 +76,6 @@ class ObjectifPedagogiquePolicy
 
     public function delete(User $user, ObjectifPedagogique $objectif): bool
     {
-        return $user->hasRole('admin');
+        return Roles::estAdmin($user);
     }
 }

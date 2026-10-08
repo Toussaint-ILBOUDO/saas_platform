@@ -22,10 +22,9 @@ class CahierTexteWebController extends Controller
     public function index(Request $request)
     {
         $cahiers = $this->service->paginateForUser(
-            auth()->user(),
-            [
-                'search' => $request->input('search')
-            ]
+            $request->user(),
+            $request->only(['search', 'date_debut', 'date_fin']),
+            $request->integer('per_page', 20),
         );
 
         return view(
@@ -76,7 +75,7 @@ class CahierTexteWebController extends Controller
     {
         $this->authorize('create', CahierTexte::class);
 
-        $this->service->create($request->validated());
+        $this->service->create($request->user(), $request->validated());
 
         return redirect()
             ->route('cahiers-textes.index')
@@ -123,6 +122,7 @@ class CahierTexteWebController extends Controller
         $this->authorize('update', $cahier);
 
         $this->service->update(
+            $request->user(),
             $cahier,
             $request->validated()
         );

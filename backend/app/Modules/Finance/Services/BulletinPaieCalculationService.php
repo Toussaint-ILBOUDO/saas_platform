@@ -2,93 +2,108 @@
 
 namespace App\Modules\Finance\Services;
 
-use App\Models\AffectationEnseignant;
 use App\Models\BulletinPaie;
-use App\Models\BulletinPaieLigne;
 use App\Models\EnseignantProfil;
-use App\Models\PeriodeComptable;
 use App\Models\RapportMensuelEnseignant;
 
 class BulletinPaieCalculationService
 {
     /**
-     * Récupère les enseignants ayant des rapports soumis/validés pour la période.
+     * Enseignants dont les rapports mensuels sont VALIDÉS pour la période.
+     *
+     * D-051 : on ne paie que des heures validées par l'administration.
+     * KEduc incluait les rapports « soumis », ce qui permettait de générer un
+     * bulletin sur des heures que le compte n'avait pas encore validées.
      */
     public function getEnseignantsConcernes(int $periodeId): \Illuminate\Support\Collection
     {
         return EnseignantProfil::query()
             ->whereHas('rapportsMensuels', function ($q) use ($periodeId) {
                 $q->where('periode_id', $periodeId)
-                    ->whereIn('statut', ['soumis', 'valide']);
+                    ->where('statut', 'valide')
+                    ->whereHas('lignes', fn ($l) => $l->where('nombre_heures', '>', 0));
             })
             ->with('user')
+            ->orderBy('id')
             ->get();
     }
 
     /**
      * Calcule les lignes de paie pour un enseignant donné sur une période.
      *
-     * Source des heures : RapportMensuelEnseignant.volume_horaire_cumule
-     * Source du taux   : AffectationEnseignant.taux_horaire_enseignant
+     * D-049 — Source des heures : `rapport_mensuel_enseignant_lignes`
+     * (ventilation par affectation/matière issue du cahier de texte).
+     * D-049 — Source du taux : `affectations_enseignants.taux_horaire_enseignant`.
+     *
+     * KEduc indexait les rapports par enseignant, lisait le CUMULATIF
+     * `volume_horaire_cumule` puis rattachait la ligne à la PREMIÈRE affectation
+     * trouvée (`firstWhere`) : les heures d'une deuxième matière étaient
+     * payées au taux de la première, et le cumul était compté en double dès
+     * qu'un enseignant intervenait sur plusieurs contrats.
+     *
+     * @return array{lignes: array<int, array<string, mixed>>, total_heures: float, montant_brut: int}
      */
     public function calculerLignes(
         EnseignantProfil $enseignant,
         int $periodeId
     ): array {
 
-        $rapports = RapportMensuelEnseignant::query()
+        $ventilations = RapportMensuelEnseignant::query()
             ->where('enseignant_id', $enseignant->id)
             ->where('periode_id', $periodeId)
-            ->whereIn('statut', ['soumis', 'valide'])
+            ->where('statut', 'valide')
+            ->whereHas('lignes', fn ($q) => $q->where('nombre_heures', '>', 0))
             ->with([
+                'lignes' => fn ($q) => $q->where('nombre_heures', '>', 0),
+                'lignes.affectation',
+                'lignes.affectation.matiere',
                 'contratCours.eleve.user',
-                'contratCours.affectations' => function ($q) use ($enseignant) {
-                    $q->where('enseignant_id', $enseignant->id)
-                        ->with('matiere');
-                },
             ])
+            ->orderBy('contrat_cours_id')
             ->get();
 
         $lignes = [];
-        $totalHeures = 0;
+        $totalHeures = 0.0;
         $montantBrut = 0;
 
-        foreach ($rapports as $rapport) {
+        foreach ($ventilations as $rapport) {
+            $eleve = $rapport->contratCours?->eleve;
 
-            $heures = (float) $rapport->volume_horaire_cumule;
+            foreach ($rapport->lignes as $ventilation) {
+                $affectation = $ventilation->affectation;
 
-            if ($heures <= 0) {
-                continue;
+                if (! $affectation || $affectation->statut !== 'actif') {
+                    continue;
+                }
+
+                $heures = (float) $ventilation->nombre_heures;
+
+                if ($heures <= 0) {
+                    continue;
+                }
+
+                $tauxHoraire = (int) $affectation->taux_horaire_enseignant;
+                $montantLigne = (int) round($heures * $tauxHoraire);
+
+                $totalHeures += $heures;
+                $montantBrut += $montantLigne;
+
+                $lignes[] = [
+                    'affectation_enseignant_id' => (int) $affectation->id,
+                    'contrat_cours_id'          => (int) $rapport->contrat_cours_id,
+                    'eleve_id'                  => (int) $rapport->contratCours->eleve_id,
+                    'matiere_id'                => (int) $ventilation->matiere_id,
+                    'eleve_nom'                 => trim(
+                        ($eleve?->user?->prenom ?? '')
+                        . ' '
+                        . ($eleve?->user?->nom ?? '')
+                    ),
+                    'matiere_nom'               => $affectation->matiere?->nom ?? '—',
+                    'nombre_heures'             => round($heures, 2),
+                    'taux_horaire'              => $tauxHoraire,
+                    'montant'                   => $montantLigne,
+                ];
             }
-
-            $affectation = $rapport->contratCours->affectations
-                ->firstWhere('enseignant_id', $enseignant->id);
-
-            if (!$affectation) {
-                continue;
-            }
-
-            $tauxHoraire = (int) $affectation->taux_horaire_enseignant;
-            $montantLigne = (int) ($heures * $tauxHoraire);
-
-            $totalHeures += $heures;
-            $montantBrut += $montantLigne;
-
-            $lignes[] = [
-                'affectation_enseignant_id' => $affectation->id,
-                'contrat_cours_id'          => $rapport->contrat_cours_id,
-                'eleve_id'                  => $rapport->contratCours->eleve_id,
-                'matiere_id'                => $affectation->matiere_id,
-                'eleve_nom'                 => trim(
-                    ($rapport->contratCours->eleve?->user?->prenom ?? '')
-                    . ' '
-                    . ($rapport->contratCours->eleve?->user?->nom ?? '')
-                ),
-                'matiere_nom'               => $affectation->matiere?->nom ?? '—',
-                'nombre_heures'             => round($heures, 2),
-                'taux_horaire'              => $tauxHoraire,
-                'montant'                   => $montantLigne,
-            ];
         }
 
         return [
@@ -122,9 +137,14 @@ class BulletinPaieCalculationService
      */
     public function recalculerTotaux(BulletinPaie $bulletin): void
     {
+        $bulletin->loadMissing('lignes', 'ajustements');
+
         $bulletin->update([
-            'total_heures' => $bulletin->lignes->sum('nombre_heures'),
-            'montant_brut' => $bulletin->lignes->sum('montant'),
+            'total_heures' => round(
+                $bulletin->lignes->sum('nombre_heures'),
+                2
+            ),
+            'montant_brut' => (int) $bulletin->lignes->sum('montant'),
             'montant_net'  => $this->calculerMontantNet($bulletin),
         ]);
     }

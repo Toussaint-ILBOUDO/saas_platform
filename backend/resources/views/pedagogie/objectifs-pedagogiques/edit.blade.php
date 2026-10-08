@@ -16,7 +16,7 @@
                     Modifier — {{ $objectif->eleve?->user?->nom }} {{ $objectif->eleve?->user?->prenom }}
                 </h1>
                 <p class="text-muted mb-0">
-                    {{ $objectif->periode }}
+                    {{ $objectif->periode?->label ?? '—' }}
                 </p>
             </div>
         </div>
@@ -40,14 +40,19 @@
                                disabled>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Période</label>
-                        <select name="periode" class="form-select" required>
-                            @foreach(['Trimestre 1', 'Trimestre 2', 'Trimestre 3', 'Semestre 1', 'Semestre 2', 'Annuel'] as $p)
-                                <option value="{{ $p }}" {{ old('periode', $objectif->periode) === $p ? 'selected' : '' }}>
-                                    {{ $p }}
+                        <label class="form-label">Période comptable</label>
+                        <select name="periode_id" class="form-select" required>
+                            @foreach($periodes as $periode)
+                                <option value="{{ $periode->id }}" @selected((int) old('periode_id', $objectif->periode_id) === $periode->id)>
+                                    {{ $periode->label }}
+                                    ({{ $periode->date_debut->format('d/m/Y') }}
+                                    — {{ $periode->date_fin->format('d/m/Y') }})
                                 </option>
                             @endforeach
                         </select>
+                        @error('periode_id')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Moyenne générale visée</label>

@@ -116,6 +116,93 @@ class ApiNotificationTest extends TenantTestCase
             ->assertJsonPath('meta.total', 0);
     }
 
+    /**
+     * `route_angular` : chemin interne de l'espace.
+     *
+     * `url` reste une URL Blade absolue (utile au backoffice historique) mais
+     * serait fausse dans l'UI Angular : elle sortirait de l'application et
+     * viserait le domaine central au lieu du domaine du cabinet. C'est ce champ
+     * que l'écran Angular doit router.
+     */
+    public function test_notification_expose_une_route_angular(): void
+    {
+        $this->connecterAdmin('c1');
+
+        tenancy()->initialize('c1');
+        $admin = User::where('email', 'admin@c1.local')->first();
+        (new NotificationService())->create(
+            $admin->id,
+            'Nouvelle demande de cours',
+            'Demande de Awa Ouédraogo pour la classe Terminale.',
+            'demande_cours',
+            ['demande_cours_id' => 7],
+            'bi-journal-text'
+        );
+        tenancy()->end();
+
+        $this->getJson('http://c1.localhost/api/notifications')
+            ->assertOk()
+            ->assertJsonPath('data.0.route_angular', '/espace/pedagogie/demandes-cours/7')
+            ->assertJsonPath('data.0.action_label', 'Voir la demande');
+    }
+
+    /**
+     * Une notification dont l'écran cible n'existe pas encore n'expose pas de
+     * route : l'écran affiche alors la ligne sans lien, mieux qu'un lien mort.
+     */
+    public function test_type_inconnu_ne_produit_pas_de_route_angular(): void
+    {
+        $this->connecterAdmin('c1');
+
+        tenancy()->initialize('c1');
+        $admin = User::where('email', 'admin@c1.local')->first();
+        (new NotificationService())->create($admin->id, 'Info', 'Contenu', 'evenement_inconnu');
+        tenancy()->end();
+
+        $this->getJson('http://c1.localhost/api/notifications')
+            ->assertOk()
+            ->assertJsonPath('data.0.route_angular', null);
+    }
+
+    /**
+     * `lu` s'interprète comme « déjà lue » : `lu=1` → les lues, `lu=0` → les
+     * non lues. Le filtre de l'écran Angular s'appuie sur ce contrat — une
+     * inversion passait la « liste des non lues » en miroir (incident test
+     * du 07/10/2026).
+     */
+    public function test_le_filtre_lu_trie_lues_et_non_lues(): void
+    {
+        $this->connecterAdmin('c2');
+
+        tenancy()->initialize('c2');
+        $admin = User::where('email', 'admin@c2.local')->first();
+        $systeeme = new NotificationService();
+        $systeeme->create($admin->id, 'À lire', 'Contenu', 'actualite', ['actualite_id' => 1]);
+        $systeeme->create($admin->id, 'Déjà lue', 'Contenu', 'actualite', ['actualite_id' => 2]);
+        $nonLueId = (int) Notification::where('user_id', $admin->id)->orderBy('id')->first()?->id;
+        $lueId = (int) Notification::where('user_id', $admin->id)->orderByDesc('id')->first()?->id;
+        Notification::where('id', $lueId)->update(['lu' => true, 'date_lecture' => now()]);
+        tenancy()->end();
+
+        $this->getJson('http://c2.localhost/api/notifications?lu=0')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $nonLueId)
+            ->assertJsonPath('meta.non_lues', 1);
+
+        $this->getJson('http://c2.localhost/api/notifications?lu=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $lueId)
+            ->assertJsonPath('data.0.lu', true);
+
+        // Sans filtre, la liste complète est servie.
+        $this->getJson('http://c2.localhost/api/notifications')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.non_lues', 1);
+    }
+
     public function test_abonnement_push_ajout_mise_a_jour_suppression(): void
     {
         $this->connecterAdmin('c1');

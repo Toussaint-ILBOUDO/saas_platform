@@ -156,6 +156,11 @@ import {
         font-size: 0.82rem;
         margin: -0.6rem 0 0.9rem;
       }
+      .aide {
+        color: var(--mpc-texte-doux);
+        font-size: 0.8rem;
+        margin: -0.6rem 0 0.9rem;
+      }
     `,
   ],
   template: `
@@ -189,10 +194,17 @@ import {
                 <p class="erreur" *ngIf="prenom.invalid && (prenom.touched || tente)">Veuillez saisir votre prénom.</p>
               </div>
             </div>
-            <label for="telephone">Téléphone (informations utiles au format +226) <span class="obligatoire">*</span></label>
+            <label for="telephone">Téléphone (utile au format +226) <span class="obligatoire">*</span></label>
             <input class="champ" id="telephone" name="telephone" type="tel" required
                    placeholder="+226 …" [(ngModel)]="demande.telephone" #tel="ngModel" />
             <p class="erreur" *ngIf="tel.invalid && (tel.touched || tente)">Veuillez saisir votre numéro de téléphone.</p>
+
+            <label for="whatsapp">Numéro WhatsApp</label>
+            <input class="champ" id="whatsapp" name="telephone_whatsapp" type="tel"
+                   placeholder="Si différent du téléphone" [(ngModel)]="demande.telephone_whatsapp" />
+            <p class="aide">
+              Si vous le laissez vide, le centre vous rappellera au numéro ci-dessus.
+            </p>
 
             <div class="etape-titre"><span class="etape-num">2</span>{{ CONTENT.demandeCours.etapesForm[1] }}</div>
             <div class="row g-0" style="column-gap: 1rem">
@@ -259,9 +271,17 @@ export class DemandeCoursComponent implements OnInit {
     nom_parent: string;
     prenom_parent: string;
     telephone: string;
+    telephone_whatsapp: string;
     volume_horaire_estime: number | null;
     message?: string;
-  } = { nom_parent: '', prenom_parent: '', telephone: '', volume_horaire_estime: null, message: '' };
+  } = {
+    nom_parent: '',
+    prenom_parent: '',
+    telephone: '',
+    telephone_whatsapp: '',
+    volume_horaire_estime: null,
+    message: '',
+  };
 
   protected readonly envoye = signal(false);
   protected readonly envoiEnCours = signal(false);
@@ -301,6 +321,8 @@ export class DemandeCoursComponent implements OnInit {
         nom_parent: this.demande.nom_parent,
         prenom_parent: this.demande.prenom_parent,
         telephone: this.demande.telephone,
+        // Vide = le centre rappelle au numéro principal.
+        telephone_whatsapp: this.demande.telephone_whatsapp.trim() || undefined,
         type_cours_id: this.typeCoursId,
         classe_id: this.classeId,
         volume_horaire_estime: this.demande.volume_horaire_estime ?? 1,

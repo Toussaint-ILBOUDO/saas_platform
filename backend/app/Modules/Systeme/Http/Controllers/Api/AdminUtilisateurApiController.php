@@ -4,6 +4,7 @@ namespace App\Modules\Systeme\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\UtilisateurAdminResource;
+use App\Support\Recherche;
 use App\Models\User;
 use App\Modules\Systeme\Http\Requests\Api\StoreUtilisateurApiRequest;
 use App\Modules\Systeme\Http\Requests\Api\UpdateUtilisateurApiRequest;
@@ -22,14 +23,13 @@ class AdminUtilisateurApiController extends Controller
         $perPage = min((int) $request->input('per_page', 15), 50);
 
         $users = User::query()
-            ->with('roles')
+            ->with(['roles', 'eleve.classe'])
             ->when((string) $request->input('search', '') !== '', function ($query) use ($request) {
-                $search = (string) $request->input('search');
-                $query->where(function ($q) use ($search) {
-                    $q->where('nom', 'ilike', "%{$search}%")
-                        ->orWhere('prenom', 'ilike', "%{$search}%")
-                        ->orWhere('email', 'ilike', "%{$search}%");
-                });
+                Recherche::likeInsensible(
+                    $query,
+                    ['nom', 'prenom', 'email'],
+                    (string) $request->input('search')
+                );
             })
             ->when((string) $request->input('role', '') !== '', function ($query) use ($request) {
                 $query->role((string) $request->input('role'));

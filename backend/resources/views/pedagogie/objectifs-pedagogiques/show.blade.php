@@ -16,13 +16,13 @@
                     Objectif — {{ $objectif->eleve?->user?->nom }} {{ $objectif->eleve?->user?->prenom }}
                 </h1>
                 <p class="text-muted mb-0">
-                    {{ $objectif->periode }}
+                    {{ $objectif->periode?->label ?? '—' }}
                 </p>
             </div>
         </div>
         <div class="heading-actions">
             <span class="badge text-bg-info fs-6">
-                {{ $objectif->periode }}
+                {{ $objectif->periode?->label ?? '—' }}
             </span>
         </div>
     </div>
@@ -39,7 +39,7 @@
                 <div class="p-4">
                     <p><strong>Élève :</strong> {{ $objectif->eleve?->user?->nom }} {{ $objectif->eleve?->user?->prenom }}</p>
                     <p><strong>Classe :</strong> {{ $objectif->eleve?->classe?->nom ?? '-' }}</p>
-                    <p><strong>Période :</strong> {{ $objectif->periode }}</p>
+                    <p><strong>Période :</strong> {{ $objectif->periode?->label ?? '—' }}</p>
                     <p><strong>Moyenne générale visée :</strong> {{ $objectif->moyenne_visee }}</p>
                     <p><strong>Moyenne générale obtenue :</strong> {{ $objectif->moyenne_obtenue ?? '—' }}</p>
                 </div>

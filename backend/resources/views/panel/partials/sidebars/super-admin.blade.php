@@ -82,7 +82,6 @@
                 <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.factures.index') }}"><i class="bi bi-receipt"></i> Factures clients</a></li>
                 <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.bulletins-paie.index') }}"><i class="bi bi-cash-coin"></i> Bulletins de paie</a></li>
                 <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.type-ajustements.index') }}"><i class="bi bi-tags"></i> Types d'ajustements</a></li>
-                <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.paiements-enseignants.index') }}"><i class="bi bi-wallet2" aria-hidden="true"></i> Paiements enseignants</a></li>
                 <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.facture-cabinet.index') }}"><i class="bi bi-briefcase"></i> Facturation cabinet</a></li>
             </ul>
         </li>

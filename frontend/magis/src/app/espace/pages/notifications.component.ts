@@ -1,12 +1,16 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../services/api.service';
+import { NonLuesService } from '../../services/non-lues.service';
 import { MetaPage, NotificationEspace } from '../../models';
 import { messageErreurApi } from '../../services/messages';
 
-/** Écran « Notifications » : liste, marquage lu, suppression, tout lire. */
+/** Écran « Notifications » : liste filtrée, marquage lu, suppression, tout lire. */
 @Component({
   selector: 'espace-notifications',
-  imports: [],
+  imports: [FormsModule],
   styles: [
     `
       :host {
@@ -28,6 +32,16 @@ import { messageErreurApi } from '../../services/messages';
         font-weight: 800;
         color: var(--mpc-bleu);
       }
+      .entete .compteur {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--mpc-primaire);
+        background: var(--mpc-primaire-tint);
+        padding: 0.22rem 0.55rem;
+        border-radius: 99px;
+        margin-left: 0.5rem;
+        vertical-align: middle;
+      }
       .btn-lire {
         display: inline-flex;
         align-items: center;
@@ -44,6 +58,13 @@ import { messageErreurApi } from '../../services/messages';
       .btn-lire:hover {
         border-color: var(--mpc-primaire);
         color: var(--mpc-primaire);
+      }
+      .filtres {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: center;
+        margin-bottom: 1rem;
       }
       .liste {
         display: grid;
@@ -106,6 +127,22 @@ import { messageErreurApi } from '../../services/messages';
         font-size: 0.72rem;
         color: var(--mpc-texte-doux);
       }
+      .notif-lien {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--mpc-primaire);
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+      }
+      .notif-lien:hover {
+        text-decoration: underline;
+      }
       .notif-actions {
         display: flex;
         flex-direction: column;
@@ -152,10 +189,33 @@ import { messageErreurApi } from '../../services/messages';
   ],
   template: `
     <div class="entete">
-      <h1>Notifications</h1>
+      <h1>
+        Notifications
+        @if (nonLues() > 0) {
+          <span class="compteur">{{ nonLues() }} non-lue{{ nonLues() > 1 ? 's' : '' }}</span>
+        }
+      </h1>
       @if (nonLues() > 0) {
         <button class="btn-lire" type="button" (click)="toutLire()"><i class="bi bi-check2-all"></i> Tout marquer comme lu</button>
       }
+    </div>
+
+    <div class="filtres">
+      <select
+        class="form-select form-select-sm w-auto"
+        [ngModel]="filtreType()"
+        (ngModelChange)="changerType($event)"
+      >
+        <option value="">Tous les types</option>
+        @for (t of TYPES; track t.code) {
+          <option [value]="t.code">{{ t.libelle }}</option>
+        }
+      </select>
+      <select class="form-select form-select-sm w-auto" [ngModel]="filtreLu() === null ? '' : filtreLu() ? '1' : '0'" (ngModelChange)="changerLu($event)">
+        <option value="">Toutes</option>
+        <option value="0">Non lues</option>
+        <option value="1">Lues</option>
+      </select>
     </div>
 
     @if (toast()) {
@@ -182,6 +242,15 @@ import { messageErreurApi } from '../../services/messages';
                 <p class="notif-contenu">{{ n.contenu }}</p>
               }
               <div class="notif-date">{{ dater(n.created_at) }}</div>
+              @if (n.route_angular) {
+                <button
+                  class="notif-lien"
+                  type="button"
+                  (click)="ouvrir($event, n)"
+                >
+                  {{ n.action_label || 'Ouvrir' }} <i class="bi bi-arrow-right"></i>
+                </button>
+              }
             </div>
             <div class="notif-actions">
               <button class="mini" type="button" title="Supprimer" (click)="supprimer($event, n)"><i class="bi bi-x-lg"></i></button>
@@ -189,17 +258,62 @@ import { messageErreurApi } from '../../services/messages';
           </div>
         }
       </div>
+
+      @if (meta() && meta()!.last_page > 1) {
+        <nav class="mt-3">
+          <ul class="pagination pagination-sm justify-content-center">
+            <li class="page-item" [class.disabled]="page() <= 1">
+              <button class="page-link" (click)="changerPage(page() - 1)">Précédent</button>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link">Page {{ page() }} / {{ meta()!.last_page }}</span>
+            </li>
+            <li class="page-item" [class.disabled]="page() >= meta()!.last_page">
+              <button class="page-link" (click)="changerPage(page() + 1)">Suivant</button>
+            </li>
+          </ul>
+        </nav>
+      }
     }
   `,
 })
 export class NotificationsComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
+  private readonly compteur = inject(NonLuesService);
+
+  /**
+   * Les types proposed sont ceux qui ont un écran correspondant. Les autres
+   * restent accessibles via « Tous les types » : la liste ne doit jamais
+   * cacher une notification parce que son écran n'existe pas encore.
+   */
+  protected readonly TYPES = [
+    { code: 'demande_cours', libelle: 'Demandes de cours' },
+    { code: 'rapport', libelle: 'Rapports mensuels' },
+    { code: 'bulletin_paie', libelle: 'Bulletins de paie' },
+    { code: 'facture', libelle: 'Factures' },
+    { code: 'contrat', libelle: 'Contrats' },
+    { code: 'temoignage', libelle: 'Témoignages' },
+    { code: 'actualite', libelle: 'Actualités' },
+  ];
 
   protected readonly notifications = signal<NotificationEspace[]>([]);
+  protected readonly meta = signal<MetaPage | null>(null);
+  protected readonly page = signal(1);
+  protected readonly filtreType = signal('');
+  /** `true` = « déjà lue » (l'API filtre `lu=1`), `false` = « non lue ». */
+  protected readonly filtreLu = signal<boolean | null>(null);
   protected readonly charge = signal(true);
   protected readonly toast = signal('');
 
-  protected readonly nonLues = computed(() => this.notifications().filter((n) => !n.lu).length);
+  /**
+   * Vient de `meta.non_lues` (total du cabinet), pas d'un recomptage sur la
+   * page affichée : filtrer sur « Traitées » ne doit pas faire croire qu'il
+   * n'y a plus rien à lire.
+   */
+  protected readonly nonLues = signal(0);
+
+  protected readonly vide = computed(() => this.notifications().length === 0);
 
   ngOnInit(): void {
     this.charger();
@@ -208,17 +322,38 @@ export class NotificationsComponent implements OnInit {
   protected async marquer(n: NotificationEspace): Promise<void> {
     if (n.lu) return;
     this.notifications.update((liste) => liste.map((x) => (x.id === n.id ? { ...x, lu: true } : x)));
+    this.compteur.diminuer();
+    this.nonLues.update((v) => Math.max(0, v - 1));
     try {
-      await this.api.marquerNotificationLue(n.id).toPromise();
+      await firstValueFrom(this.api.marquerNotificationLue(n.id));
     } catch {
       this.notifications.update((liste) => liste.map((x) => (x.id === n.id ? { ...x, lu: false } : x)));
+      this.nonLues.update((v) => v + 1);
+      this.compteur.recharger();
+      this.toast.set('Impossible de marquer cette notification comme lue.');
     }
   }
 
+  /**
+   * Ouvre la ressource dans l'espace.
+   *
+   * `route_angular` et non `url` : ce dernier est une URL Blade absolue
+   * (domaine central, backoffice historique) qui sortirait de l'application.
+   */
+  protected ouvrir(evenement: Event, n: NotificationEspace): void {
+    evenement.stopPropagation();
+
+    if (!n.route_angular) return;
+
+    void this.marquer(n);
+    void this.router.navigateByUrl(n.route_angular);
+  }
+
   protected async toutLire(): Promise<void> {
-    this.notifications.update((liste) => liste.map((x) => ({ ...x, lu: true })));
     try {
-      await this.api.lireToutesNotifications().toPromise();
+      await firstValueFrom(this.api.lireToutesNotifications());
+      await this.charger();
+      this.compteur.nonLues.set(0);
     } catch (e) {
       this.toast.set(messageErreurApi(e));
       this.charger();
@@ -227,12 +362,37 @@ export class NotificationsComponent implements OnInit {
 
   protected async supprimer(evenement: Event, n: NotificationEspace): Promise<void> {
     evenement.stopPropagation();
+
+    const etaitNonLue = !n.lu;
+
     try {
-      await this.api.supprimerNotification(n.id).toPromise();
+      await firstValueFrom(this.api.supprimerNotification(n.id));
       this.notifications.update((liste) => liste.filter((x) => x.id !== n.id));
+      if (etaitNonLue) {
+        this.nonLues.update((v) => Math.max(0, v - 1));
+        this.compteur.diminuer();
+      }
     } catch (e) {
       this.toast.set(messageErreurApi(e));
     }
+  }
+
+  protected changerType(type: string): void {
+    this.filtreType.set(type);
+    this.page.set(1);
+    this.charger();
+  }
+
+  protected changerLu(valeur: string): void {
+    this.filtreLu.set(valeur === '' ? null : valeur === '1');
+    this.page.set(1);
+    this.charger();
+  }
+
+  protected changerPage(p: number): void {
+    if (p < 1) return;
+    this.page.set(p);
+    this.charger();
   }
 
   protected dater(iso?: string | null): string {
@@ -242,15 +402,27 @@ export class NotificationsComponent implements OnInit {
 
   private charger(): void {
     this.charge.set(true);
-    this.api.getNotifications(1, 50).subscribe({
-      next: (r) => {
-        this.notifications.set(r.data);
-        this.charge.set(false);
-      },
-      error: (e) => {
-        this.toast.set(messageErreurApi(e));
-        this.charge.set(false);
-      },
-    });
+
+    this.api
+      .getNotifications(this.page(), 20, {
+        type: this.filtreType() || undefined,
+        lu: this.filtreLu() ?? undefined,
+      })
+      .subscribe({
+        next: (r) => {
+          this.notifications.set(r.data);
+          this.meta.set(r.meta ?? null);
+          this.nonLues.set(r.meta?.non_lues ?? 0);
+          // La cloche de la coquille partage le même compteur : la lire ici,
+          // à chaque chargement, la garde synchronisée même sans décrément
+          // local (ex. un « tout lire » fait autre part).
+          this.compteur.nonLues.set(r.meta?.non_lues ?? 0);
+          this.charge.set(false);
+        },
+        error: (e) => {
+          this.toast.set(messageErreurApi(e));
+          this.charge.set(false);
+        },
+      });
   }
 }

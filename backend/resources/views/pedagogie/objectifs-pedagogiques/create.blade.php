@@ -47,19 +47,25 @@
                         @enderror
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Période</label>
-                        <select name="periode" class="form-select @error('periode') is-invalid @enderror" required>
+                        <label class="form-label">Période comptable</label>
+                        <select name="periode_id" class="form-select @error('periode_id') is-invalid @enderror" required>
                             <option value="">Sélectionner une période...</option>
-                            <option value="Trimestre 1" {{ old('periode') === 'Trimestre 1' ? 'selected' : '' }}>Trimestre 1</option>
-                            <option value="Trimestre 2" {{ old('periode') === 'Trimestre 2' ? 'selected' : '' }}>Trimestre 2</option>
-                            <option value="Trimestre 3" {{ old('periode') === 'Trimestre 3' ? 'selected' : '' }}>Trimestre 3</option>
-                            <option value="Semestre 1" {{ old('periode') === 'Semestre 1' ? 'selected' : '' }}>Semestre 1</option>
-                            <option value="Semestre 2" {{ old('periode') === 'Semestre 2' ? 'selected' : '' }}>Semestre 2</option>
-                            <option value="Annuel" {{ old('periode') === 'Annuel' ? 'selected' : '' }}>Annuel</option>
+                            @foreach($periodes as $periode)
+                                <option value="{{ $periode->id }}" @selected((int) old('periode_id') === $periode->id)>
+                                    {{ $periode->label }}
+                                    ({{ $periode->date_debut->format('d/m/Y') }}
+                                    — {{ $periode->date_fin->format('d/m/Y') }})
+                                </option>
+                            @endforeach
                         </select>
-                        @error('periode')
+                        @error('periode_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                        @if($periodes->isEmpty())
+                            <div class="form-text text-danger">
+                                Aucune période comptable ouverte : créez-en une avant de saisir des objectifs.
+                            </div>
+                        @endif
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Moyenne générale visée</label>

@@ -289,10 +289,17 @@
     @if($bulletin->statut === 'conteste')
         <div class="panel mb-4">
             <div class="panel-header">
-                <h5 class="mb-0 text-danger">Contestation</h5>
+                <h5 class="mb-0 text-danger">Contestation envoyée</h5>
             </div>
             <div class="panel-body">
+                <div class="mb-2">
+                    <strong>Motif :</strong>
+                    {{ $bulletin->libelle_motif_contestation ?? 'Non précisé' }}
+                </div>
                 <p>{{ $bulletin->commentaire_enseignant }}</p>
+                <p class="text-muted mb-0">
+                    L'administration est notifiée et doit corriger le bulletin.
+                </p>
             </div>
         </div>
     @endif
@@ -300,7 +307,7 @@
     @if($bulletin->statut === 'verse')
         <div class="panel mb-4">
             <div class="panel-header">
-                <h5 class="mb-0 text-success">Informations de paiement</h5>
+                <h5 class="mb-0 text-success">Paiement</h5>
             </div>
             <div class="panel-body">
                 <div class="row">
@@ -313,10 +320,49 @@
                         {{ $bulletin->mode_paiement ?? '—' }}
                     </div>
                     <div class="col-md-4">
-                        <strong>Reference :</strong>
+                        <strong>Référence :</strong>
                         {{ $bulletin->reference_paiement ?? '—' }}
                     </div>
                 </div>
+
+                @if($bulletin->estRecu())
+
+                    <div class="alert alert-success mt-3 mb-0">
+                        <i class="bi bi-check2-circle"></i>
+                        Réception du paiement confirmée le
+                        {{ $bulletin->date_reception?->format('d/m/Y') }}.
+                    </div>
+
+                @else
+
+                    <div class="alert alert-warning mt-3">
+                        <p class="mb-2">
+                            Le paiement a été enregistré par l'administration.
+                            Si vous l'avez bien reçu, confirmez-le : cela clôt
+                            votre cycle de paie.
+                        </p>
+
+                        <form method="POST"
+                              action="{{ route('mes-bulletins.confirmer-reception', $bulletin) }}"
+                              onsubmit="return confirm('Confirmez-vous avoir reçu ce paiement ?');">
+
+                            @csrf
+
+                            <button class="btn btn-success">
+                                <i class="bi bi-cash-coin"></i>
+                                J'ai bien reçu ce paiement
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                    <p class="text-muted small mt-2 mb-0">
+                        Vous n'avez rien reçu ? Signalez-le à l'administration
+                        plutôt que de confirmer.
+                    </p>
+
+                @endif
             </div>
         </div>
     @endif

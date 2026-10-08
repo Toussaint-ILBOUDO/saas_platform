@@ -7,6 +7,7 @@ use App\Models\TemoignageCommentaire;
 use App\Models\TemoignageSignalement;
 use App\Models\User;
 use App\Modules\Systeme\Services\NotificationService;
+use App\Support\Roles;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -84,8 +85,18 @@ class TemoignageNotificationService
         );
     }
 
+    /**
+     * Destinataires de la modération : le staff du cabinet.
+     *
+     * D-007 / D-051 — une base tenant ne contient que les 5 rôles de
+     * `Roles::ROLES_TENANT`. Ce service interrogeait `['admin', 'super-admin']`,
+     * deux rôles qui n'existent jamais dans une base cabinet : la requête
+     * renvoyait systématiquement zéro destinataire et les notifications de
+     * modération (publication, signalement) étaient perdues, sans erreur.
+     * `Roles::ROLES_STAFF` aligne la cible sur celle de `NotificationDispatcher`.
+     */
     protected function admins(): Collection
     {
-        return User::role(['admin', 'super-admin'])->get();
+        return User::role(Roles::ROLES_STAFF)->get();
     }
 }

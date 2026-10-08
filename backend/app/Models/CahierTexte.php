@@ -22,7 +22,14 @@ class CahierTexte extends Model implements HasMedia
         'contenu_cours',
         'objectifs_atteints',
         'observations',
-        'valide_admin',
+        // Colonne existante en base mais absente du `$fillable` : sans elle, un
+        // client hors ligne ne pouvait pas rattacher sa reprise à une séance.
+        //
+        // `valide_admin` en revanche a été **supprimée** par D-051 (migration
+        // `2026_09_30_000002`) : la validation d'une séance appartient au
+        // rapport mensuel, pas à la ligne. La garder en `$fillable` faisait
+        // échouer toute écriture de masse qui la mentionnait.
+        'uuid_client',
     ];
 
     protected $casts = [

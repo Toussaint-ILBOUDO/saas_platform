@@ -139,6 +139,59 @@ a {
   max-width: 760px;
 }
 
+/* ---------- Boutons maison (btn-mpc / btn-outline-mpc / text-mpc) ----------
+   Ces classes sont employées par les écrans (rapports, factures, bulletins…)
+   mais n'existaient nulle part : Bootstrap ne les connaît pas, le bouton
+   restait un `.btn` nu — sans fond, sans survol, et désactivé au moindre
+   `[disabled]`, ce qui supprime le pointeur (pointer-events: none). */
+.btn-mpc {
+  color: #fff;
+  background-color: var(--mpc-primaire);
+  border-color: var(--mpc-primaire);
+  cursor: pointer;
+}
+.btn-mpc:not(:disabled):not(.disabled):hover,
+.btn-mpc:not(:disabled):not(.disabled):focus,
+.btn-mpc:not(:disabled):not(.disabled):active {
+  color: #fff;
+  background-color: var(--mpc-primaire-fonce);
+  border-color: var(--mpc-primaire-fonce);
+}
+.btn-mpc:hover { color: #fff; }
+
+.btn-outline-mpc {
+  color: var(--mpc-primaire);
+  background-color: transparent;
+  border-color: var(--mpc-primaire);
+  cursor: pointer;
+}
+.btn-outline-mpc:not(:disabled):not(.disabled):hover,
+.btn-outline-mpc:not(:disabled):not(.disabled):focus,
+.btn-outline-mpc:not(:disabled):not(.disabled):active {
+  color: #fff;
+  background-color: var(--mpc-primaire);
+  border-color: var(--mpc-primaire);
+}
+/* Icônes de suppression/validation : leur couleur d'état prime (utilitaires
+   Bootstrap en !important), seul le survol passe en blanc. */
+.btn-outline-mpc.text-danger:hover,
+.btn-outline-mpc.text-success:hover {
+  color: #fff;
+}
+
+.text-mpc { color: var(--mpc-primaire) !important; }
+
+/* Désactivés : Bootstrap pose `pointer-events: none`, la souris repasse donc
+   en flèche (aucun retour). On autorise le survol pour afficher le curseur
+   « non autorisé » — les styles de survol restent neutralisés par :not(:disabled). */
+.btn-mpc:disabled,
+.btn-mpc.disabled,
+.btn-outline-mpc:disabled,
+.btn-outline-mpc.disabled {
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+
 /* Réduit les largeurs max pour un rendu aéré. */
 .container {
   max-width: 1200px;
@@ -261,6 +314,9 @@ a {
   --mpc-ordre: #8a7350;
   --mpc-ordre-tint: #f3ede2;
   --mpc-ombre: 0 1px 2px rgba(18, 48, 94, 0.05), 0 8px 24px rgba(18, 48, 94, 0.08);
+  /* Alias historiques employés dans les composants (alertes, pastilles). */
+  --mpc-rouge-clair: #fdecec;
+  --mpc-bleu-doux: #eef3fb;
 }
 
 html[data-bs-theme='sombre'] {
@@ -280,6 +336,8 @@ html[data-bs-theme='sombre'] {
   --mpc-attention-tint: rgba(180, 83, 9, 0.18);
   --mpc-ordre-tint: rgba(138, 115, 80, 0.16);
   --mpc-ombre: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.45);
+  --mpc-rouge-clair: rgba(214, 69, 69, 0.16);
+  --mpc-bleu-doux: rgba(29, 78, 137, 0.18);
   color-scheme: dark;
 }
 

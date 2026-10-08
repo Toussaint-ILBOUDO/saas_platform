@@ -54,15 +54,6 @@ class PeriodeComptableControllerWeb extends Controller
             ->with('success', 'La période comptable a été mise à jour.');
     }
 
-    public function destroy(PeriodeComptable $periode)
-    {
-        $this->service->delete($periode);
-
-        return redirect()
-            ->route('finance.periodes.index')
-            ->with('success', 'La période comptable a été supprimée.');
-    }
-
     public function close(PeriodeComptable $periode)
     {
         $this->service->close($periode);
@@ -70,5 +61,17 @@ class PeriodeComptableControllerWeb extends Controller
         return redirect()
             ->route('finance.periodes.index')
             ->with('success', 'La période comptable a été clôturée.');
+    }
+
+    /**
+     * Réouverture après une clôture erronée (D-051).
+     */
+    public function reopen(PeriodeComptable $periode)
+    {
+        $this->service->reopen($periode);
+
+        return redirect()
+            ->route('finance.periodes.index')
+            ->with('success', 'La période comptable a été rouverte.');
     }
 }

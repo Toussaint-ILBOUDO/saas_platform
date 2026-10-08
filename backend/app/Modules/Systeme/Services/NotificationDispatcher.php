@@ -8,7 +8,6 @@ use App\Models\BulletinPaie;
 use App\Models\ContratCours;
 use App\Models\DemandeCours;
 use App\Models\Facture;
-use App\Models\PaiementEnseignant;
 use App\Models\RapportMensuelEnseignant;
 use App\Models\User;
 use App\Modules\Communication\Enums\ActualiteDestinataire;
@@ -258,26 +257,6 @@ class NotificationDispatcher
     }
 
     // =========================
-    // PAIEMENT ENSEIGNANT
-    // =========================
-
-    public function teacherPaid(PaiementEnseignant $paiement): void
-    {
-        $enseignantUserId = $paiement->enseignant?->user_id;
-
-        if (!$enseignantUserId) return;
-
-        $this->notificationService->create(
-            $enseignantUserId,
-            'Paiement reçu',
-            'Un paiement de ' . number_format($paiement->montant_total, 0, ',', ' ') . ' FCFA a été effectué sur votre compte.',
-            'paiement_enseignant',
-            ['paiement_id' => $paiement->id],
-            'bi-wallet2',
-        );
-    }
-
-    // =========================
     // RAPPORT MENSUEL
     // =========================
 
@@ -295,6 +274,54 @@ class NotificationDispatcher
                 'bi-clipboard-data',
             );
         }
+    }
+
+    /**
+     * D-051 — L'administration valide : la facture et la paie sont débloquées.
+     */
+    public function reportValidated(RapportMensuelEnseignant $rapport): void
+    {
+        $enseignantUserId = $rapport->enseignant?->user_id;
+
+        if (! $enseignantUserId) {
+            return;
+        }
+
+        $this->notificationService->create(
+            $enseignantUserId,
+            'Rapport mensuel validé',
+            'Votre rapport mensuel pour la période « '
+                . ($rapport->periode->label ?? '')
+                . ' » a été validé. Vos heures sont retenues pour la facturation.',
+            'rapport',
+            ['rapport_id' => $rapport->id],
+            'bi-clipboard-check',
+        );
+    }
+
+    /**
+     * D-051 — Rejet motivé : l'enseignant doit pouvoir corriger.
+     */
+    public function reportRejected(
+        RapportMensuelEnseignant $rapport,
+        string $motif
+    ): void {
+        $enseignantUserId = $rapport->enseignant?->user_id;
+
+        if (! $enseignantUserId) {
+            return;
+        }
+
+        $this->notificationService->create(
+            $enseignantUserId,
+            'Rapport mensuel rejeté',
+            'Votre rapport mensuel pour la période « '
+                . ($rapport->periode->label ?? '')
+                . ' » a été rejeté. Motif : ' . $motif,
+            'rapport',
+            ['rapport_id' => $rapport->id],
+            'bi-clipboard-x',
+        );
     }
 
     // =========================
@@ -399,6 +426,27 @@ class NotificationDispatcher
             ['bulletin_paie_id' => $bulletin->id],
             'bi-cash-stack',
         );
+    }
+
+    /**
+     * D-052 — L'enseignant confirme avoir reçu son paiement.
+     *
+     * Envoyée à l'administration : tant que cette confirmation manque, le
+     * versement est « payé mais non réceptionné » et doit pouvoir être relancé.
+     */
+    public function bulletinRecu(BulletinPaie $bulletin): void
+    {
+        foreach (User::role('admin_cabinet')->get() as $admin) {
+            $this->notificationService->create(
+                $admin->id,
+                'Paiement réceptionné',
+                'L\'enseignant a confirmé avoir reçu le paiement du bulletin '
+                    . $bulletin->numero . '.',
+                'bulletin_paie',
+                ['bulletin_paie_id' => $bulletin->id],
+                'bi-check2-circle',
+            );
+        }
     }
 
     public function bulletinVerse(BulletinPaie $bulletin): void

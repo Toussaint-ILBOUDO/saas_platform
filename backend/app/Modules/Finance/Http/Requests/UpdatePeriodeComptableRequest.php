@@ -9,10 +9,7 @@ class UpdatePeriodeComptableRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->user()->hasAnyRole([
-            'admin',
-            'super-admin'
-        ]);
+        return auth()->user()->hasRole('admin_cabinet');
     }
 
     public function rules(): array
@@ -20,32 +17,29 @@ class UpdatePeriodeComptableRequest extends FormRequest
         return [
             'label' => [
                 'required',
+                'string',
+                'max:255',
                 Rule::unique('periode_comptables', 'label')
-                    ->ignore($this->periode->id),
+                    ->ignore($this->route('periode')),
             ],
 
             'date_debut' => [
                 'required',
-                'date'
+                'date',
             ],
 
             'date_fin' => [
                 'required',
                 'date',
-                'after_or_equal:date_debut'
+                'after_or_equal:date_debut',
             ],
 
             'type' => [
                 'required',
                 'string',
-                'in:mensuel,trimestriel,annuel'
+                'in:mensuel,trimestriel,annuel',
             ],
-
-            'statut' => [
-                'required',
-                'string',
-                'in:ouverte,cloturee'
-            ],
+            // Le statut est géré uniquement par close/reopen, jamais par update.
         ];
     }
 }

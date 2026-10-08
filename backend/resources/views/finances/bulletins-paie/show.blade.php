@@ -310,10 +310,6 @@
                     </button>
                 </form>
 
-                <a href="{{ route('finance.bulletins-paie.contester.form', $bulletin) }}"
-                   class="btn btn-danger">
-                    <i class="bi bi-exclamation-triangle"></i> Contester
-                </a>
             </div>
         </div>
     @endif
@@ -321,9 +317,13 @@
     @if($bulletin->statut === 'conteste')
         <div class="panel mb-4">
             <div class="panel-header">
-                <h5 class="mb-0 text-danger">Contestation</h5>
+                <h5 class="mb-0 text-danger">Contestation de l'enseignant</h5>
             </div>
             <div class="panel-body">
+                <div class="mb-2">
+                    <strong>Motif :</strong>
+                    {{ $bulletin->libelle_motif_contestation ?? 'Non précisé' }}
+                </div>
                 <p>{{ $bulletin->commentaire_enseignant }}</p>
             </div>
         </div>
@@ -376,6 +376,36 @@
                         <strong>Référence :</strong>
                         {{ $bulletin->reference_paiement ?? '—' }}
                     </div>
+                </div>
+
+                <div class="mt-3">
+                    @if($bulletin->estRecu())
+
+                        <span class="badge text-bg-success">
+                            Réception confirmée
+                        </span>
+
+                        @if($bulletin->date_reception)
+                            le {{ $bulletin->date_reception->format('d/m/Y') }}
+                        @endif
+
+                        @if($bulletin->recaperePar)
+                            par {{ $bulletin->recaperePar->prenom }}
+                            {{ $bulletin->recaperePar->nom }}
+                        @endif
+
+                    @else
+
+                        <span class="badge text-bg-warning">
+                            En attente de confirmation par l'enseignant
+                        </span>
+
+                        <p class="text-muted small mb-0 mt-2">
+                            Le versement est enregistré, mais l'enseignant n'a pas
+                            encore confirmé l'avoir reçu.
+                        </p>
+
+                    @endif
                 </div>
             </div>
         </div>

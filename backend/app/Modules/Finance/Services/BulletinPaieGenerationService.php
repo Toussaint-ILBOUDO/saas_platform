@@ -16,6 +16,8 @@ class BulletinPaieGenerationService
     public function __construct(
         private BulletinPaieCalculationService $calculator,
         private NotificationDispatcher $notifier,
+        private GardePeriodeOuverte $garde,
+        private NumerotationDocuments $numerotation,
     ) {}
 
     /**
@@ -111,6 +113,10 @@ class BulletinPaieGenerationService
         array $ajustementsPerEnseignant = []
     ): array {
         $periode = PeriodeComptable::findOrFail($periodeId);
+
+        // D-051 : une période close n'accepte aucune écriture financière.
+        $this->garde->exigerOuverte($periode, 'La génération des bulletins');
+
         $enseignants = $this->calculator->getEnseignantsConcernes($periodeId);
         $typesAjustement = TypeAjustement::where('is_active', true)->get();
         $bulletins = [];
@@ -175,7 +181,11 @@ class BulletinPaieGenerationService
                     - $totalDebits;
 
                 $bulletin = BulletinPaie::create([
-                    'numero'        => $this->genererNumero(),
+                    'numero'        => $this->numerotation->prochain(
+                        'BP',
+                        'numero',
+                        now()
+                    ),
                     'enseignant_id' => $enseignant->id,
                     'periode_id'    => $periode->id,
                     'total_heures'  => $result['total_heures'],
@@ -252,21 +262,5 @@ class BulletinPaieGenerationService
                 'montant'             => $submittedAjustements[$type->id] ?? 0,
             ];
         });
-    }
-
-    /**
-     * Genere un numero unique.
-     * Format : BP-YYYYMM-NNNNN
-     */
-    private function genererNumero(): string
-    {
-        $prefixe = 'BP-' . now()->format('Ym') . '-';
-
-        $dernierNumero = BulletinPaie::query()
-            ->where('numero', 'like', $prefixe . '%')
-            ->count();
-
-        return $prefixe
-            . str_pad($dernierNumero + 1, 5, '0', STR_PAD_LEFT);
     }
 }

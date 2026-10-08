@@ -12,7 +12,8 @@ class ObjectifPedagogique extends Model
 
     protected $fillable = [
         'eleve_id',
-        'periode',
+        'periode_id',
+        'enseignant_id',
         'moyenne_visee',
         'moyenne_obtenue',
         'materiel_disponible',
@@ -28,6 +29,16 @@ class ObjectifPedagogique extends Model
     public function eleve(): BelongsTo
     {
         return $this->belongsTo(Eleve::class);
+    }
+
+    public function periode(): BelongsTo
+    {
+        return $this->belongsTo(PeriodeComptable::class, 'periode_id');
+    }
+
+    public function enseignant(): BelongsTo
+    {
+        return $this->belongsTo(EnseignantProfil::class, 'enseignant_id');
     }
 
     public function objectifsMatieres(): HasMany

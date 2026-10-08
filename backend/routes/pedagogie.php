@@ -20,7 +20,7 @@ use App\Modules\Pedagogie\Http\Controllers\PlanningController;
 use App\Modules\Pedagogie\Http\Controllers\PlanningEnseignantController;
 use App\Modules\Pedagogie\Http\Controllers\EvaluationsController;
 
-Route::middleware(['auth', 'role:admin|super-admin'])->group(function () {
+Route::middleware(['auth', 'role:admin_cabinet'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
@@ -86,7 +86,7 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function () {
 |--------------------------------------------------------------------------
 | CONTRATS — consultation d'un contrat précis
 |
-| Sorti du groupe role:admin|super-admin : l'accès à UN contrat doit être
+| Sorti du groupe role:admin_cabinet : l'accès à UN contrat doit être
 | tranché par ContratCoursPolicy (admin, parent du contrat, enseignant
 | affecté), pas par un rôle global. C'est ce qui causait le 403 sur
 | /contrats/{id} pour les parents/enseignants pourtant autorisés par
@@ -323,11 +323,11 @@ Route::middleware('auth')
 
         Route::post('/{rapport}/valider', 'valider')
             ->name('validate')
-            ->middleware('role:admin');
+            ->middleware('role:admin_cabinet');
 
         Route::post('/{rapport}/rejeter', 'reject')
             ->name('reject')
-            ->middleware('role:admin');
+            ->middleware('role:admin_cabinet');
     });
 
 /*

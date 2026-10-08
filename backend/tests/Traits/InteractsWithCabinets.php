@@ -90,4 +90,64 @@ trait InteractsWithCabinets
             }
         }
     }
+
+    /**
+     * Vide le schéma de la base centrale de test avant `migrate:fresh`.
+     *
+     * `migrate:fresh` s'appuie sur `db:wipe`, qui sur PostgreSQL ne supprime que
+     * les **tables** (`dropAllTables`). Une exécution interrompue peut laisser
+     * une séquence orpheline — typiquement `migrations_id_seq` : la table a été
+     * droppée, sa séquence pas. Le `migrate:fresh` suivant échoue alors sur
+     *
+     *     pg_class_relname_nsp_index : (relname, relnamespace)=(migrations_id_seq)
+     *
+     * et plus aucun test ne démarre : la base de test reste bloquée jusqu'à
+     * intervention manuelle. Ce nettoyage rend la suite auto-réparatrice.
+     *
+     * Limité à l'environnement `testing` : la base de développement ne doit
+     * jamais passer par ici.
+     */
+    protected function purgeSchemaCentralTest(): void
+    {
+        if (app()->environment('testing') !== true) {
+            return;
+        }
+
+        $schema = DB::getDatabaseName();
+
+        // Vues d'abord : elles peuvent dépendre des tables.
+        foreach (DB::select('
+            SELECT viewname FROM pg_views WHERE schemaname = current_schema()
+        ') as $vue) {
+            DB::unprepared('DROP VIEW IF EXISTS "' . $schema . '"."' . $vue->viewname . '" CASCADE');
+        }
+
+        // Types énumérés : `db:wipe` ne les droppe que sur option.
+        foreach (DB::select("
+            SELECT t.typname
+            FROM pg_type t
+            JOIN pg_namespace n ON n.oid = t.typnamespace
+            WHERE n.nspname = current_schema()
+              AND t.typtype = 'e'
+        ") as $type) {
+            DB::unprepared('DROP TYPE IF EXISTS "' . $schema . '"."' . $type->typname . '" CASCADE');
+        }
+
+        // Tables, puis séquences : l'ordre compte, une séquence `serial` peut
+        // être rattachée à une colonne encore existante.
+        foreach (DB::select('
+            SELECT tablename FROM pg_tables WHERE schemaname = current_schema()
+        ') as $table) {
+            DB::unprepared('DROP TABLE IF EXISTS "' . $schema . '"."' . $table->tablename . '" CASCADE');
+        }
+
+        foreach (DB::select('
+            SELECT c.relname
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE c.relkind = \'S\' AND n.nspname = current_schema()
+        ') as $sequence) {
+            DB::unprepared('DROP SEQUENCE IF EXISTS "' . $schema . '"."' . $sequence->relname . '" CASCADE');
+        }
+    }
 }

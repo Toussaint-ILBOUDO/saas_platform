@@ -3,16 +3,24 @@
 namespace App\Modules\Pedagogie\Services;
 
 use App\Models\Classe;
+use App\Support\Recherche;
 use App\Models\Eleve;
 
 class ClasseService
 {
-    public function paginate(int $perPage = 15)
+    public function paginate(array $filters = [], int $perPage = 15)
     {
         return Classe::query()
-            ->withCount('eleves')
+            ->withCount(['eleves', 'demandesCours'])
+            // La recherche est faite en base : filtrer la page courante
+            // donnerait un résultat faux sur une liste paginée.
+            ->when(
+                $filters['search'] ?? null,
+                fn ($query, $search) => Recherche::likeInsensible($query, ['nom', 'sigle'], $search)
+            )
             ->latest()
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     public function create(array $data): Classe

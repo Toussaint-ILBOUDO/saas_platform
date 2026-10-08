@@ -9,6 +9,7 @@ use App\Modules\Finance\Services\BulletinPaiePdfService;
 use App\Modules\Finance\Services\BulletinPaieValidationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class BulletinPaieController extends Controller
@@ -155,7 +156,11 @@ class BulletinPaieController extends Controller
     }
 
     /**
-     * Soumettre une contestation.
+     * Soumettre une contestation (D-052).
+     *
+     * Motif structuré : une catégorie imposée (liste fermée du modèle) et un
+     * détail libre d'au moins 20 caractères. Le service revalide les deux —
+     * l'API et le web passent par le même garde.
      */
     public function contester(
         Request $request,
@@ -163,17 +168,49 @@ class BulletinPaieController extends Controller
     ): RedirectResponse {
         $this->authorize('update', $bulletin);
 
-        $request->validate([
+        $valides = $request->validate([
+            'motif_contestation' => [
+                'required',
+                Rule::in(array_keys(BulletinPaie::MOTIFS_CONTESTATION)),
+            ],
             'commentaire_enseignant' => 'required|string|max:1000',
+        ], [
+            'motif_contestation.required' =>
+                'Indiquez ce que vous contestez sur ce bulletin.',
+            'motif_contestation.in' =>
+                'Motif de contestation inconnu.',
+            'commentaire_enseignant.required' =>
+                'Décrivez la contestation : l\'administration a besoin de savoir '
+                . 'ce qui est contesté pour vous répondre.',
         ]);
 
         $this->validationService->contester(
             $bulletin,
-            $request->commentaire_enseignant
+            $valides['motif_contestation'],
+            $valides['commentaire_enseignant'],
         );
 
         return redirect()
             ->route('mes-bulletins.show', $bulletin)
-            ->with('success', 'Contestation soumise.');
+            ->with('success', 'Contestation soumise : l\'administration est notifiée.');
+    }
+
+    /**
+     * D-052 — L'enseignant confirme avoir reçu son paiement.
+     *
+     * Le versement se fait hors plateforme : c'est le seul moment où
+     * l'enseignant atteste que l'argent lui est parvenu, ce qui clôt le
+     * cycle de paie et previent l'administration.
+     */
+    public function confirmerReception(
+        BulletinPaie $bulletin
+    ): RedirectResponse {
+        $this->authorize('update', $bulletin);
+
+        $this->validationService->confirmerReception($bulletin);
+
+        return redirect()
+            ->route('mes-bulletins.show', $bulletin)
+            ->with('success', 'Réception du paiement confirmée. Merci.');
     }
 }

@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ApiService } from '../services/api.service';
 import { AuthService, libelleRole } from '../services/auth.service';
+import { NonLuesService } from '../services/non-lues.service';
 import { ThemeService } from '../services/theme.service';
 import { CONTENT } from '../../content';
 import {
@@ -39,7 +40,7 @@ export class EspaceComponent implements OnInit {
   protected readonly tiroirOuvert = signal(false);
   protected readonly profilOuvert = signal(false);
   protected readonly choixRoleOuvert = signal(false);
-  protected readonly nonLues = signal(0);
+  protected readonly nonLues = inject(NonLuesService).nonLues;
   protected readonly titre = signal('Espace cabinet');
 
   protected readonly rubriques = computed(() => {
@@ -59,15 +60,17 @@ export class EspaceComponent implements OnInit {
 
   protected readonly aPlusieursRoles = computed(() => (this.auth.utilisateur()?.roles.length ?? 0) > 1);
 
+  private readonly compteur = inject(NonLuesService);
+
   ngOnInit(): void {
     this.router.events.subscribe((evenement) => {
       if (evenement instanceof NavigationEnd) {
         this.titre.set(titreDeRoute(evenement.urlAfterRedirects));
       }
     });
-    this.api.getNotifications(1, 1).subscribe({
-      next: (r) => this.nonLues.set(r.meta.non_lues ?? 0),
-    });
+    // La cloche partage le compteur avec l'écran « Notifications » : chaque
+    // lecture le décrémente en direct, on recharge seulement au démarrage.
+    this.compteur.recharger();
     this.api.getCabinetPublic().subscribe((cabinet) => {
       this.logoUrl.set(cabinet.logo_url ?? null);
     });

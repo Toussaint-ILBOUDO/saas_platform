@@ -35,11 +35,28 @@ export interface OngletMobile {
 export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
   admin_cabinet: [
     {
+      items: [{ libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' }],
+    },
+    {
+      libelle: 'Pédagogie',
       items: [
-        { libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
-        { libelle: 'Finance', icone: 'bi-wallet2', route: '/espace/finance' },
-        { libelle: 'Rapports', icone: 'bi-file-earmark-bar-graph', route: '/espace/rapports' },
+        { libelle: 'Référentiels', icone: 'bi-journal-bookmark', route: '/espace/pedagogie/referentiels' },
+        { libelle: 'Contrats de cours', icone: 'bi-file-earmark-text', route: '/espace/pedagogie/contrats' },
+        { libelle: 'Rapports mensuels', icone: 'bi-file-earmark-bar-graph', route: '/espace/pedagogie/rapports-mensuels' },
+        { libelle: 'Modèle de rapport', icone: 'bi-ui-checks', route: '/espace/pedagogie/modele-rapport' },
+        { libelle: 'Demandes de cours', icone: 'bi-journal-text', route: '/espace/pedagogie/demandes-cours' },
       ],
+    },
+    {
+      libelle: 'Finance',
+      items: [
+        { libelle: 'Périodes comptables', icone: 'bi-calendar-range', route: '/espace/finance/periodes' },
+        { libelle: 'Factures', icone: 'bi-receipt', route: '/espace/finance/factures' },
+        { libelle: 'Bulletins de paie', icone: 'bi-cash-stack', route: '/espace/finance/bulletins-paie' },
+      ],
+    },
+    {
+      items: [{ libelle: 'Rapports', icone: 'bi-file-earmark-bar-graph', route: '/espace/rapports' }],
     },
     {
       libelle: 'La communauté',
@@ -65,7 +82,11 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
     {
       items: [
         { libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
+        { libelle: 'Mes cours', icone: 'bi-journal-bookmark', route: '/espace/modules/mes-cours' },
         { libelle: 'Mon planning', icone: 'bi-calendar3', route: '/espace/modules/planning' },
+        { libelle: 'Cahier de texte', icone: 'bi-journal-text', route: '/espace/modules/cahier-de-texte' },
+        { libelle: 'Rapports mensuels', icone: 'bi-file-earmark-bar-graph', route: '/espace/modules/rapports-mensuels' },
+        { libelle: 'Mes bulletins de paie', icone: 'bi-cash-stack', route: '/espace/modules/mes-bulletins' },
       ],
     },
     {
@@ -81,6 +102,9 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
       items: [
         { libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
         { libelle: 'Planning', icone: 'bi-calendar3', route: '/espace/modules/planning' },
+        { libelle: 'Cahier de texte', icone: 'bi-journal-text', route: '/espace/modules/cahier-de-texte' },
+        { libelle: 'Mes contrats', icone: 'bi-file-earmark-text', route: '/espace/modules/mes-contrats' },
+        { libelle: 'Mes factures', icone: 'bi-receipt', route: '/espace/modules/mes-factures' },
       ],
     },
     {
@@ -95,7 +119,9 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
     {
       items: [
         { libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
-        { libelle: 'Mes cours', icone: 'bi-book', route: '/espace/modules/cours' },
+        { libelle: 'Mes cours', icone: 'bi-journal-bookmark', route: '/espace/modules/mes-cours' },
+        { libelle: 'Mon planning', icone: 'bi-calendar3', route: '/espace/modules/planning' },
+        { libelle: 'Cahier de texte', icone: 'bi-journal-text', route: '/espace/modules/cahier-de-texte' },
       ],
     },
     {
@@ -124,37 +150,44 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
 };
 
 export const ROADMAP_PAR_ROLE: Record<RoleEspace, string[]> = {
-  admin_cabinet: ['Pédagogie', 'Planning', 'Bibliothèque', 'Boutique', 'Témoignages'],
-  enseignant: ['Mes cours', 'Cahiers de textes', 'Rapports mensuels', 'Objectifs', 'Bulletins de paie', 'Bibliothèque'],
-  parent: ['Mes enfants', 'Factures', 'Paiements', 'Bibliothèque'],
-  eleve: ['Mon planning', 'Évaluations', 'Documents', 'Bibliothèque'],
+  admin_cabinet: ['Pédagogie', 'Bibliothèque', 'Boutique', 'Témoignages'],
+  enseignant: ['Objectifs', 'Bibliothèque'],
+  parent: ['Mes enfants', 'Paiements', 'Bibliothèque'],
+  eleve: ['Évaluations', 'Documents', 'Bibliothèque'],
   gestionnaire_librairie: ['Catégories', 'Produits', 'Commandes'],
 };
 
 export const ONGLETS_MOBILE_PAR_ROLE: Record<RoleEspace, OngletMobile[]> = {
   admin_cabinet: [
     { id: 'accueil', libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
-    { id: 'finance', libelle: 'Finance', icone: 'bi-wallet2', route: '/espace/finance' },
-    { id: 'rapports', libelle: 'Rapports', icone: 'bi-file-earmark-bar-graph', route: '/espace/rapports' },
+    { id: 'referentiels', libelle: 'Référentiels', icone: 'bi-journal-bookmark', route: '/espace/pedagogie/referentiels' },
+    { id: 'contrats', libelle: 'Contrats', icone: 'bi-file-earmark-text', route: '/espace/pedagogie/contrats' },
+    { id: 'periodes', libelle: 'Périodes', icone: 'bi-calendar-range', route: '/espace/finance/periodes' },
+    // « Finance » reste dans le tiroir : c'est encore un écran « module à
+    // venir », il n'a pas sa place dans une barre de 5 entrées à côté de trois
+    // écrans livrés. Le tiroir y donne accès, et la barre garde « Plus ».
     { id: 'plus', libelle: 'Plus', icone: 'bi-grid-3x3-gap' },
   ],
   enseignant: [
     { id: 'accueil', libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
+    { id: 'cours', libelle: 'Mes cours', icone: 'bi-journal-bookmark', route: '/espace/modules/mes-cours' },
     { id: 'planning', libelle: 'Planning', icone: 'bi-calendar3', route: '/espace/modules/planning' },
-    { id: 'notifs', libelle: 'Messages', icone: 'bi-bell', route: '/espace/notifications' },
+    { id: 'cahier', libelle: 'Cahier', icone: 'bi-journal-text', route: '/espace/modules/cahier-de-texte' },
     { id: 'plus', libelle: 'Plus', icone: 'bi-grid-3x3-gap' },
   ],
   parent: [
     { id: 'accueil', libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
     { id: 'planning', libelle: 'Planning', icone: 'bi-calendar3', route: '/espace/modules/planning' },
+    { id: 'cahier', libelle: 'Cahier', icone: 'bi-journal-text', route: '/espace/modules/cahier-de-texte' },
     { id: 'notifs', libelle: 'Messages', icone: 'bi-bell', route: '/espace/notifications' },
     { id: 'plus', libelle: 'Plus', icone: 'bi-grid-3x3-gap' },
   ],
   eleve: [
     { id: 'accueil', libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
-    { id: 'cours', libelle: 'Cours', icone: 'bi-book', route: '/espace/modules/cours' },
+    { id: 'cours', libelle: 'Cours', icone: 'bi-journal-bookmark', route: '/espace/modules/mes-cours' },
+    { id: 'planning', libelle: 'Planning', icone: 'bi-calendar3', route: '/espace/modules/planning' },
+    { id: 'cahier', libelle: 'Cahier', icone: 'bi-journal-text', route: '/espace/modules/cahier-de-texte' },
     { id: 'notifs', libelle: 'Messages', icone: 'bi-bell', route: '/espace/notifications' },
-    { id: 'plus', libelle: 'Plus', icone: 'bi-grid-3x3-gap' },
   ],
   gestionnaire_librairie: [
     { id: 'accueil', libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
@@ -184,7 +217,7 @@ export const MODULES_DESCRIPTION: Record<string, ModuleDescription> = {
   planning: {
     titre: 'Planning des cours',
     icone: 'bi-calendar3',
-    phrase: 'Emplois du temps et planning par classe, enseignant ou élève.',
+    phrase: 'Cours hebdomadaires par élève : créneaux, matières et enseignants.',
   },
   cours: {
     titre: 'Mes cours',
@@ -201,6 +234,14 @@ export const MODULES_DESCRIPTION: Record<string, ModuleDescription> = {
 /** Retrouve un libellé de page à partir du chemin courant (topbar). */
 export function titreDeRoute(chemin: string): string {
   const segments = chemin.split('/').filter(Boolean);
+
+  // Une fiche ouverte par identifiant (`/mes-contrats/12`, `/contrats/7`)
+  // appartient à l'écran de la liste correspondante : sans ce retrait, aucun
+  // libellé ne correspond et la barre supérieure afficherait « Espace cabinet ».
+  if (segments.length > 2 && /^\d+$/.test(segments[segments.length - 1])) {
+    segments.pop();
+  }
+
   const racine = '/' + segments.join('/');
   if (segments[0] === 'espace' && segments[1] === 'actualites' && segments.length > 2) return 'Actualités';
   for (const rubriques of Object.values(RUBRIQUES_PAR_ROLE)) {
@@ -215,6 +256,18 @@ export function titreDeRoute(chemin: string): string {
     if (module) return module.titre;
   }
   if (racine === '/espace/actualites') return 'Actualités';
+  if (racine === '/espace/pedagogie/referentiels') return 'Référentiels';
+  if (racine === '/espace/pedagogie/contrats') return 'Contrats de cours';
+  if (racine === '/espace/pedagogie/demandes-cours') return 'Demandes de cours';
+  if (racine === '/espace/modules/mes-cours') return 'Mes cours';
+  if (racine === '/espace/finance/periodes') return 'Périodes comptables';
+  if (racine === '/espace/finance/factures') return 'Factures';
+  if (racine === '/espace/finance/bulletins-paie') return 'Bulletins de paie';
+  if (racine === '/espace/modules/mes-factures') return 'Mes factures';
+  if (racine === '/espace/modules/mes-contrats') return 'Mes contrats';
+  if (racine === '/espace/modules/mes-bulletins') return 'Mes bulletins de paie';
+  if (racine === '/espace/pedagogie/rapports-mensuels') return 'Rapports mensuels';
+  if (racine === '/espace/modules/rapports-mensuels') return 'Rapports mensuels';
   if (racine === '/espace/utilisateurs') return 'Utilisateurs';
   if (racine === '/espace/fiche-cabinet') return 'Fiche du cabinet';
   if (racine === '/espace/faq') return 'FAQ';

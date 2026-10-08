@@ -96,7 +96,7 @@
                     <div>
                         <span>Statut</span>
 
-                        @if($periode->statut === 'ouverte')
+                        @if($periode->estOuverte())
 
                             <span class="badge text-bg-success">
                                 Ouverte
@@ -111,6 +111,28 @@
                         @endif
 
                     </div>
+
+
+                    @if($periode->cloturee_at)
+
+                        <div>
+                            <span>Clôturée le</span>
+
+                            <strong>
+                                {{ $periode->cloturee_at?->format('d/m/Y H:i') }}
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <span>Clôturée par</span>
+
+                            <strong>
+                                {{ trim(($periode->clotureur?->prenom ?? '') . ' ' . ($periode->clotureur?->nom ?? '')) ?: '—' }}
+                            </strong>
+                        </div>
+
+                    @endif
 
 
                     <div>
@@ -154,11 +176,11 @@
                 <div class="d-grid gap-2">
 
 
-                    @if($periode->statut === 'ouverte')
+                    @if($periode->estOuverte())
 
                         <form method="POST"
                               action="{{ route('finance.periodes.close',$periode) }}"
-                              onsubmit="return confirm('Clôturer cette période ? Cette action est irréversible.');">
+                              onsubmit="return confirm('Clôturer cette période ? Les factures et bulletins de la période ne pourront plus être modifiés.');">
 
                             @csrf
                             @method('PATCH')
@@ -172,24 +194,31 @@
 
                         </form>
 
+                    @else
+
+                        <form method="POST"
+                              action="{{ route('finance.periodes.reopen',$periode) }}"
+                              onsubmit="return confirm('Rouvrir cette période ?');">
+
+                            @csrf
+                            @method('PATCH')
+
+                            <button type="submit" class="btn btn-success w-100">
+
+                                <i class="bi bi-unlock"></i>
+                                Rouvrir
+
+                            </button>
+
+                        </form>
+
+                        <p class="text-muted small mb-0">
+                            La réouverture est refusée dès qu'une facture ou un
+                            bulletin de paie existe sur la période.
+                        </p>
+
                     @endif
 
-
-                    <form method="POST"
-                          action="{{ route('finance.periodes.destroy',$periode) }}"
-                          onsubmit="return confirm('Supprimer cette période ? Cette action est irréversible.');">
-
-                        @csrf
-                        @method('DELETE')
-
-                        <button type="submit" class="btn btn-danger w-100">
-
-                            <i class="bi bi-trash"></i>
-                            Supprimer
-
-                        </button>
-
-                    </form>
 
 
                     <a href="{{ route('finance.periodes.index') }}"

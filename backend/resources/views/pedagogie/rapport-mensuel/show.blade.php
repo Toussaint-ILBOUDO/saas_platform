@@ -115,11 +115,36 @@
                 <li>
                     <span>Statut</span>
                     <strong>
-                        <span class="badge text-bg-success">
+                        @php
+                            $couleurStatut = match ($rapport->statut) {
+                                'valide' => 'text-bg-success',
+                                'rejete' => 'text-bg-danger',
+                                'soumis' => 'text-bg-warning',
+                                default => 'text-bg-secondary',
+                            };
+                        @endphp
+
+                        <span class="badge {{ $couleurStatut }}">
                             {{ ucfirst($rapport->statut) }}
                         </span>
                     </strong>
                 </li>
+
+
+                @if($rapport->date_validation)
+                    <li>
+                        <span>Validé le</span>
+                        <strong>{{ $rapport->date_validation->format('d/m/Y H:i') }}</strong>
+                    </li>
+                @endif
+
+
+                @if($rapport->motif_rejet)
+                    <li>
+                        <span>Motif du rejet</span>
+                        <strong class="text-danger">{{ $rapport->motif_rejet }}</strong>
+                    </li>
+                @endif
 
             </ul>
         </div>
@@ -222,6 +247,97 @@
         </div>
 
     </div>
+
+
+
+    {{-- VALIDATION / REJET PAR L'ADMINISTRATION (D-051) --}}
+    @role('admin_cabinet')
+
+        <div class="panel mb-4">
+
+            <div class="panel-header">
+                <h5 class="mb-0">Décision de l'administration</h5>
+            </div>
+
+            <div class="panel-body">
+
+                @if($rapport->statut === 'soumis')
+
+                    <p class="text-muted">
+                        La validation débloque la facturation au parent et la
+                        paie de l'enseignant. Un rejet doit être motivé :
+                        l'enseignant est notifié du motif.
+                    </p>
+
+                    <div class="d-flex gap-2 mb-4">
+
+                        <form method="POST"
+                              action="{{ route('rapports-mensuels.validate', $rapport) }}"
+                              onsubmit="return confirm('Valider ce rapport ?');">
+
+                            @csrf
+
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i>
+                                Valider le rapport
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                    <form method="POST"
+                          action="{{ route('rapports-mensuels.reject', $rapport) }}">
+
+                        @csrf
+
+                        <div class="mb-2">
+                            <label class="form-label" for="motif_rejet">
+                                Motif du rejet <span class="text-danger">*</span>
+                            </label>
+
+                            <textarea name="motif_rejet"
+                                      id="motif_rejet"
+                                      rows="3"
+                                      class="form-control @error('motif_rejet') is-invalid @enderror"
+                                      required
+                                      minlength="5"
+                                      placeholder="Ce que l'enseignant doit corriger.">{{ old('motif_rejet') }}</textarea>
+
+                            @error('motif_rejet')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="bi bi-x-circle"></i>
+                            Rejeter le rapport
+                        </button>
+
+                    </form>
+
+                @elseif($rapport->statut === 'valide')
+
+                    <p class="text-muted mb-0">
+                        Rapport validé{{ $rapport->date_validation ? ' le ' . $rapport->date_validation->format('d/m/Y') : '' }} :
+                        il n'est plus modifiable ni supprimable, et il alimente la
+                        facture comme le bulletin de paie.
+                    </p>
+
+                @else
+
+                    <p class="text-muted mb-0">
+                        Rapport {{ $rapport->statut === 'rejete' ? 'rejeté' : 'en brouillon' }} :
+                        seule une validation peut débloquer la facturation.
+                    </p>
+
+                @endif
+
+            </div>
+
+        </div>
+
+    @endrole
 
 </div>
 @endsection

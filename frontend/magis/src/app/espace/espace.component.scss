@@ -513,7 +513,23 @@
   .barre-item._actif {
     color: var(--mpc-primaire);
   }
-  .barre-item._plus {
-    border-left: 1px solid var(--mpc-separateur);
+  .tiroir {
+    width: min(90vw, 360px);
   }
-}
+  .tiroir-nav {
+    padding: 0.85rem 0.8rem 1.2rem;
+  }
+  .lien {
+    justify-content: flex-start;
+    padding: 0.7rem 0.85rem;
+    min-height: 46px;
+  }
+  .lien-texte {
+    display: inline;
+    white-space: normal;
+    line-height: 1.25;
+  }
+  .rubrique {
+    display: block;
+    margin-bottom: 0.9rem;
+  }}

@@ -39,14 +39,13 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Période</label>
-                    <select name="periode" class="form-select">
+                    <select name="periode_id" class="form-select">
                         <option value="">Toutes les périodes</option>
-                        <option value="Trimestre 1" {{ request('periode') === 'Trimestre 1' ? 'selected' : '' }}>Trimestre 1</option>
-                        <option value="Trimestre 2" {{ request('periode') === 'Trimestre 2' ? 'selected' : '' }}>Trimestre 2</option>
-                        <option value="Trimestre 3" {{ request('periode') === 'Trimestre 3' ? 'selected' : '' }}>Trimestre 3</option>
-                        <option value="Semestre 1" {{ request('periode') === 'Semestre 1' ? 'selected' : '' }}>Semestre 1</option>
-                        <option value="Semestre 2" {{ request('periode') === 'Semestre 2' ? 'selected' : '' }}>Semestre 2</option>
-                        <option value="Annuel" {{ request('periode') === 'Annuel' ? 'selected' : '' }}>Annuel</option>
+                        @foreach($periodes as $periode)
+                            <option value="{{ $periode->id }}" @selected((int) request('periode_id') === $periode->id)>
+                                {{ $periode->label }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -85,7 +84,7 @@
                         <td>{{ $objectif->eleve?->classe?->nom ?? '-' }}</td>
                         <td>
                             <span class="badge text-bg-info">
-                                {{ $objectif->periode }}
+                                {{ $objectif->periode?->label ?? '—' }}
                             </span>
                         </td>
                         <td>

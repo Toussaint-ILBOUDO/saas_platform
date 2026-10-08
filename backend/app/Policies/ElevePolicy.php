@@ -4,12 +4,13 @@ namespace App\Policies;
 
 use App\Models\Eleve;
 use App\Models\User;
+use App\Support\Roles;
 
 class ElevePolicy
 {
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('super-admin')) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
@@ -23,25 +24,25 @@ class ElevePolicy
 
     public function view(User $user, Eleve $eleve): bool
     {
-        if ($user->hasRole('admin') && $user->can('eleve.view')) {
+        if (Roles::estAdmin($user) && $user->can('eleve.view')) {
             return true;
         }
 
         if (
-            $user->hasRole('parent') &&
+            Roles::estParent($user) &&
             $eleve->parent_id === $user->id
         ) {
             return true;
         }
 
         if (
-            $user->hasRole('eleve') &&
+            Roles::estEleve($user) &&
             $eleve->user_id === $user->id
         ) {
             return true;
         }
 
-        if ($user->hasRole('enseignant') && $user->enseignantProfil) {
+        if (Roles::estEnseignant($user) && $user->enseignantProfil) {
             return \App\Models\AffectationEnseignant::query()
                 ->where('enseignant_id', $user->enseignantProfil->id)
                 ->whereHas('contrat', fn ($q) =>
@@ -60,18 +61,18 @@ class ElevePolicy
 
     public function update(User $user, Eleve $eleve): bool
     {
-        if ($user->hasRole('admin') && $user->can('eleve.update')) {
+        if (Roles::estAdmin($user) && $user->can('eleve.update')) {
             return true;
         }
 
         if (
-            $user->hasRole('parent') &&
+            Roles::estParent($user) &&
             $eleve->parent_id === $user->id
         ) {
             return true;
         }
 
-        if ($user->hasRole('enseignant') && $user->enseignantProfil) {
+        if (Roles::estEnseignant($user) && $user->enseignantProfil) {
             return \App\Models\AffectationEnseignant::query()
                 ->where('enseignant_id', $user->enseignantProfil->id)
                 ->whereHas('contrat', fn ($q) =>

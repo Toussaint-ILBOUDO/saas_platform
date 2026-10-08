@@ -5,11 +5,10 @@ use App\Modules\Finance\Http\Controllers\BulletinPaieController;
 use App\Modules\Finance\Http\Controllers\Enseignant\BulletinPaieController as EnseignantBulletinPaieController;
 use App\Modules\Finance\Http\Controllers\FactureWebController;
 use App\Modules\Finance\Http\Controllers\FactureCabinetController;
-use App\Modules\Finance\Http\Controllers\PaiementEnseignantController;
 use App\Modules\Finance\Http\Controllers\PeriodeComptableControllerWeb;
 use App\Modules\Finance\Http\Controllers\TypeAjustementController;
 
-Route::middleware(['auth', 'role:super-admin|admin'])
+Route::middleware(['auth', 'role:admin_cabinet'])
     ->prefix('finance')
     ->name('finance.')
     ->group(function () {
@@ -20,12 +19,22 @@ Route::middleware(['auth', 'role:super-admin|admin'])
         |--------------------------------------------------------------------------
         */
 
-        Route::resource('periodes', PeriodeComptableControllerWeb::class);
+        // D-051 : pas de `destroy` — une période ne se supprime pas
+        // (elle porte le rattachement de ses rapports, factures et bulletins).
+        Route::resource('periodes', PeriodeComptableControllerWeb::class)
+            ->except(['destroy']);
 
         Route::patch(
             'periodes/{periode}/close',
             [PeriodeComptableControllerWeb::class, 'close']
         )->name('periodes.close');
+
+        // D-051 : réouverture, pour corriger une clôture erronée. Le service
+        // la refuse s'il existe déjà des factures ou bulletins sur la période.
+        Route::patch(
+            'periodes/{periode}/reopen',
+            [PeriodeComptableControllerWeb::class, 'reopen']
+        )->name('periodes.reopen');
 
         /*
         |--------------------------------------------------------------------------
@@ -55,19 +64,6 @@ Route::middleware(['auth', 'role:super-admin|admin'])
             'factures/{facture}/marquer-paye',
             [FactureWebController::class, 'marquerPaye']
         )->name('factures.marquer-paye');
-
-        /*
-        |--------------------------------------------------------------------------
-        | PAIEMENTS ENSEIGNANTS
-        |--------------------------------------------------------------------------
-        */
-
-        Route::resource(
-            'paiements-enseignants',
-            PaiementEnseignantController::class
-        )
-            ->parameters(['paiements-enseignants' => 'paiement'])
-            ->only(['index', 'create', 'store', 'show']);
 
         /*
         |--------------------------------------------------------------------------
@@ -124,16 +120,6 @@ Route::middleware(['auth', 'role:super-admin|admin'])
             'bulletins-paie/{bulletin}/ajustement/{ajustement}',
             [BulletinPaieController::class, 'destroyAjustement']
         )->name('bulletins-paie.ajustement.destroy');
-
-        Route::get(
-            'bulletins-paie/{bulletin}/contester',
-            [BulletinPaieController::class, 'contesterForm']
-        )->name('bulletins-paie.contester.form');
-
-        Route::post(
-            'bulletins-paie/{bulletin}/contester',
-            [BulletinPaieController::class, 'contester']
-        )->name('bulletins-paie.contester');
 
         Route::post(
             'bulletins-paie/{bulletin}/consulter',
@@ -310,5 +296,10 @@ Route::middleware('auth')
 
         Route::post('/{bulletin}/contester', 'contester')
             ->name('contester')
+            ->can('update', 'bulletin');
+
+        // D-052 — l'enseignant confirme avoir reçu son paiement hors plateforme.
+        Route::post('/{bulletin}/confirmer-reception', 'confirmerReception')
+            ->name('confirmer-reception')
             ->can('update', 'bulletin');
     });

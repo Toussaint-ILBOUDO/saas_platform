@@ -3,6 +3,7 @@
 namespace App\Modules\Pedagogie\Services;
 
 use App\Models\TypeCours;
+use App\Support\Recherche;
 
 class TypeCoursService
 {
@@ -11,12 +12,7 @@ class TypeCoursService
         return TypeCours::query()
             ->when(
                 $filters['search'] ?? null,
-                function ($query, $search) {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('libelle', 'like', "%{$search}%")
-                            ->orWhere('code', 'like', "%{$search}%");
-                    });
-                }
+                fn ($query, $search) => Recherche::likeInsensible($query, ['libelle', 'code'], $search)
             )
             ->when(
                 isset($filters['actif']) && $filters['actif'] !== '',

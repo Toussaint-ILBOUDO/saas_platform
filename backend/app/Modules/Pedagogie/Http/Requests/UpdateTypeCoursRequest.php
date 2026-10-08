@@ -14,7 +14,9 @@ class UpdateTypeCoursRequest extends FormRequest
 
     public function rules(): array
     {
-        $typeCours = $this->route('type_cour');
+        // Le nom de paramètre de route historique est « type_cour » (web) ;
+        // l'API expose « type_cours ». On accepte les deux.
+        $typeCours = $this->route('type_cours') ?? $this->route('type_cour');
 
         return [
             'libelle' => [

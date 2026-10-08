@@ -4,12 +4,13 @@ namespace App\Policies;
 
 use App\Models\ContratCours;
 use App\Models\User;
+use App\Support\Roles;
 
 class ContratCoursPolicy
 {
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('super-admin')) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
@@ -29,11 +30,13 @@ class ContratCoursPolicy
             return true;
         }
 
-        // Parent du contrat
+        // Parent du contrat. `eleves.parent_id` référence `users.id` et non
+        // `parent_profils.id` (séquence indépendante) : utiliser le profil
+        // rattacherait ce parent aux contrats d'une autre famille.
         if (
             $user->parentProfil
             && $contrat->eleve
-            && $contrat->eleve->parent_id === $user->parentProfil->id
+            && $contrat->eleve->parent_id === $user->id
         ) {
             return true;
         }

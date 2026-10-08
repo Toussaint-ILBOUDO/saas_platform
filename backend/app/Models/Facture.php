@@ -25,7 +25,6 @@ class Facture extends Model
         'mode_paiement',
         'date_limite_paiement',
         'reference_paiement',
-        'statut_paiement_enseignants',
     ];
 
     protected $casts = [
@@ -84,11 +83,6 @@ class Facture extends Model
     public function estPartiellementPayee(): bool
     {
         return $this->statut_paiement === 'partiel';
-    }
-
-    public function tousEnseignantsPayes(): bool
-    {
-        return $this->statut_paiement_enseignants === 'paye';
     }
 
     public function getMontantSuiviAttribute(): int

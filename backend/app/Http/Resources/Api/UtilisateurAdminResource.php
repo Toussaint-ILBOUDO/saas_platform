@@ -21,6 +21,17 @@ class UtilisateurAdminResource extends JsonResource
             'telephone_appel' => $this->telephone_appel,
             'statut' => $this->statut,
             'roles' => $this->roles->pluck('name')->sort()->values(),
+            // `users.id` et `eleves.id` sont deux clés distinctes : un contrat se
+            // rattache à l'élève, pas au compte. Sans cet objet, l'écran des
+            // contrats ne peut pas construire son sélecteur.
+            'eleve' => $this->whenLoaded('eleve', fn () => $this->eleve ? [
+                'id' => $this->eleve->id,
+                'classe' => $this->eleve->relationLoaded('classe') && $this->eleve->classe ? [
+                    'id' => $this->eleve->classe->id,
+                    'nom' => $this->eleve->classe->nom,
+                    'sigle' => $this->eleve->classe->sigle,
+                ] : null,
+            ] : null),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

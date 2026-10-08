@@ -19,6 +19,18 @@ class AffectationEnseignant extends Model
         'statut',
     ];
 
+    /**
+     * `nombre_heures_prevues` est un decimal(5,2) et le taux un entier de
+     * FCFA : sans ces casts, l'API comparait des chaînes et la facturation
+     * recalculait des montants à partir de texte.
+     */
+    protected $casts = [
+        'taux_horaire_enseignant' => 'integer',
+        'nombre_heures_prevues' => 'decimal:2',
+        'date_affectation' => 'date',
+        'date_fin' => 'date',
+    ];
+
     // Relations
 
     public function contrat()
@@ -46,8 +58,14 @@ class AffectationEnseignant extends Model
         return $this->hasMany(LigneFacture::class);
     }
 
-    public function lignesPaiement()
+    /**
+     * D-048 : la rémunération de l'enseignant passe désormais par les lignes
+     * de son bulletin de paie, plus par un paiement par affectation.
+     *
+     * @see \App\Models\BulletinPaieLigne
+     */
+    public function lignesBulletin()
     {
-        return $this->hasMany(LignePaiementEnseignant::class);
+        return $this->hasMany(BulletinPaieLigne::class);
     }
 }

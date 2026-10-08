@@ -119,11 +119,27 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return match ($e->getStatusCode()) {
+                401 => response()->json(['message' => 'Authentification requise.', 'code' => 'NON_AUTHENTIFIE'], 401),
+                403 => response()->json(['message' => 'Accès refusé.', 'code' => 'ACCES_REFUSE'], 403),
                 404 => response()->json(['message' => 'Introuvable.', 'code' => 'INTROUVABLE'], 404),
                 405 => response()->json(['message' => 'Méthode non autorisée.', 'code' => 'METHODE_NON_AUTORISEE'], 405),
                 429 => response()->json(['message' => 'Trop de requêtes. Réessayez plus tard.', 'code' => 'TROP_DE_REQUETES'], 429),
                 default => null,
             };
+        });
+
+        $exceptions->render(function (
+            \App\Modules\Pedagogie\Exceptions\ModeleRapportNonMigreException $e,
+            \Illuminate\Http\Request $request
+        ) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return response()->json([
+                'message' => 'Le modèle de rapport n\'est pas encore présent dans la base de ce cabinet : la migration des cabinets n\'a pas été appliquée. Exécutez \'php artisan tenants:migrate\' depuis backend/ puis rechargez la page.',
+                'code' => 'MODELE_RAPPORT_NON_MIGRE',
+            ], 500);
         });
 
         $exceptions->render(function (Throwable $e, \Illuminate\Http\Request $request) {

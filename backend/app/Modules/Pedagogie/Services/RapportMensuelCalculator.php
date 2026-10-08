@@ -16,10 +16,11 @@ class RapportMensuelCalculator
      *
      * Retourne :
      * - période
-     * - affectations concernées
+     * - affectations concernées (actives uniquement)
      * - cahiers de texte
      * - nombre de séances
-     * - volume horaire
+     * - volume horaire (total)
+     * - ventilation : heures et séances par matière (D-049)
      * - bilan automatique
      */
     public function calculate(
@@ -53,6 +54,9 @@ class RapportMensuelCalculator
         $affectations = AffectationEnseignant::query()
             ->where('contrat_cours_id', $contratId)
             ->where('enseignant_id', $enseignantId)
+            // Une affectation terminée ou suspendue ne produit pas d'heures
+            // payables sur la période.
+            ->where('statut', 'actif')
             ->with('matiere')
             ->get();
 
@@ -117,7 +121,61 @@ class RapportMensuelCalculator
                 $cahiers
             ),
 
+            /*
+            |----------------------------------------------------------------------
+            | D-049 — ventilation par matière
+            |----------------------------------------------------------------------
+            |
+            | Une entrée par affectation, avec ses propres heures et son nombre de
+            | séances. C'est cette structure qui est persistée dans
+            | `rapport_mensuel_enseignant_lignes` puis consommée par la facture ET
+            | le bulletin : sans elle, les heures d'un enseignant étaient comptées
+            | autant de fois qu'il enseignait de matières au même élève.
+            |
+            */
+            'ventilation' => $this->buildVentilation($affectations, $cahiers),
         ];
+    }
+
+    /**
+     * Répartit les heures et les séances par affectation (donc par matière).
+     *
+     * Les affectations sans aucune séance sont conservées avec un volume nul :
+     * l'enseignant voit ainsi dans son rapport toutes les matières qu'il
+     * enseigne, y compris celles où il n'a rien fait sur la période.
+     *
+     * @param  Collection<AffectationEnseignant>  $affectations
+     * @param  Collection<CahierTexte>  $cahiers
+     * @return array<int, array{affectation_enseignant_id: int, matiere_id: int, matiere: string|null, nombre_seances: int, nombre_heures: float}>
+     */
+    public function buildVentilation(Collection $affectations, Collection $cahiers): array
+    {
+        $parAffectation = $cahiers->groupBy('affectation_enseignant_id');
+
+        // `groupBy()` conserve le type Eloquent, mais la valeur par défaut doit
+        // être elle aussi une Collection Eloquent : `calculateHours()` est
+        // typé sur `Illuminate\Database\Eloquent\Collection`, et un `collect()`
+        // (Support) y provoquerait une TypeError pour toute affectation sans
+        // séance.
+        $aucuneSeance = new Collection();
+
+        return $affectations
+            ->map(function (AffectationEnseignant $affectation) use ($parAffectation, $aucuneSeance) {
+                $cahiersAffectation = $parAffectation->get(
+                    $affectation->id,
+                    $aucuneSeance
+                );
+
+                return [
+                    'affectation_enseignant_id' => (int) $affectation->id,
+                    'matiere_id' => (int) $affectation->matiere_id,
+                    'matiere' => $affectation->matiere?->nom,
+                    'nombre_seances' => $cahiersAffectation->count(),
+                    'nombre_heures' => $this->calculateHours($cahiersAffectation),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
 

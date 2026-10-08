@@ -16,8 +16,76 @@ use Illuminate\Validation\ValidationException;
 class FacturationService
 {
     public function __construct(
-        private NotificationDispatcher $notifier
+        private NotificationDispatcher $notifier,
+        private GardePeriodeOuverte $garde,
+        private NumerotationDocuments $numerotation
     ) {}
+
+    /**
+     * Lignes de facturation d'un contrat pour une période.
+     *
+     * D-049 : la source est la VENTILATION du rapport mensuel validé
+     * (`rapport_mensuel_enseignant_lignes`), c'est-à-dire les heures réellement
+     * faites par matière. KEduc indexait les rapports par `enseignant_id` puis
+     * bouclait sur les AFFECTATIONS, ce qui comptait les heures d'un enseignant
+     * autant de fois qu'il enseignait de matières au même élève.
+     *
+     * Seuls les rapports `valide` sont retenus (D-051) : les heures payées par
+     * le parent et par l'enseignant sont celles que l'administration a validées.
+     *
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    protected function lignesFacturables(ContratCours $contrat, PeriodeComptable $periode): \Illuminate\Support\Collection
+    {
+        $rapports = RapportMensuelEnseignant::query()
+            ->where('contrat_cours_id', $contrat->id)
+            ->where('periode_id', $periode->id)
+            ->where('statut', 'valide')
+            ->with([
+                'lignes.affectation.enseignant.user',
+                'lignes.affectation.matiere',
+            ])
+            ->get();
+
+        $lignes = collect();
+
+        foreach ($rapports as $rapport) {
+            foreach ($rapport->lignes as $ligne) {
+                $heures = (float) $ligne->nombre_heures;
+
+                if ($heures <= 0) {
+                    continue;
+                }
+
+                $affectation = $ligne->affectation;
+
+                if (! $affectation || $affectation->statut !== 'actif') {
+                    continue;
+                }
+
+                $tauxHoraire = (int) $affectation->taux_horaire_enseignant;
+
+                $lignes->push([
+                    'affectation_enseignant_id' => (int) $affectation->id,
+                    'contrat_cours_id' => (int) $contrat->id,
+                    'eleve_id' => (int) $contrat->eleve_id,
+                    'matiere_id' => $ligne->matiere_id,
+                    'matiere' => $affectation->matiere->nom ?? '—',
+                    'enseignant_id' => (int) $affectation->enseignant_id,
+                    'enseignant' => trim(
+                        ($affectation->enseignant->user->prenom ?? '')
+                        . ' '
+                        . ($affectation->enseignant->user->nom ?? '')
+                    ),
+                    'nombre_heures' => round($heures, 2),
+                    'taux_horaire' => $tauxHoraire,
+                    'montant' => (int) round($heures * $tauxHoraire),
+                ]);
+            }
+        }
+
+        return $lignes;
+    }
 
     /**
      * Vérifie que tous les enseignants affectés au contrat
@@ -37,26 +105,32 @@ class FacturationService
             ->with(['enseignant.user', 'matiere'])
             ->get();
 
+        // Aucun enseignant affecté : la facturation est impossible, et l'erreur
+        // doit le dire ici (KEduc renvoyait « prérequis OK » puis échouait à la
+        // génération, §2.3-8 de la spécification).
         if ($affectations->isEmpty()) {
-            return null;
+            throw ValidationException::withMessages([
+                'contrat' => 'Ce contrat n\'a aucune affectation active : impossible de le facturer.',
+            ]);
         }
 
         $enseignantsAffectes = $affectations
             ->pluck('enseignant_id')
             ->unique();
 
-        $rapportsExistants = RapportMensuelEnseignant::query()
+        // D-051 : seuls les rapports VALIDÉS débloquent la facturation.
+        $rapportsValides = RapportMensuelEnseignant::query()
             ->where('contrat_cours_id', $contrat->id)
             ->where('periode_id', $periodeId)
             ->whereIn('enseignant_id', $enseignantsAffectes)
-            ->whereIn('statut', ['soumis', 'valide'])
+            ->where('statut', 'valide')
             ->pluck('enseignant_id')
             ->map(fn($id) => (int) $id)
             ->values();
 
         $manquants = $affectations
             ->filter(
-                fn($a) => !$rapportsExistants->contains(
+                fn($a) => !$rapportsValides->contains(
                     (int) $a->enseignant_id
                 )
             )
@@ -88,66 +162,16 @@ class FacturationService
 
         $periode = PeriodeComptable::findOrFail($periodeId);
 
-        $affectations = AffectationEnseignant::query()
-            ->where('contrat_cours_id', $contrat->id)
-            ->where('statut', 'actif')
-            ->with([
-                'enseignant.user',
-                'matiere',
-            ])
-            ->get();
+        $lignes = $this->lignesFacturables($contrat, $periode);
 
-        $rapports = RapportMensuelEnseignant::query()
-            ->where('contrat_cours_id', $contrat->id)
-            ->where('periode_id', $periode->id)
-            ->whereIn('statut', ['soumis', 'valide'])
-            ->get()
-            ->keyBy(fn($r) => (int) $r->enseignant_id);
+        $volumeHoraireTotal = round(
+            $lignes->sum('nombre_heures'),
+            2
+        );
 
-        $volumeHoraireTotal = 0;
-        $montantCours = 0;
-        $lignes = [];
-
-        foreach ($affectations as $affectation) {
-
-            $rapport = $rapports->get(
-                (int) $affectation->enseignant_id
-            );
-
-            if (!$rapport) {
-                continue;
-            }
-
-            $heures = (float) $rapport->volume_horaire_cumule;
-
-            if ($heures <= 0) {
-                continue;
-            }
-
-            $tauxHoraire = (int)
-                $affectation->taux_horaire_enseignant;
-
-            $montantLigne = $heures * $tauxHoraire;
-
-            $volumeHoraireTotal += $heures;
-            $montantCours += $montantLigne;
-
-            $lignes[] = [
-                'enseignant' => trim(
-                    ($affectation->enseignant->user->prenom ?? '')
-                    . ' '
-                    . ($affectation->enseignant->user->nom ?? '')
-                ),
-                'matiere'
-                    => $affectation->matiere->nom ?? '—',
-                'nombre_heures'
-                    => round($heures, 2),
-                'taux_horaire'
-                    => $tauxHoraire,
-                'montant'
-                    => $montantLigne,
-            ];
-        }
+        $montantCours = (int) round(
+            $lignes->sum('montant')
+        );
 
         $fraisSuivi = (int) ($frais['frais_suivi'] ?? 0);
         $autresFrais = (int) ($frais['autres_frais'] ?? 0);
@@ -170,9 +194,9 @@ class FacturationService
                 ? trim($parentUser->prenom . ' ' . $parentUser->nom)
                 : '—',
             'periode_label' => $periode->label,
-            'lignes' => $lignes,
+            'lignes' => $lignes->values()->all(),
             'volume_horaire_total'
-                => round($volumeHoraireTotal, 2),
+                => $volumeHoraireTotal,
             'montant_cours'
                 => $montantCours,
             'frais_suivi' => $fraisSuivi,
@@ -200,11 +224,17 @@ class FacturationService
 
             $periode = PeriodeComptable::findOrFail($periodeId);
 
+            // D-051 : une période close n'accepte aucune écriture financière.
+            $this->garde->exigerOuverte($periode, 'La facturation');
+
             // ─── Duplicata ───
+            // Le contrôle applicatif donne un message lisible ; l'index unique
+            // `uq_factures_contrat_periode` (posé en base) est la vraie
+            // protection contre deux générations concurrentes.
             $factureExistante = Facture::query()
                 ->where('contrat_cours_id', $contrat->id)
                 ->where('periode_id', $periode->id)
-                ->exists();
+                ->first();
 
             if ($factureExistante) {
                 throw ValidationException::withMessages([
@@ -213,7 +243,7 @@ class FacturationService
                 ]);
             }
 
-            // ─── Préalable : tous les rapports déposés ───
+            // ─── Préalable : tous les rapports validés ───
             $manquants = $this->verifierPrerequis(
                 $contrat,
                 $periode->id
@@ -226,80 +256,30 @@ class FacturationService
 
                 throw ValidationException::withMessages([
                     'rapports' =>
-                        "Rapports manquants pour : {$noms}.",
+                        "Rapports mensuels non validés pour : {$noms}.",
                 ]);
             }
 
-            // ─── Récupération des rapports ───
-            $affectations = AffectationEnseignant::query()
-                ->where('contrat_cours_id', $contrat->id)
-                ->where('statut', 'actif')
-                ->get();
+            // ─── Lignes depuis la ventilation des rapports validés (D-049) ───
+            $lignesFacture = $this->lignesFacturables($contrat, $periode);
 
-            if ($affectations->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'contrat' =>
-                        'Aucune affectation active trouvée pour ce contrat.',
-                ]);
-            }
-
-            $rapports = RapportMensuelEnseignant::query()
-                ->where('contrat_cours_id', $contrat->id)
-                ->where('periode_id', $periode->id)
-                ->whereIn('statut', ['soumis', 'valide'])
-                ->get()
-                ->keyBy(fn($r) => (int) $r->enseignant_id);
-
-            // ─── Calcul des lignes ───
-            $volumeHoraireTotal = 0;
-            $montantCours = 0;
-            $lignesFacture = [];
-
-            foreach ($affectations as $affectation) {
-
-                $rapport = $rapports->get($affectation->enseignant_id);
-
-                if (!$rapport) {
-                    continue;
-                }
-
-                $heures = (float) $rapport->volume_horaire_cumule;
-
-                if ($heures <= 0) {
-                    continue;
-                }
-
-                $tauxHoraire = (int)
-                    $affectation->taux_horaire_enseignant;
-
-                $montantLigne = $heures * $tauxHoraire;
-
-                $volumeHoraireTotal += $heures;
-                $montantCours += $montantLigne;
-
-                $lignesFacture[] = [
-                    'affectation_enseignant_id'
-                        => $affectation->id,
-
-                    'nombre_heures'
-                        => $heures,
-
-                    'taux_horaire'
-                        => $tauxHoraire,
-
-                    'montant'
-                        => $montantLigne,
-                ];
-            }
-
-            if (empty($lignesFacture)) {
+            if ($lignesFacture->isEmpty()) {
                 throw ValidationException::withMessages([
                     'periode' =>
-                        'Aucune heure réalisée trouvée pour cette période.',
+                        'Aucune heure validée pour cette période.',
                 ]);
             }
 
             // ─── Calculs globaux ───
+            $volumeHoraireTotal = round(
+                $lignesFacture->sum('nombre_heures'),
+                2
+            );
+
+            $montantCours = (int) round(
+                $lignesFacture->sum('montant')
+            );
+
             $fraisSuivi = (int) ($data['frais_suivi'] ?? 0);
             $autresFrais = (int) ($data['autres_frais'] ?? 0);
             $remise = (int) ($data['remise'] ?? 0);
@@ -311,6 +291,9 @@ class FacturationService
                 - $remise;
 
             // ─── Création de la facture ───
+            // Numéro atomique : calculé sous verrou à partir du maximum
+            // existant (et non d'un `count()+1`), la transaction étant déjà
+            // ouverte ici.
             $facture = Facture::create([
 
                 'contrat_cours_id'
@@ -326,7 +309,11 @@ class FacturationService
                     => $periode->id,
 
                 'numero_facture'
-                    => $this->genererNumeroFacture(),
+                    => $this->numerotation->prochain(
+                        'FAC',
+                        'numero_facture',
+                        now()
+                    ),
 
                 'volume_horaire_total'
                     => $volumeHoraireTotal,
@@ -350,9 +337,6 @@ class FacturationService
                     => $data['date_limite_paiement'] ?? null,
 
                 'statut_paiement'
-                    => 'en_attente',
-
-                'statut_paiement_enseignants'
                     => 'en_attente',
             ]);
 
@@ -398,12 +382,23 @@ class FacturationService
         array $data
     ): Facture {
 
+        // D-051 : une facture déjà réglée ne peut pas être réglée une seconde
+        // fois. KEduc ne contrôlait rien et autorisait n'importe quel
+        // ré-enregistrement, y compris après un premier règlement.
+        if ($facture->estPayee()) {
+            throw ValidationException::withMessages([
+                'facture' => 'Cette facture est déjà marquée comme payée.',
+            ]);
+        }
+
         $facture->update([
             'statut_paiement'  => 'payee',
             'date_paiement'    => $data['date_paiement'],
             'mode_paiement'    => $data['mode_paiement'],
             'reference_paiement' => $data['reference_paiement'] ?? null,
-            'commentaire'      => $data['commentaire'] ?? $facture->commentaire,
+            // Le commentaire de règlement ne doit pas écraser le commentaire
+            // administratif de la facture.
+            'commentaire'      => $facture->commentaire,
         ]);
 
         $this->notifier->invoicePaid(
@@ -416,21 +411,5 @@ class FacturationService
         );
 
         return $facture->fresh();
-    }
-
-    /**
-     * Génère un numéro de facture unique.
-     * Format : FAC-YYYYMM-NNNNN
-     */
-    private function genererNumeroFacture(): string
-    {
-        $prefixe = 'FAC-' . now()->format('Ym') . '-';
-
-        $dernierNumero = Facture::query()
-            ->where('numero_facture', 'like', $prefixe . '%')
-            ->count();
-
-        return $prefixe
-            . str_pad($dernierNumero + 1, 5, '0', STR_PAD_LEFT);
     }
 }

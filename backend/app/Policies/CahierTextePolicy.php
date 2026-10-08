@@ -6,6 +6,7 @@ use App\Models\AffectationEnseignant;
 use App\Models\CahierTexte;
 use App\Models\Eleve;
 use App\Models\User;
+use App\Support\Roles;
 
 class CahierTextePolicy
 {
@@ -15,7 +16,7 @@ class CahierTextePolicy
      */
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('super-admin') || $user->hasRole('admin')) {
+        if (Roles::estAdmin($user)) {
             return true;
         }
 
@@ -33,7 +34,7 @@ class CahierTextePolicy
             return $cahier->affectation
                 && $cahier->affectation->contrat
                 && $cahier->affectation->contrat->eleve
-                && $cahier->affectation->contrat->eleve->parent_id === $user->parentProfil->id;
+                && $cahier->affectation->contrat->eleve->parent_id === $user->id;
         }
 
         if ($user->eleve) {
@@ -55,9 +56,12 @@ class CahierTextePolicy
         }
 
         if ($user->parentProfil) {
+            // `eleves.parent_id` référence `users.id`, pas `parent_profils.id` :
+            // comparer les deux lierait un parent aux enfants d'une autre
+            // famille dès que les séquences se recouvrent.
             return Eleve::query()
                 ->where('id', $eleveId)
-                ->where('parent_id', $user->parentProfil->id)
+                ->where('parent_id', $user->id)
                 ->exists();
         }
 
@@ -70,7 +74,7 @@ class CahierTextePolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole('enseignant') && $user->enseignantProfil !== null;
+        return Roles::estEnseignant($user) && $user->enseignantProfil !== null;
     }
 
     public function update(User $user, CahierTexte $cahier): bool

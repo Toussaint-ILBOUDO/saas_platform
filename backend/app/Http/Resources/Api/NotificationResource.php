@@ -20,7 +20,10 @@ class NotificationResource extends JsonResource
             'icone' => $this->iconeHtml,
             'couleur' => $this->couleur,
             'action_label' => $this->action_label,
+            // `url` : URL absolue Blade (backoffice historique).
+            // `route_angular` : chemin interne de l'espace, à router côté front.
             'url' => $this->url,
+            'route_angular' => $this->route_angular,
             'data' => $this->data ?? [],
             'lu' => $this->lu,
             'date_lecture' => $this->date_lecture?->toIso8601String(),

@@ -25,6 +25,11 @@ abstract class TenantTestCase extends TestCase
     {
         if (method_exists($this, 'purgeBasesTenantResiduelles')) {
             $this->purgeBasesTenantResiduelles();
+
+            // Doit précéder `migrate:fresh` : `db:wipe` ne supprime pas les
+            // séquences orphelines d'un run interrompu, ce qui bloque ensuite
+            // toute création de table `serial` dans cette base.
+            $this->purgeSchemaCentralTest();
         }
 
         RefreshDatabaseState::$migrated = false;

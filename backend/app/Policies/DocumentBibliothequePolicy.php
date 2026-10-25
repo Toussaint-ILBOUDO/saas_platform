@@ -45,7 +45,10 @@ class DocumentBibliothequePolicy
 
     public function update(User $user, DocumentBibliotheque $document): bool
     {
-        if ($user->hasAnyRole(['admin', 'super-admin'])) {
+        // `bibliotheque.moderate` couvre l'admin du cabinet : sans ce raccourci,
+        // un `admin_cabinet` (rôle tenant, distinct des rôles legacy « admin »)
+        // ne pourrait modifier que ses propres documents.
+        if ($user->can('bibliotheque.moderate')) {
             return true;
         }
 
@@ -55,7 +58,7 @@ class DocumentBibliothequePolicy
 
     public function delete(User $user, DocumentBibliotheque $document): bool
     {
-        if ($user->hasAnyRole(['admin', 'super-admin'])) {
+        if ($user->can('bibliotheque.moderate')) {
             return true;
         }
 

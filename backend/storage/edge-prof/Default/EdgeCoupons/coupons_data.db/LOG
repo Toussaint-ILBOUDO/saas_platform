@@ -1,0 +1,6 @@
+2026/10/13-21:39:13.742 b50 Reusing MANIFEST C:\projets\Saas\backend\storage\edge-prof\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/10/13-21:39:13.773 b50 Recovering log #4
+2026/10/13-21:39:13.774 b50 Reusing old log C:\projets\Saas\backend\storage\edge-prof\Default\EdgeCoupons/coupons_data.db/000004.log 
+2026/10/13-21:39:13.860 5300 Level-0 table #8: started
+2026/10/13-21:39:13.866 5300 Level-0 table #8: 683444 bytes OK
+2026/10/13-21:39:13.875 5300 Delete type=0 #4

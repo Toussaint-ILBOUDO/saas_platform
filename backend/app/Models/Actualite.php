@@ -151,16 +151,29 @@ class Actualite extends Model implements HasMedia
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * URL contrôlée de l'image (le disque public tenant n'est pas exposé
+     * via `/storage`).
+     */
+    public function imageUrl(?string $conversion = null): ?string
+    {
+        if (! $this->getFirstMedia('image_principale')) {
+            return null;
+        }
+
+        $url = '/api/public/actualites/'.$this->slug.'/image';
+
+        return $conversion !== null ? $url.'?conversion='.$conversion : $url;
+    }
+
     public function getImageUrlAttribute(): string
     {
-        return $this->getFirstMediaUrl('image_principale', 'thumb')
-            ?: asset('assets/img/logo.png');
+        return $this->imageUrl('thumb') ?: asset('assets/img/logo.png');
     }
 
     public function getImageOriginalAttribute(): string
     {
-        return $this->getFirstMediaUrl('image_principale')
-            ?: asset('assets/img/logo.png');
+        return $this->imageUrl() ?: asset('assets/img/logo.png');
     }
 
     public function getDocumentUrlAttribute(): ?string

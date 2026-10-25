@@ -3,6 +3,7 @@
         ['route' => 'landlord.dashboard', 'name' => 'landlord.dashboard', 'label' => 'Tableau de bord', 'icon' => 'bi-speedometer2'],
         ['route' => 'landlord.cabinets.index', 'name' => 'landlord.cabinets.*', 'label' => 'Cabinets', 'icon' => 'bi-buildings'],
         ['route' => 'landlord.facturation.index', 'name' => 'landlord.facturation.*', 'label' => 'Facturation', 'icon' => 'bi-receipt'],
+        ['route' => 'landlord.catalogue.index', 'name' => 'landlord.catalogue.*', 'label' => 'Catalogue', 'icon' => 'bi-collection'],
         ['route' => 'landlord.journal.index', 'name' => 'landlord.journal.*', 'label' => 'Journal', 'icon' => 'bi-journal-text'],
         ['route' => 'landlord.parametres.index', 'name' => 'landlord.parametres.*', 'label' => 'Paramètres', 'icon' => 'bi-gear'],
     ];
@@ -71,6 +72,10 @@
         </div>
 
     </div>
+
+    <script src="{{ asset('templates/publicpages/assets/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+
+    @stack('scripts')
 
 </body>
 </html>

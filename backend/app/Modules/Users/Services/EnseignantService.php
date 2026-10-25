@@ -3,6 +3,8 @@
 namespace App\Modules\Users\Services;
 
 use App\Models\User;
+use App\Models\EvenementFacturable;
+use App\Modules\Plateforme\Services\JournalFacturable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -34,6 +36,15 @@ class EnseignantService
             if (!empty($data['matieres'])) {
                 $user->enseignantProfil->matieres()->sync($data['matieres']);
             }
+
+            // P8 : journalisation facturable — compte enseignant créé
+            // (actif dès la création, droit d'abonnement mensuel).
+            JournalFacturable::capturer(
+                EvenementFacturable::TYPE_COMPTE_ENSEIGNANT_ACTIVE,
+                'user',
+                $user->id,
+                'Compte enseignant créé',
+            );
 
             return $user->load('enseignantProfil.matieres');
         });

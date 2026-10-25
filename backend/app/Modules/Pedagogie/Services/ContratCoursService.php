@@ -6,8 +6,11 @@ use App\Models\BulletinPaieLigne;
 use App\Models\ContratCours;
 use App\Models\EnseignantProfil;
 use App\Models\LigneFacture;
+use App\Models\EvenementFacturable;
+use App\Modules\Plateforme\Services\JournalFacturable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Modules\Audit\Services\AuditService;
 use App\Modules\Systeme\Services\NotificationDispatcher;
 
 class ContratCoursService
@@ -71,6 +74,8 @@ class ContratCoursService
             return $contrat;
         }
 
+        $ancienStatut = $contrat->statut;
+
         if ($statut === self::TERMINE && $this->aDesFacturesLiees($contrat)) {
             throw ValidationException::withMessages([
                 'statut' => 'Ce contrat porte des factures : il ne peut pas être terminé. Suspendez-le si nécessaire.',
@@ -84,15 +89,34 @@ class ContratCoursService
                 : $contrat->date_fin,
         ]);
 
-        // Un contrat suspendu ne doit pas laisser des affectations actives :
-        // la facturation ignore les affectations non actives, mais laisser
-        // « actif » sur un contrat suspendu donnerait l'illusion du contraire
-        // dans les listes admin.
-        if ($statut !== self::ACTIF) {
-            $contrat->affectations()
-                ->where('statut', AffectationService::ACTIF)
-                ->update(['statut' => AffectationService::SUSPENDU]);
-        }
+            // Un contrat suspendu ne doit pas laisser des affectations actives :
+            // la facturation ignore les affectations non actives, mais laisser
+            // « actif » sur un contrat suspendu donnerait l'illusion du contraire
+            // dans les listes admin.
+            if ($statut !== self::ACTIF) {
+                $contrat->affectations()
+                    ->where('statut', AffectationService::ACTIF)
+                    ->update(['statut' => AffectationService::SUSPENDU]);
+            }
+
+            // P8 : journalisation facturable — réactivation d'un contrat
+            // (frais de contrat actif tarifés une fois, Q-A2).
+            if ($statut === self::ACTIF && $ancienStatut !== self::ACTIF) {
+                JournalFacturable::capturer(
+                    EvenementFacturable::TYPE_CONTRAT_REACTIVE,
+                    'contrat',
+                    $contrat->id,
+                    'Réactivation du contrat de cours #'.$contrat->id,
+                );
+            }
+
+        AuditService::enregistrer(
+            'contrat.statut',
+            'Contrat #' . $contrat->id . ' : ' . $ancienStatut . ' → ' . $statut,
+            $contrat,
+            ['ancien_statut' => $ancienStatut, 'nouveau_statut' => $statut],
+            $statut === self::ACTIF ? 'info' : 'warning'
+        );
 
         return $contrat->fresh();
     }
@@ -136,6 +160,15 @@ class ContratCoursService
             if ($contrat->eleve?->parent_id) {
                 $notifier->contractCreated($contrat);
             }
+
+            // P8 : journalisation facturable — contrat créé actif
+            // (frais de création + frais de contrat actif, Q-A2).
+            JournalFacturable::capturer(
+                EvenementFacturable::TYPE_CONTRAT_CREE,
+                'contrat',
+                $contrat->id,
+                'Création du contrat de cours #'.$contrat->id,
+            );
 
             $parentNotified = false;
 

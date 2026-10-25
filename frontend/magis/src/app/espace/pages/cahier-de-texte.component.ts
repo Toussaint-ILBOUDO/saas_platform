@@ -1,8 +1,10 @@
-import { Component, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
+import { HorsLigneService } from '../../services/hors-ligne.service';
 import { messageErreurApi } from '../../services/messages';
 import {
   AffectationCahierTexte,
@@ -820,6 +822,8 @@ const MODELE_VIDE: CahierTexteFormulaire = {
 export class CahierDeTexteComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
+  private readonly file = inject(HorsLigneService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly el: ElementRef<HTMLElement> = inject(ElementRef);
 
   protected readonly horairesCourants = [
@@ -900,6 +904,12 @@ export class CahierDeTexteComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Une saisie mise en file ne figure pas encore au serveur : la
+    // liste se relit d'elle-même quand la file a fini de partir (T4.5).
+    this.file.synchroTerminee.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      void this.charger(this.meta()?.current_page ?? 1);
+    });
+
     void this.demarrer();
   }
 
@@ -1043,8 +1053,31 @@ export class CahierDeTexteComponent implements OnInit {
     this.message.set('');
     this.edition.set(null);
     this.erreurs.set({});
-    this.modele.set({ ...MODELE_VIDE, date_seance: this.aujourdhui() });
+    // L'identité de la saisie naît **ici** et ne change plus : c'est elle que
+    // la file hors-ligne réémettra, et que le serveur reconnaîtra (D-060).
+    this.modele.set({
+      ...MODELE_VIDE,
+      date_seance: this.aujourdhui(),
+      uuid_client: this.nouvelUuid(),
+    });
     this.formulaireOuvert.set(true);
+  }
+
+  /**
+   * `uuid_client` (D-060) : clé d'idempotence de la saisie. Généré **une fois
+   * pour toute la modale** — une réémission depuis la file doit être reconnue
+   * comme une reprise (200), jamais dupliquée.
+   */
+  private nouvelUuid(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    // Repli hors contexte sécurisé : même forme que l'UUID v4 attendu.
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
   }
 
   protected modifier(s: CahierTexte): void {
@@ -1151,7 +1184,7 @@ export class CahierDeTexteComponent implements OnInit {
         // ignorerait (D-054 pour l'affectation, idempotence pour l'uuid).
         // `date_seance` est renvoyée à l'identique — elle est acceptée mais
         // vérifiée, ce qui évite d'avoir à savoir ici ce qui peut être omis.
-        await firstValueFrom(
+        const resultat = await firstValueFrom(
           this.api.majCahierTexte(courant.id, {
             date_seance: this.modele().date_seance,
             heure_debut: this.modele().heure_debut,
@@ -1162,9 +1195,25 @@ export class CahierDeTexteComponent implements OnInit {
           })
         );
 
+        if (resultat.misEnFile) {
+          // Hors-ligne : la correction attend la file, la liste ne bouge pas
+          // encore — `synchroTerminee` la relira au bon moment.
+          this.message.set(this.messageFile('Correction'));
+          this.succes.set(true);
+          this.fermerFormulaire();
+          return;
+        }
+
         this.message.set('Séance corrigée.');
       } else {
         const reponse = await firstValueFrom(this.api.creerCahierTexte(this.modele()));
+
+        if (reponse.misEnFile) {
+          this.message.set(this.messageFile('Séance'));
+          this.succes.set(true);
+          this.fermerFormulaire();
+          return;
+        }
 
         // `cree` vient du statut HTTP : une reprise idempotente ne doit pas
         // être annoncée comme une nouvelle saisie.
@@ -1302,6 +1351,17 @@ export class CahierDeTexteComponent implements OnInit {
     });
   }
 
+  /**
+   * Message d'une écriture partie en file (T4.5). Le compteur de la file est
+   * déjà à jour : la saisie vient d'y entrer. Il dit ce qui **va** se passer —
+   * la confirmation d'enregistrement viendra du bandeau « Synchronisé ».
+   */
+  private messageFile(action: string): string {
+    const nombre = this.file.enAttente();
+    const compte = `${nombre} en attente`;
+    return `${action} mise en file (${compte}) : elle partira au retour du réseau.`;
+  }
+
   protected async supprimer(s: CahierTexte): Promise<void> {
     const confirmation = confirm(
       `Supprimer la séance du ${this.dateLongue(s.date_seance)} ?\n\n` +
@@ -1312,7 +1372,16 @@ export class CahierDeTexteComponent implements OnInit {
     if (!confirmation) return;
 
     try {
-      await firstValueFrom(this.api.supprimerCahierTexte(s.id));
+      const resultat = await firstValueFrom(this.api.supprimerCahierTexte(s.id));
+
+      if (resultat.misEnFile) {
+        // La séance existe encore au serveur : elle reste affichée jusqu'au
+        // départ de la file, ce que le message dit explicitement.
+        this.message.set(this.messageFile('Suppression'));
+        this.succes.set(true);
+        return;
+      }
+
       this.message.set('Séance supprimée.');
       this.succes.set(true);
       await this.charger(this.meta()?.current_page ?? 1);

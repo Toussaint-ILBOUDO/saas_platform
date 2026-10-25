@@ -24,17 +24,8 @@ class ObjectifPedagogiquePolicy
 
     public function view(User $user, ObjectifPedagogique $objectif): bool
     {
-        if (Roles::estAdmin($user)) {
-            return true;
-        }
-
         if (Roles::estEnseignant($user) && $user->enseignantProfil) {
-            return \App\Models\AffectationEnseignant::query()
-                ->where('enseignant_id', $user->enseignantProfil->id)
-                ->whereHas('contrat.eleve', fn ($q) =>
-                    $q->where('id', $objectif->eleve_id)
-                )
-                ->exists();
+            return (int) $objectif->enseignant_id === (int) $user->enseignantProfil->id;
         }
 
         if (Roles::estParent($user)) {
@@ -58,17 +49,8 @@ class ObjectifPedagogiquePolicy
 
     public function update(User $user, ObjectifPedagogique $objectif): bool
     {
-        if (Roles::estAdmin($user)) {
-            return true;
-        }
-
         if (Roles::estEnseignant($user) && $user->enseignantProfil) {
-            return \App\Models\AffectationEnseignant::query()
-                ->where('enseignant_id', $user->enseignantProfil->id)
-                ->whereHas('contrat.eleve', fn ($q) =>
-                    $q->where('id', $objectif->eleve_id)
-                )
-                ->exists();
+            return (int) $objectif->enseignant_id === (int) $user->enseignantProfil->id;
         }
 
         return false;
@@ -76,6 +58,10 @@ class ObjectifPedagogiquePolicy
 
     public function delete(User $user, ObjectifPedagogique $objectif): bool
     {
-        return Roles::estAdmin($user);
+        if (Roles::estEnseignant($user) && $user->enseignantProfil) {
+            return (int) $objectif->enseignant_id === (int) $user->enseignantProfil->id;
+        }
+
+        return false;
     }
 }

@@ -84,7 +84,7 @@ class RapportMensuelPdfService
 
 
         $pdf = Pdf::loadView(
-                'pedagogie.rapport-mensuel.rapport-mensuel',
+                'pdf.rapport-mensuel',
                 $data
             )
             ->setPaper(

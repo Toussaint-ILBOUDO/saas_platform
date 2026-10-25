@@ -18,15 +18,18 @@ import { Actualite } from '../models';
         overflow: hidden;
         height: 16rem;
         background: var(--mpc-commune, var(--mpc-bleu));
-        display: grid;
-        place-items: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         color: var(--mpc-accent);
         font-size: 3rem;
       }
       .article-vignette img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        box-sizing: border-box;
+        object-fit: contain;
+        padding: 1rem;
       }
       .meta {
         display: flex;

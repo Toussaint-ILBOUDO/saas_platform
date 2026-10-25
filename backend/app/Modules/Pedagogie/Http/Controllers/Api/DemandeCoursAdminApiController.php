@@ -17,8 +17,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 /**
  * API demandes de cours — administration du cabinet.
  *
- * Alimente l'écran Angular « Demandes de cours » et remplace le backoffice
- * Blade (`DemandeCoursAdminController`) côté front.
+ * Alimente l'écran Angular « Demandes de cours ». Le backoffice Blade
+ * qu'elle remplaçait (`DemandeCoursAdminController`) a été retiré avec
+ * le web KEduc (T7A.11) : cette API est le seul accès d'administration.
  *
  * Les actions de constitution de dossier (parent, élève, contrat) renvoient la
  * **demande** mise à jour et non l'entité créée : l'écran a besoin de savoir

@@ -23,7 +23,10 @@ class ActualitePublicResource extends JsonResource
             'contenu' => $this->when($this->showContenu, $this->contenu),
             'video_url' => $this->video_url,
             'lien_externe' => $this->lien_externe,
-            'image_url' => $this->getFirstMediaUrl('image_principale') ?: null,
+            // Route contrôlée : /storage ne résout pas en multi-tenant.
+            'image_url' => $this->getFirstMedia('image_principale')
+                ? '/api/public/actualites/'.$this->slug.'/image'
+                : null,
             'published_at' => $this->published_at?->toIso8601String(),
             'nb_vues' => $this->nb_vues,
             'nb_reactions' => $this->nb_reactions,

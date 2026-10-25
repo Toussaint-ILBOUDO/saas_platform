@@ -66,6 +66,15 @@ class Facture extends Model
         return $this->hasMany(LigneFacture::class);
     }
 
+    /**
+     * Lignes d'ajustement (bonus / débit) ajoutées par l'administration après
+     * génération. Elles s'ajoutent au montant des cours et aux frais figés.
+     */
+    public function ajustements(): HasMany
+    {
+        return $this->hasMany(FactureAjustement::class);
+    }
+
     // ======================
     // HELPERS
     // ======================

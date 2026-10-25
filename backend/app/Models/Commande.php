@@ -24,18 +24,25 @@ class Commande extends Model
         'reference',
         'user_id',
         'nom_client',
+        'prenom_client',
         'telephone_client',
         'whatsapp',
         'adresse_livraison',
         'quartier',
+        'point_de_repere',
+        'lien_geolocalisation',
         'is_livraison',
         'montant_total',
         'frais_livraison',
         'token',
+        'cle_idempotence',
         'statut',
         'mode_paiement',
         'reference_transaction',
         'notes',
+        'note_interne',
+        'annulation_demandee_at',
+        'annulation_motif',
     ];
 
     protected $casts = [
@@ -43,6 +50,7 @@ class Commande extends Model
         'montant_total' => 'decimal:2',
         'frais_livraison' => 'decimal:2',
         'statut_modifications' => 'array',
+        'annulation_demandee_at' => 'datetime',
     ];
 
     // ======================
@@ -137,6 +145,57 @@ class Commande extends Model
         return $this->statut === self::STATUT_ANNULEE;
     }
 
+    /**
+     * Une commande peut être annulée par le client tant qu'elle n'est pas
+     * entrée en préparation (aucun déplacement ni préparation engagé).
+     */
+    public function estAnnulableParClient(): bool
+    {
+        return in_array($this->statut, [self::STATUT_EN_ATTENTE, self::STATUT_CONFIRMEE], true);
+    }
+
+    /**
+     * Étapes publiques du suivi : chaque statut franchi est daté à partir
+     * du journal `statut_modifications`, les étapes futures restent vides.
+     *
+     * `fait` vaut true lorsque l'étape est franchie : date présente dans le
+     * journal, ou étape correspondant au statut courant (journal incomplet).
+     *
+     * @return array<int, array{cle: string, libelle: string, statut: string, date: string|null, fait: bool}>
+     */
+    public function etapesSuivi(): array
+    {
+        $journal = collect($this->statut_modifications ?? []);
+
+        $dateDe = function (string $statut) use ($journal) {
+            $evenement = $journal->last(fn ($m) => ($m['nouveau_statut'] ?? null) === $statut);
+
+            return $evenement['created_at'] ?? null;
+        };
+
+        $etapes = [
+            ['cle' => 'recue', 'libelle' => 'Commande reçue', 'statut' => self::STATUT_EN_ATTENTE, 'date' => $this->created_at?->toIso8601String()],
+            ['cle' => 'confirmee', 'libelle' => 'Commande confirmée', 'statut' => self::STATUT_CONFIRMEE, 'date' => $dateDe(self::STATUT_CONFIRMEE)],
+            ['cle' => 'preparation', 'libelle' => 'En préparation', 'statut' => self::STATUT_EN_PREPARATION, 'date' => $dateDe(self::STATUT_EN_PREPARATION)],
+            ['cle' => 'livree', 'libelle' => $this->is_livraison ? 'Livrée' : 'Prête / retirée', 'statut' => self::STATUT_LIVREE, 'date' => $dateDe(self::STATUT_LIVREE)],
+        ];
+
+        if ($this->estAnnulee()) {
+            $etapes[] = [
+                'cle' => 'annulee',
+                'libelle' => 'Annulée',
+                'statut' => self::STATUT_ANNULEE,
+                'date' => $dateDe(self::STATUT_ANNULEE),
+            ];
+        }
+
+        foreach ($etapes as $i => $etape) {
+            $etapes[$i]['fait'] = $etape['date'] !== null || $etape['statut'] === $this->statut;
+        }
+
+        return $etapes;
+    }
+
     public function getMontantAvecLivraisonAttribute(): float
     {
         return (float) $this->montant_total + (float) $this->frais_livraison;
@@ -193,12 +252,19 @@ class Commande extends Model
     */
 
     /**
-     * Génère une référence « CMD-XXXXXXXX » aléatoire et garantie unique.
+     * Génère la référence publique « SIGLE-AAAAMMJJ-IDENTIFIANT »
+     * (ex. `CAB-20261010-A67BR234`) : lisible, identifiable, sans lien avec
+     * l'id interne, et suffisamment aléatoire pour être devinable une fois
+     * sur des milliards. La contrainte d'unicité + la boucle garantissent
+     * l'unicité même en cas de collision théorique.
      */
     public static function genererReference(): string
     {
+        $sigle = \App\Models\ParametreLibrairie::sigle();
+        $date = now()->format('Ymd');
+
         do {
-            $reference = self::PREFIXE_REFERENCE.Str::upper(Str::random(8));
+            $reference = sprintf('%s-%s-%s', $sigle, $date, Str::upper(Str::random(7)));
         } while (static::query()->where('reference', $reference)->exists());
 
         return $reference;

@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
             // Session (D8) : l'API cabinet est consommée par Angular sur la même
             // base → authentification par cookie de session (guard web), comme le web.
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
+            // Cookie « rester connecté » (remember-me) : le recaller est mis en
+            // file par le guard (queue) — sans ce middleware il ne part jamais.
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
             \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
             \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,

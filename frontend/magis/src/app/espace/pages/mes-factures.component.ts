@@ -37,6 +37,22 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
       .alerte { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.8rem 0.95rem; border-radius: 0.9rem; background: var(--mpc-rouge-clair); color: #7a1d1d; font-size: 0.85rem; margin-bottom: 0.9rem; }
       .lignes-mini { font-size: 0.82rem; }
       .lignes-mini tr:last-child td { border-bottom: none; }
+      .identite { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-bottom: 0.9rem; }
+      .identite .ident-item { font-size: 0.85rem; }
+      .identite .ident-label { display: block; font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .identite .ident-valeur { font-weight: 600; color: #1f2937; }
+      .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.7rem; margin-bottom: 1.1rem; }
+      .metric { background: #f8fafc; border: 1px solid var(--mpc-bordure); border-radius: 0.9rem; padding: 0.7rem 0.9rem; }
+      .metric-label { font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .metric-value { font-size: 1.1rem; font-weight: 800; color: var(--mpc-bleu); font-variant-numeric: tabular-nums; }
+      .metric-value.accent { color: #0a5d35; }
+      .section-titre { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mpc-texte-doux); margin: 1.1rem 0 0.5rem; }
+      .table-clair tfoot th { background: #f1f5f9; font-size: 0.82rem; }
+      .recap-ligne { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; padding: 0.12rem 0; min-width: 240px; }
+      .recap-total { border-top: 1px solid var(--mpc-bordure); margin-top: 0.25rem; padding-top: 0.35rem; font-weight: 800; font-size: 1rem; color: #0a5d35; }
+      .badge-direction { font-size: 0.66rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 99px; white-space: nowrap; }
+      .badge-credit { background: var(--mpc-vert-pale); color: #0a5d35; }
+      .badge-debit { background: var(--mpc-rouge-clair); color: #7a1d1d; }
     `,
   ],
   template: `
@@ -127,38 +143,120 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
               <button type="button" class="btn-close" (click)="fermerDetail()"></button>
             </div>
             <div class="modal-body">
-              <p class="text-doux-tiny">
-                {{ detail()!.eleve?.nom }} · {{ detail()!.periode?.label }} ·
-                {{ detail()!.type_cours?.libelle }}
-              </p>
+              <div class="identite">
+                <div class="ident-item">
+                  <span class="ident-label">Élève</span>
+                  <span class="ident-valeur">{{ detail()!.eleve?.nom ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Période</span>
+                  <span class="ident-valeur">{{ detail()!.periode?.label ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Type de cours</span>
+                  <span class="ident-valeur">{{ detail()!.type_cours?.libelle ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Émise le</span>
+                  <span class="ident-valeur">{{ dateCourte(detail()!.created_at) }}</span>
+                </div>
+                @if (detail()!.date_limite_paiement) {
+                  <div class="ident-item">
+                    <span class="ident-label">Échéance</span>
+                    <span class="ident-valeur">{{ detail()!.date_limite_paiement }}</span>
+                  </div>
+                }
+              </div>
 
-              <table class="table table-sm lignes-mini">
-                <thead><tr><th>Enseignant</th><th>Matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr></thead>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-label">Heures facturées</div>
+                  <div class="metric-value">{{ chiffre(volumeDetail()) }} h</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Montant cours</div>
+                  <div class="metric-value">{{ monnaie(montantCours()) }}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Frais &amp; ajustements</div>
+                  <div class="metric-value">{{ monnaie(fraisEtAjustements()) }}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Total à payer</div>
+                  <div class="metric-value accent">{{ monnaie(detail()!.montant_total) }}</div>
+                </div>
+              </div>
+
+              <div class="section-titre">Détail des lignes de cours</div>
+              <table class="table table-sm lignes-mini table-clair">
+                <thead>
+                  <tr><th>Enseignant</th><th>Matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr>
+                </thead>
                 <tbody>
                   @for (l of detail()!.lignes; track l.id) {
                     <tr>
-                      <td>{{ l.enseignant }}</td>
-                      <td>{{ l.matiere }}</td>
+                      <td>{{ l.enseignant ?? '—' }}</td>
+                      <td>{{ l.matiere ?? '—' }}</td>
                       <td class="text-end">{{ chiffre(l.nombre_heures) }} h</td>
                       <td class="text-end">{{ monnaie(l.taux_horaire) }}</td>
                       <td class="text-end">{{ monnaie(l.montant) }}</td>
                     </tr>
+                  } @empty {
+                    <tr><td colspan="5" class="text-center text-doux-tiny py-3">Aucune ligne sur cette facture.</td></tr>
                   }
                 </tbody>
+                @if (detail()!.lignes.length > 0) {
+                  <tfoot>
+                    <tr>
+                      <th colspan="2">Total</th>
+                      <th class="text-end">{{ chiffre(volumeDetail()) }} h</th>
+                      <th></th>
+                      <th class="text-end montant">{{ monnaie(montantCours()) }}</th>
+                    </tr>
+                  </tfoot>
+                }
               </table>
 
-              <div class="d-flex flex-column align-items-end mt-3 gap-1">
-                <div class="text-doux-tiny">Cours — <b class="montant">{{ monnaie(montantCours()) }}</b></div>
-                @if (detail()!.frais_suivi > 0) {
-                  <div class="text-doux-tiny">Frais de suivi — <b class="montant">{{ monnaie(detail()!.frais_suivi) }}</b></div>
-                }
-                @if (detail()!.autres_frais > 0) {
-                  <div class="text-doux-tiny">Autres frais — <b class="montant">{{ monnaie(detail()!.autres_frais) }}</b></div>
-                }
-                @if (detail()!.remise > 0) {
-                  <div class="text-doux-tiny">Remise — <b class="montant">−{{ monnaie(detail()!.remise) }}</b></div>
-                }
-                <div class="fw-bold montant fs-5">Total {{ monnaie(detail()!.montant_total) }}</div>
+              @if (detail()!.ajustements.length > 0) {
+                <div class="section-titre">Bonus &amp; débits</div>
+                <table class="table table-sm lignes-mini table-clair">
+                  <thead><tr><th>Libellé</th><th>Nature</th><th class="text-end">Montant</th></tr></thead>
+                  <tbody>
+                    @for (a of detail()!.ajustements; track a.id) {
+                      <tr>
+                        <td>{{ a.libelle }}</td>
+                        <td>
+                          <span class="badge-direction" [class.badge-credit]="a.type === 'credit'" [class.badge-debit]="a.type === 'debit'">
+                            {{ a.type === 'credit' ? 'Crédit' : 'Débit' }}
+                          </span>
+                        </td>
+                        <td class="text-end montant">{{ a.type === 'credit' ? '+' : '−' }}{{ monnaie(a.montant) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+
+              <div class="d-flex justify-content-end mt-3">
+                <div>
+                  <div class="recap-ligne"><span>Cours ({{ chiffre(volumeDetail()) }} h)</span><b class="montant">{{ monnaie(montantCours()) }}</b></div>
+                  @if (detail()!.frais_suivi > 0) {
+                    <div class="recap-ligne"><span>Frais de suivi</span><b class="montant">{{ monnaie(detail()!.frais_suivi) }}</b></div>
+                  }
+                  @if (detail()!.autres_frais > 0) {
+                    <div class="recap-ligne"><span>Autres frais</span><b class="montant">{{ monnaie(detail()!.autres_frais) }}</b></div>
+                  }
+                  @if (detail()!.remise > 0) {
+                    <div class="recap-ligne"><span>Remise</span><b class="montant">−{{ monnaie(detail()!.remise) }}</b></div>
+                  }
+                  @if ((detail()!.total_credits ?? 0) > 0) {
+                    <div class="recap-ligne"><span>Bonus (crédits)</span><b class="montant">+{{ monnaie(detail()!.total_credits) }}</b></div>
+                  }
+                  @if ((detail()!.total_debits ?? 0) > 0) {
+                    <div class="recap-ligne"><span>Débits</span><b class="montant">−{{ monnaie(detail()!.total_debits) }}</b></div>
+                  }
+                  <div class="recap-ligne recap-total"><span>Total à payer</span><b class="montant">{{ monnaie(detail()!.montant_total) }}</b></div>
+                </div>
               </div>
 
               @if (detail()!.commentaire) {
@@ -197,6 +295,10 @@ export class MesFacturesComponent implements OnInit {
 
   protected montantCours = computed<number>(() =>
     (this.detail()?.lignes ?? []).reduce((s: number, l: LigneFacture) => s + l.montant, 0)
+  );
+
+  protected volumeDetail = computed<number>(() =>
+    (this.detail()?.lignes ?? []).reduce((s: number, l: LigneFacture) => s + l.nombre_heures, 0)
   );
 
   async ngOnInit(): Promise<void> {
@@ -245,8 +347,15 @@ export class MesFacturesComponent implements OnInit {
     void this.charger();
   }
 
-  protected ouvrirDetail(f: Facture): void {
-    this.detail.set(f);
+  protected async ouvrirDetail(f: Facture): Promise<void> {
+    // La liste ne transporte pas les lignes ni les ajustements : on recharge
+    // le détail complet pour un tableau et un récapitulatif exacts.
+    this.detail.set({ ...f, lignes: f.lignes ?? [], ajustements: f.ajustements ?? [] });
+    try {
+      this.detail.set(await firstValueFrom(this.api.getMesFacture(f.id)));
+    } catch (e) {
+      this.alerte.set(messageErreurApi(e));
+    }
   }
 
   protected fermerDetail(): void {
@@ -276,6 +385,18 @@ export class MesFacturesComponent implements OnInit {
 
   protected chiffre(v: number | null | undefined): string {
     return Number(v ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+  }
+
+  /** Frais, remises et ajustements : l'écart entre le total et les cours. */
+  protected fraisEtAjustements(): number {
+    const d = this.detail();
+    return (d?.montant_total ?? 0) - this.montantCours();
+  }
+
+  protected dateCourte(v: string | null | undefined): string {
+    if (!v) return '—';
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR');
   }
 
   protected monnaie(v: number | null | undefined): string {

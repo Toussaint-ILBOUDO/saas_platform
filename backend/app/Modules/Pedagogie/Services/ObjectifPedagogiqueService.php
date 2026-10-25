@@ -18,8 +18,11 @@ class ObjectifPedagogiqueService
         private GardePeriodeOuverte $garde
     ) {}
 
-    public function paginateForUser(User $user, array $filters = []): LengthAwarePaginator
-    {
+    public function paginateForUser(
+        User $user,
+        array $filters = [],
+        int $perPage = 15
+    ): LengthAwarePaginator {
         $query = ObjectifPedagogique::query()
             ->with([
                 'eleve.user',
@@ -43,8 +46,14 @@ class ObjectifPedagogiqueService
             $query->where('periode_id', $filters['periode_id']);
         }
 
-        if ($user->hasRole('enseignant') && $user->enseignantProfil) {
-            // Un enseignant ne voit que SES objectifs.
+        // Un admin_cabinet lit tout, y compris derrière une route enseignant :
+        // c'est le pendant du `before()` de la policy. Un enseignant ne voit
+        // que SES objectifs.
+        if (
+            $user->hasRole('enseignant')
+            && ! $user->hasRole('admin_cabinet')
+            && $user->enseignantProfil
+        ) {
             $query->where('enseignant_id', $user->enseignantProfil->id);
         }
 
@@ -59,7 +68,7 @@ class ObjectifPedagogiqueService
         }
 
         return $query->latest()
-            ->paginate(15)
+            ->paginate($perPage)
             ->withQueryString();
     }
 
@@ -194,6 +203,15 @@ class ObjectifPedagogiqueService
         $user = auth()->user();
 
         if ($user->hasRole('enseignant') && $user->enseignantProfil) {
+            // La policy `create` ne prouve que le rôle : l'affectation est la
+            // frontière réelle. Sans ce contrôle, un enseignant pouvait poser
+            // des objectifs sur n'importe quel élève du cabinet.
+            if (! $this->enseignantAffecte((int) $user->enseignantProfil->id, (int) $data['eleve_id'])) {
+                throw ValidationException::withMessages([
+                    'eleve_id' => 'Vous n\'avez aucun cours actif avec cet élève.',
+                ]);
+            }
+
             return (int) $user->enseignantProfil->id;
         }
 
@@ -210,20 +228,23 @@ class ObjectifPedagogiqueService
                 ->value('affectation_enseignants.enseignant_id');
         }
 
-        $affecte = AffectationEnseignant::query()
-            ->join('contrat_cours', 'contrat_cours.id', '=', 'affectation_enseignants.contrat_cours_id')
-            ->where('contrat_cours.eleve_id', $data['eleve_id'])
-            ->where('affectation_enseignants.enseignant_id', $enseignantId)
-            ->where('affectation_enseignants.statut', 'actif')
-            ->exists();
-
-        if (! $affecte) {
+        if (! $this->enseignantAffecte((int) $enseignantId, (int) $data['eleve_id'])) {
             throw ValidationException::withMessages([
                 'enseignant_id' => 'Cet enseignant n\'est pas affecté à cet élève.',
             ]);
         }
 
         return (int) $enseignantId;
+    }
+
+    private function enseignantAffecte(int $enseignantId, int $eleveId): bool
+    {
+        return AffectationEnseignant::query()
+            ->join('contrat_cours', 'contrat_cours.id', '=', 'affectation_enseignants.contrat_cours_id')
+            ->where('contrat_cours.eleve_id', $eleveId)
+            ->where('affectation_enseignants.enseignant_id', $enseignantId)
+            ->where('affectation_enseignants.statut', 'actif')
+            ->exists();
     }
 
     /**

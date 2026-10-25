@@ -7,10 +7,11 @@ use App\Http\Resources\Api\TemoignagePublicResource;
 use App\Models\Temoignage;
 use App\Modules\Temoignages\Services\TemoignageService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * Témoignages publics (P2) : classement R1/B1/R2… via TemoignageService,
- * cache 3600 s — même source que la future page « Témoignages ».
+ * cache 3600 s — même source que la page « Témoignages ».
  */
 class PublicTemoignageApiController extends Controller
 {
@@ -18,13 +19,16 @@ class PublicTemoignageApiController extends Controller
     {
     }
 
-    public function index(): JsonResponse
+    /**
+     * Liste paginée (le « Voir plus » de la page publique en a besoin).
+     * `per_page` : 6 par défaut, 50 au maximum.
+     */
+    public function index(Request $request): JsonResponse
     {
-        $temoignages = $this->service->topHome(12);
+        $perPage = min(max((int) $request->query('per_page', 6), 1), 50);
+        $temoignages = $this->service->listeClassement($perPage);
 
-        return response()->json([
-            'data' => TemoignagePublicResource::collection($temoignages),
-        ]);
+        return TemoignagePublicResource::collection($temoignages)->response();
     }
 
     public function show(string $slug): JsonResponse

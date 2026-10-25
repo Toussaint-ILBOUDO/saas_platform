@@ -64,6 +64,17 @@ export class ConnexionComponent {
   protected readonly charge = signal(false);
   protected readonly erreur = signal('');
 
+  constructor() {
+    // Cookie « rester connecté » encore valable : pas de saisie, on ouvre
+    // directement le dashboard (ou le choix de rôle si plusieurs rôles).
+    void this.auth.initialiser().then(() => {
+      const u = this.auth.utilisateur();
+      if (!u) return;
+      const choix = u.roles.length > 1 && !u.active_role;
+      void this.router.navigate(choix ? ['/espace', 'choix-role'] : ['/espace'], { replaceUrl: true });
+    });
+  }
+
   protected async seConnecter(): Promise<void> {
     this.erreur.set('');
     if (!this.email.trim() || !this.motDePasse) {

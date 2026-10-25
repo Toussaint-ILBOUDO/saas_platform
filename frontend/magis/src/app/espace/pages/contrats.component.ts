@@ -7,16 +7,20 @@ import { messageErreurApi } from '../../services/messages';
 import {
   Affectation,
   AffectationFormulaire,
+  ClasseReferentiel,
   ContratCours,
   ContratFormulaire,
+  EleveCabinet,
+  EleveFormulaire,
   EnseignantReferentiel,
   MatiereReferentiel,
   MetaPage,
+  ParentCabinet,
+  ParentFormulaire,
   STATUTS_CONTRAT,
   StatutAffectation,
   StatutContrat,
   TypeCoursReferentiel,
-  UtilisateurAdmin,
 } from '../../models';
 
 const STATUTS_AFFECTATION: { valeur: StatutAffectation; libelle: string }[] = [
@@ -34,6 +38,32 @@ const LIEU_AFFECTATION: AffectationFormulaire = {
 };
 
 const JOUR = new Date().toISOString().slice(0, 10);
+
+const VIDE_ELEVE = (): EleveFormulaire => ({
+  parent_id: null,
+  prenom: '',
+  nom: '',
+  classe_id: null,
+  date_naissance: null,
+  lieu_naissance: null,
+  ecole: null,
+  email: null,
+  telephone_whatsapp: null,
+  telephone_appel: null,
+  password: null,
+});
+
+const VIDE_PARENT = (): ParentFormulaire => ({
+  nom: '',
+  prenom: '',
+  telephone_whatsapp: null,
+  telephone_appel: null,
+  email: null,
+  password: '',
+  profession: null,
+  adresse_domicile: null,
+  nombre_enfants: null,
+});
 
 /**
  * Écran admin « Contrats de cours » (T7A.3).
@@ -460,6 +490,20 @@ const JOUR = new Date().toISOString().slice(0, 10);
         font-size: 0.74rem;
         color: var(--mpc-texte-doux);
       }
+      .lien-creation {
+        border: none;
+        background: none;
+        padding: 0;
+        font: inherit;
+        font-size: inherit;
+        font-weight: 700;
+        color: var(--mpc-primaire);
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .lien-creation:hover {
+        color: var(--mpc-primaire-fonce);
+      }
       .grille {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -728,18 +772,25 @@ const JOUR = new Date().toISOString().slice(0, 10);
                 <span>Élève *</span>
                 <select [ngModel]="modele().eleve_id" (ngModelChange)="setChamp('eleve_id', $event)">
                   <option [ngValue]="null">— Choisir un élève —</option>
-                  @for (e of eleves(); track e.eleve!.id) {
-                    <option [ngValue]="e.eleve!.id">
-                      {{ e.prenom }} {{ e.nom }}@if (e.eleve?.classe) { ({{ e.eleve?.classe?.sigle }}) }
+                  @for (e of eleves(); track e.id) {
+                    <option [ngValue]="e.id">
+                      {{ e.prenom }} {{ e.nom }}@if (e.classe) { ({{ e.classe.sigle }}) }
                     </option>
                   }
                 </select>
                 @if (erreurs()['eleve_id']; as e) {
                   <span class="erreur">{{ e }}</span>
                 }
-                @if (eleves().length === 0) {
-                  <span class="aide">Aucun élève disponible : créez d’abord les élèves du cabinet.</span>
-                }
+                <span class="aide">
+                  Pas encore d’élève dans le cabinet ?
+                  <button class="lien-creation" type="button" (click)="ouvrirModalEleve()">
+                    <i class="bi bi-person-plus"></i> Nouvel élève
+                  </button>
+                  — ou
+                  <button class="lien-creation" type="button" (click)="ouvrirModalParent()">
+                    <i class="bi bi-house-heart"></i> Nouveau parent
+                  </button>
+                </span>
               </label>
 
               <label class="champ" [class._erreur]="!!erreurs()['type_cours_id']">
@@ -964,6 +1015,163 @@ const JOUR = new Date().toISOString().slice(0, 10);
         </div>
       </div>
     }
+
+    @if (modalEleveOuvert()) {
+      <div class="fenetre" (click)="fermerModalEleve()">
+        <div class="panneau" (click)="$event.stopPropagation()" style="max-width: 560px">
+          <div class="panneau-entete">
+            <h2>Nouvel élève</h2>
+            <button class="fermer" type="button" (click)="fermerModalEleve()" aria-label="Fermer">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <div class="formulaire">
+            @if (modalMessage()) {
+              <div class="avertissement">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>{{ modalMessage() }}</span>
+              </div>
+            }
+
+            <label class="champ">
+              <span>Parent *</span>
+              <select [ngModel]="eleveModele().parent_id" (ngModelChange)="setEleveChamp('parent_id', $event)">
+                <option [ngValue]="null">— Choisir un parent —</option>
+                @for (p of parents(); track p.id) {
+                  <option [ngValue]="p.id">{{ p.prenom }} {{ p.nom }}@if (p.telephone_whatsapp) { ({{ p.telephone_whatsapp }}) }</option>
+                }
+              </select>
+              <span class="aide">
+                Pas encore de parent ?
+                <button class="lien-creation" type="button" (click)="ouvrirModalParent()">
+                  <i class="bi bi-house-heart"></i> Nouveau parent
+                </button>
+              </span>
+            </label>
+
+            <div class="grille">
+              <label class="champ">
+                <span>Prénom *</span>
+                <input [ngModel]="eleveModele().prenom" (ngModelChange)="setEleveChamp('prenom', $event)" />
+              </label>
+              <label class="champ">
+                <span>Nom</span>
+                <input [ngModel]="eleveModele().nom ?? ''" (ngModelChange)="setEleveChamp('nom', $event || null)" />
+              </label>
+            </div>
+
+            <label class="champ">
+              <span>Classe *</span>
+              <select [ngModel]="eleveModele().classe_id" (ngModelChange)="setEleveChamp('classe_id', $event)">
+                <option [ngValue]="null">— Choisir une classe —</option>
+                @for (c of classes(); track c.id) {
+                  <option [ngValue]="c.id">{{ c.nom }} ({{ c.sigle }})</option>
+                }
+              </select>
+            </label>
+
+            <div class="grille">
+              <label class="champ">
+                <span>Date de naissance</span>
+                <input type="date" [ngModel]="eleveModele().date_naissance ?? ''" (ngModelChange)="setEleveChamp('date_naissance', $event || null)" />
+              </label>
+              <label class="champ">
+                <span>Lieu de naissance</span>
+                <input [ngModel]="eleveModele().lieu_naissance ?? ''" (ngModelChange)="setEleveChamp('lieu_naissance', $event || null)" />
+              </label>
+            </div>
+
+            <label class="champ">
+              <span>École</span>
+              <input [ngModel]="eleveModele().ecole ?? ''" (ngModelChange)="setEleveChamp('ecole', $event || null)" />
+            </label>
+
+            <label class="champ">
+              <span>Email (facultatif — l’élève peut se connecter)</span>
+              <input type="email" [ngModel]="eleveModele().email ?? ''" (ngModelChange)="setEleveChamp('email', $event || null)" />
+            </label>
+
+            <div class="actions-form">
+              <button class="btn-neutral" type="button" (click)="fermerModalEleve()">Annuler</button>
+              <button class="btn-primaire" type="button" [disabled]="modalSauvegarde()" (click)="enregistrerEleve()">
+                @if (modalSauvegarde()) {
+                  <i class="bi bi-arrow-repeat spin"></i> Enregistrement…
+                } @else {
+                  <i class="bi bi-check2"></i> Créer l’élève
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (modalParentOuvert()) {
+      <div class="fenetre" (click)="fermerModalParent()">
+        <div class="panneau" (click)="$event.stopPropagation()" style="max-width: 520px">
+          <div class="panneau-entete">
+            <h2>Nouveau parent</h2>
+            <button class="fermer" type="button" (click)="fermerModalParent()" aria-label="Fermer">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <div class="formulaire">
+            @if (modalMessage()) {
+              <div class="avertissement">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>{{ modalMessage() }}</span>
+              </div>
+            }
+
+            <div class="grille">
+              <label class="champ">
+                <span>Nom *</span>
+                <input [ngModel]="parentModele().nom" (ngModelChange)="setParentChamp('nom', $event)" />
+              </label>
+              <label class="champ">
+                <span>Prénom *</span>
+                <input [ngModel]="parentModele().prenom" (ngModelChange)="setParentChamp('prenom', $event)" />
+              </label>
+            </div>
+
+            <label class="champ">
+              <span>Téléphone WhatsApp</span>
+              <input type="tel" [ngModel]="parentModele().telephone_whatsapp ?? ''" (ngModelChange)="setParentChamp('telephone_whatsapp', $event || null)" placeholder="+226…" />
+              <span class="aide">Ce numéro sert d’identifiant de connexion principal.</span>
+            </label>
+
+            <label class="champ">
+              <span>Téléphone (appel)</span>
+              <input type="tel" [ngModel]="parentModele().telephone_appel ?? ''" (ngModelChange)="setParentChamp('telephone_appel', $event || null)" placeholder="+226…" />
+            </label>
+
+            <label class="champ">
+              <span>Email (facultatif)</span>
+              <input type="email" [ngModel]="parentModele().email ?? ''" (ngModelChange)="setParentChamp('email', $event || null)" />
+            </label>
+
+            <label class="champ">
+              <span>Mot de passe définitif * (min 8 caractères)</span>
+              <input type="password" [ngModel]="parentModele().password" (ngModelChange)="setParentChamp('password', $event)" />
+              <span class="aide">Communiquez-le au parent : il ouvre son espace facturation.</span>
+            </label>
+
+            <div class="actions-form">
+              <button class="btn-neutral" type="button" (click)="fermerModalParent()">Annuler</button>
+              <button class="btn-primaire" type="button" [disabled]="modalSauvegarde()" (click)="enregistrerParent()">
+                @if (modalSauvegarde()) {
+                  <i class="bi bi-arrow-repeat spin"></i> Enregistrement…
+                } @else {
+                  <i class="bi bi-check2"></i> Créer le parent
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
   `,
 })
 export class ContratsComponent implements OnInit {
@@ -983,7 +1191,9 @@ export class ContratsComponent implements OnInit {
   protected readonly filtreStatut = signal('');
   protected readonly filtreType = signal('');
 
-  protected readonly eleves = signal<UtilisateurAdmin[]>([]);
+  protected readonly eleves = signal<EleveCabinet[]>([]);
+  protected readonly parents = signal<ParentCabinet[]>([]);
+  protected readonly classes = signal<ClasseReferentiel[]>([]);
   protected readonly enseignants = signal<EnseignantReferentiel[]>([]);
   protected readonly matieres = signal<MatiereReferentiel[]>([]);
   protected readonly typesCours = signal<TypeCoursReferentiel[]>([]);
@@ -993,6 +1203,14 @@ export class ContratsComponent implements OnInit {
   protected readonly sauvegarde = signal(false);
   protected readonly erreurs = signal<Record<string, string>>({});
   protected readonly contratCible = signal<number | null>(null);
+
+  /* Création directe — modales imbriquées (parent requis pour l'élève). */
+  protected readonly modalEleveOuvert = signal(false);
+  protected readonly modalParentOuvert = signal(false);
+  protected readonly modalSauvegarde = signal(false);
+  protected readonly modalMessage = signal('');
+  protected readonly eleveModele = signal<EleveFormulaire>(VIDE_ELEVE());
+  protected readonly parentModele = signal<ParentFormulaire>(VIDE_PARENT());
 
   protected readonly modele = signal<ContratFormulaire & { id: number | null }>({
     id: null,
@@ -1007,9 +1225,13 @@ export class ContratsComponent implements OnInit {
 
   protected readonly ligne = signal<AffectationFormulaire>({ ...LIEU_AFFECTATION });
 
-  /** Sans matière ni enseignant, un contrat ne peut pas être créé. */
+  /**
+   * Sans matière ni enseignant, un contrat ne peut pas être créé. Les élèves
+   * ne bloquent plus : la création directe (`+ Nouvel élève`) permet d'en
+   * créer un à la volée, y compris son parent s'il n'existe pas encore.
+   */
   protected readonly peutCreer = computed(
-    () => this.enseignants().length > 0 && this.matieres().length > 0 && this.eleves().length > 0,
+    () => this.enseignants().length > 0 && this.matieres().length > 0,
   );
   protected readonly peutAffecter = computed(() => this.enseignants().length > 0 && this.matieres().length > 0);
 
@@ -1024,7 +1246,6 @@ export class ContratsComponent implements OnInit {
   protected readonly raisonBlocageCreation = computed(() => {
     if (this.enseignants().length === 0) return 'Aucun enseignant enregistré : créez-en un dans les référentiels.';
     if (this.matieres().length === 0) return 'Aucune matière créée : créez-en une dans les référentiels.';
-    if (this.eleves().length === 0) return 'Aucun élève disponible.';
     return '';
   });
 
@@ -1109,18 +1330,31 @@ export class ContratsComponent implements OnInit {
 
   private async chargerReferentiels(): Promise<void> {
     try {
-      const [eleves, enseignants, matieres, types] = await Promise.all([
-        firstValueFrom(this.api.getUtilisateurs(1, 50, '', 'eleve')),
+      const [eleves, parents, enseignants, matieres, types] = await Promise.all([
+        firstValueFrom(this.api.getElevesReferentiel(1, 200)),
+        firstValueFrom(this.api.getParentsReferentiel(1, 200)),
         firstValueFrom(this.api.getEnseignantsReferentiel(1, 50)),
         firstValueFrom(this.api.getMatieres(1, 50)),
         firstValueFrom(this.api.getTypesCours(1, 50)),
       ]);
-      this.eleves.set((eleves.data ?? []).filter((u) => !!u.eleve));
+      this.eleves.set(eleves.data ?? []);
+      this.parents.set(parents.data ?? []);
       this.enseignants.set(enseignants.data ?? []);
       this.matieres.set(matieres.data ?? []);
       this.typesCours.set(types.data ?? []);
     } catch {
       this.message.set('Certaines listes de référence n’ont pas pu être chargées.');
+    }
+  }
+
+  /** Les classes ne servent qu'à la création d'élève : chargées à la demande. */
+  private async chargerClasses(): Promise<void> {
+    if (this.classes().length > 0) return;
+    try {
+      const r = await firstValueFrom(this.api.getClasses(1, 200));
+      this.classes.set(r.data ?? []);
+    } catch {
+      this.modalMessage.set('La liste des classes n’a pas pu être chargée.');
     }
   }
 
@@ -1388,5 +1622,112 @@ export class ContratsComponent implements OnInit {
     const suivante = { ...courantes };
     delete suivante[champ];
     this.erreurs.set(suivante);
+  }
+
+  /* ---------- Création directe — élève & parent ---------- */
+
+  protected ouvrirModalEleve(): void {
+    const m = this.eleveModele();
+    this.eleveModele.set({ ...m, parent_id: m.parent_id ?? null });
+    this.modalMessage.set('');
+    this.modalEleveOuvert.set(true);
+    void this.chargerClasses();
+    if (this.parents().length === 0) {
+      firstValueFrom(this.api.getParentsReferentiel(1, 200))
+        .then((r) => this.parents.set(r.data ?? []))
+        .catch(() => this.modalMessage.set('La liste des parents n’a pas pu être chargée.'));
+    }
+  }
+
+  protected fermerModalEleve(): void {
+    this.modalEleveOuvert.set(false);
+    this.modalMessage.set('');
+  }
+
+  protected ouvrirModalParent(): void {
+    this.modalMessage.set('');
+    this.modalParentOuvert.set(true);
+  }
+
+  protected fermerModalParent(): void {
+    this.modalParentOuvert.set(false);
+    this.modalMessage.set('');
+  }
+
+  protected setEleveChamp(champ: keyof EleveFormulaire, valeur: unknown): void {
+    this.eleveModele.set({ ...this.eleveModele(), [champ]: valeur });
+  }
+
+  protected setParentChamp(champ: keyof ParentFormulaire, valeur: unknown): void {
+    this.parentModele.set({ ...this.parentModele(), [champ]: valeur });
+  }
+
+  protected async enregistrerEleve(): Promise<void> {
+    const m = this.eleveModele();
+    this.modalMessage.set('');
+    if (!m.parent_id) {
+      this.modalMessage.set('Choisissez le parent : un élève doit être rattaché à un parent du cabinet.');
+      return;
+    }
+    if (!m.prenom.trim()) {
+      this.modalMessage.set('Le prénom de l’élève est obligatoire.');
+      return;
+    }
+    if (!m.classe_id) {
+      this.modalMessage.set('Choisissez la classe de l’élève.');
+      return;
+    }
+
+    this.modalSauvegarde.set(true);
+    try {
+      const cree = await firstValueFrom(this.api.creerEleve(m));
+      // Le nouvel élève doit apparaître dans le sélecteur du contrat, être
+      // présélectionné — et la modale se ferme.
+      const [liste] = await Promise.all([
+        firstValueFrom(this.api.getElevesReferentiel(1, 200)),
+      ]);
+      this.eleves.set(liste.data ?? []);
+      this.setChamp('eleve_id', cree.id);
+      this.modalEleveOuvert.set(false);
+      this.eleveModele.set(VIDE_ELEVE());
+      this.succes.set(`${cree.prenom} ${cree.nom ?? ''} créé${cree.nom ? '' : 'e'}.`.trim());
+    } catch (e) {
+      this.modalMessage.set(messageErreurApi(e));
+    } finally {
+      this.modalSauvegarde.set(false);
+    }
+  }
+
+  protected async enregistrerParent(): Promise<void> {
+    const m = this.parentModele();
+    this.modalMessage.set('');
+    if (!m.nom.trim() || !m.prenom.trim()) {
+      this.modalMessage.set('Le nom et le prénom du parent sont obligatoires.');
+      return;
+    }
+    if (m.password.length < 8) {
+      this.modalMessage.set('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+
+    this.modalSauvegarde.set(true);
+    try {
+      const cree = await firstValueFrom(this.api.creerParent(m));
+      const liste = await firstValueFrom(this.api.getParentsReferentiel(1, 200));
+      this.parents.set(liste.data ?? []);
+      // Si on venait de la modale élève, pré-remplir son champ parent.
+      if (this.modalEleveOuvert()) {
+        this.setEleveChamp('parent_id', cree.id);
+        this.modalParentOuvert.set(false);
+      } else {
+        this.modalParentOuvert.set(false);
+      }
+      this.parentModele.set(VIDE_PARENT());
+      this.succes.set(`${cree.prenom} ${cree.nom} créé.`.trim());
+    } catch (e) {
+      this.modalMessage.set(messageErreurApi(e));
+    } finally {
+      this.modalSauvegarde.set(false);
+    }
   }
 }

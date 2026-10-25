@@ -3,6 +3,7 @@
 namespace App\Modules\Systeme\Services;
 
 use App\Mail\ActualitePublishedMail;
+use App\Mail\NotificationFinanciereMail;
 use App\Models\Actualite;
 use App\Models\BulletinPaie;
 use App\Models\ContratCours;
@@ -11,9 +12,12 @@ use App\Models\Facture;
 use App\Models\RapportMensuelEnseignant;
 use App\Models\User;
 use App\Modules\Communication\Enums\ActualiteDestinataire;
+use App\Support\CabinetInfo;
+use App\Support\RoutesAngular;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 
@@ -234,25 +238,47 @@ class NotificationDispatcher
 
     public function invoiceCreated(Facture $facture): void
     {
+        $titre = 'Nouvelle facture';
+        $contenu = 'Une facture de ' . number_format($facture->montant_total, 0, ',', ' ') . ' FCFA est disponible.';
+
         $this->notificationService->create(
             $facture->parent_id,
-            'Nouvelle facture',
-            'Une facture de ' . number_format($facture->montant_total, 0, ',', ' ') . ' FCFA est disponible.',
+            $titre,
+            $contenu,
             'facture',
             ['facture_id' => $facture->id],
             'bi-receipt',
+        );
+
+        $this->mailFinancier(
+            $facture->parent_id,
+            $titre,
+            $contenu,
+            'facture',
+            ['facture_id' => $facture->id],
         );
     }
 
     public function invoicePaid(Facture $facture): void
     {
+        $titre = 'Facture payée';
+        $contenu = 'Votre facture de ' . number_format($facture->montant_total, 0, ',', ' ') . ' FCFA a été enregistrée comme payée.';
+
         $this->notificationService->create(
             $facture->parent_id,
-            'Facture payée',
-            'Votre facture de ' . number_format($facture->montant_total, 0, ',', ' ') . ' FCFA a été enregistrée comme payée.',
+            $titre,
+            $contenu,
             'facture',
             ['facture_id' => $facture->id],
             'bi-receipt',
+        );
+
+        $this->mailFinancier(
+            $facture->parent_id,
+            $titre,
+            $contenu,
+            'facture',
+            ['facture_id' => $facture->id],
         );
     }
 
@@ -281,22 +307,33 @@ class NotificationDispatcher
      */
     public function reportValidated(RapportMensuelEnseignant $rapport): void
     {
-        $enseignantUserId = $rapport->enseignant?->user_id;
+       $enseignantUserId = $rapport->enseignant?->user_id;
 
-        if (! $enseignantUserId) {
-            return;
-        }
+       if (! $enseignantUserId) {
+           return;
+       }
 
-        $this->notificationService->create(
-            $enseignantUserId,
-            'Rapport mensuel validé',
-            'Votre rapport mensuel pour la période « '
-                . ($rapport->periode->label ?? '')
-                . ' » a été validé. Vos heures sont retenues pour la facturation.',
-            'rapport',
-            ['rapport_id' => $rapport->id],
-            'bi-clipboard-check',
-        );
+       $titre = 'Rapport mensuel validé';
+       $contenu = 'Votre rapport mensuel pour la période « '
+           . ($rapport->periode->label ?? '')
+           . ' » a été validé. Vos heures sont retenues pour la facturation.';
+
+       $this->notificationService->create(
+           $enseignantUserId,
+           $titre,
+           $contenu,
+           'rapport',
+           ['rapport_id' => $rapport->id],
+           'bi-clipboard-check',
+       );
+
+       $this->mailFinancier(
+           $enseignantUserId,
+           $titre,
+           $contenu,
+           'rapport',
+           ['rapport_id' => $rapport->id],
+       );
     }
 
     /**
@@ -312,15 +349,26 @@ class NotificationDispatcher
             return;
         }
 
+        $titre = 'Rapport mensuel rejeté';
+        $contenu = 'Votre rapport mensuel pour la période « '
+            . ($rapport->periode->label ?? '')
+            . ' » a été rejeté. Motif : ' . $motif;
+
         $this->notificationService->create(
             $enseignantUserId,
-            'Rapport mensuel rejeté',
-            'Votre rapport mensuel pour la période « '
-                . ($rapport->periode->label ?? '')
-                . ' » a été rejeté. Motif : ' . $motif,
+            $titre,
+            $contenu,
             'rapport',
             ['rapport_id' => $rapport->id],
             'bi-clipboard-x',
+        );
+
+        $this->mailFinancier(
+            $enseignantUserId,
+            $titre,
+            $contenu,
+            'rapport',
+            ['rapport_id' => $rapport->id],
         );
     }
 
@@ -455,13 +503,55 @@ class NotificationDispatcher
 
         if (!$enseignantUserId) return;
 
+        $titre = 'Paiement effectué';
+        $contenu = 'Le paiement de votre bulletin ' . $bulletin->numero . ' a été effectué.';
+
         $this->notificationService->create(
             $enseignantUserId,
-            'Paiement effectué',
-            'Le paiement de votre bulletin ' . $bulletin->numero . ' a été effectué.',
+            $titre,
+            $contenu,
             'bulletin_paie',
             ['bulletin_paie_id' => $bulletin->id],
             'bi-cash-stack',
         );
+
+        $this->mailFinancier(
+            $enseignantUserId,
+            $titre,
+            $contenu,
+            'bulletin_paie',
+            ['bulletin_paie_id' => $bulletin->id],
+        );
+    }
+
+    /**
+     * Canal mail des événements financiers (T7A.10, §8 CONCEPTION_FINANCE).
+     *
+     * Enfile **le même message** que la notification d'espace — sujet et
+     * texte — plus un lien absolu vers l'écran du destinataire. Le lien est
+     * construit maintenant, pendant la request tenant : il porte alors le
+     * domaine du cabinet, contrairement à l'attribut `route_angular` de
+     * l'espace (chemin relatif, préfixé côté front).
+     *
+     * Aucune écriture de préférence : tout destinataire notifié en base
+     * reçoit aussi le mail, sauf absence d'adresse électronique — auquel
+     * cas on reste muet, comme partout ailleurs dans le dispatcher.
+     */
+    private function mailFinancier(int $userId, string $sujet, string $contenu, string $type, array $data): void
+    {
+        $user = User::find($userId);
+
+        if (! $user?->email) {
+            return;
+        }
+
+        $route = RoutesAngular::pour($user, $type, $data);
+
+        Mail::to($user->email)->queue(new NotificationFinanciereMail(
+            $sujet,
+            $contenu,
+            $route ? URL::to($route) : null,
+            CabinetInfo::get('nom', 'K\'Educ'),
+        ));
     }
 }

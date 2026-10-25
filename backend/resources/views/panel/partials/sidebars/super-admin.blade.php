@@ -37,57 +37,6 @@
 
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                <span class="nav-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></span>
-                <span class="nav-text">Référentiels</span>
-            </a>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('classes.index') }}"><i class="bi bi-grid-1x2"></i> Classes</a></li>
-                <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('matieres.index') }}"><i class="bi bi-book"></i> Matières</a></li>
-                <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('type-cours.index') }}"><i class="bi bi-diagram-3"></i> Types de cours</a></li>
-            </ul>
-        </li>
-
-        <a class="nav-link" href="{{ route('demande-cours.index') }}">
-            <span class="nav-icon"><i class="bi bi-inbox" aria-hidden="true"></i></span>
-            <span class="nav-text">Demandes de cours</span>
-        </a>
-
-        <a class="nav-link" href="{{ route('contrats.index') }}">
-            <span class="nav-icon"><i class="bi bi-file-text" aria-hidden="true"></i></span>
-            <span class="nav-text">Contrats</span>
-        </a>
-
-        <a class="nav-link" href="{{ route('cahiers-textes.index') }}">
-            <span class="nav-icon"><i class="bi bi-journal-text" aria-hidden="true"></i></span>
-            <span class="nav-text">Cahiers de texte</span>
-        </a>
-
-        <a class="nav-link" href="{{ route('rapports-mensuels.index') }}">
-            <span class="nav-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
-            <span class="nav-text">Rapports enseignants</span>
-        </a>
-
-        <a class="nav-link" href="{{ route('objectifs-pedagogiques.index') }}">
-            <span class="nav-icon"><i class="bi bi-bullseye" aria-hidden="true"></i></span>
-            <span class="nav-text">Objectifs pédagogiques</span>
-        </a>
-
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                <span class="nav-icon"><i class="bi bi-cash-stack" aria-hidden="true"></i></span>
-                <span class="nav-text">Finance</span>
-            </a>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.periodes.index') }}"><i class="bi bi-bar-chart-line"></i> Périodes comptables</a></li>
-                <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.factures.index') }}"><i class="bi bi-receipt"></i> Factures clients</a></li>
-                <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.bulletins-paie.index') }}"><i class="bi bi-cash-coin"></i> Bulletins de paie</a></li>
-                <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.type-ajustements.index') }}"><i class="bi bi-tags"></i> Types d'ajustements</a></li>
-                <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('finance.facture-cabinet.index') }}"><i class="bi bi-briefcase"></i> Facturation cabinet</a></li>
-            </ul>
-        </li>
-
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                 <span class="nav-icon"><i class="bi bi-library" aria-hidden="true"></i></span>
                 <span class="nav-text">Bibliothèque</span>
             </a>

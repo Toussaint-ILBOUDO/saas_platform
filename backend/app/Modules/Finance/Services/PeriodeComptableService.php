@@ -3,6 +3,7 @@
 namespace App\Modules\Finance\Services;
 
 use App\Models\PeriodeComptable;
+use App\Modules\Audit\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -92,6 +93,14 @@ class PeriodeComptableService
                 'cloturee_at' => now(),
             ]);
 
+            AuditService::enregistrer(
+                'periode.cloturee',
+                'Période « ' . $periode->label . ' » clôturée',
+                $periode,
+                [],
+                'warning'
+            );
+
             return $periode->fresh();
         });
     }
@@ -125,6 +134,14 @@ class PeriodeComptableService
                 'cloturee_par' => null,
                 'cloturee_at' => null,
             ]);
+
+            AuditService::enregistrer(
+                'periode.reouverte',
+                'Période « ' . $periode->label . ' » réouverte',
+                $periode,
+                [],
+                'warning'
+            );
 
             return $periode->fresh();
         });

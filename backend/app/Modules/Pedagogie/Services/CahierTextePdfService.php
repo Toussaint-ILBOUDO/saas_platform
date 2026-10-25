@@ -4,10 +4,9 @@ namespace App\Modules\Pedagogie\Services;
 
 use App\Models\CahierTexte;
 use App\Models\Eleve;
-use App\Support\CabinetInfo;
+use App\Support\Pdf\DocumentPdf;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Modules\Pedagogie\Enums\PdfCollection;
 
@@ -27,15 +26,23 @@ class CahierTextePdfService
             'affectation.contrat.eleve.user',
         ]);
 
+        $cabinet = $this->getCabinet();
+
         return $this->buildPdf(
             self::SINGLE_VIEW,
-            [
-                'cabinet' => $this->getCabinet(),
+            array_merge($cabinet, [
                 'cahier'  => $cahier,
-            ],
+                'document_titre'    => 'Cahier de texte',
+                'document_sous_titre' => 'Séance du '
+                    . ($cahier->date_seance?->format('d/m/Y') ?? '—'),
+                'document_reference' => 'CT-' . $cahier->id,
+                'date_edition'      => now(),
+                'ligne_meta'        => $this->ligneMetaSeance($cahier),
+            ]),
             'cahier-' . $cahier->id . '.pdf',
             PdfCollection::CAHIER_TEXTE,
-            $cahier
+            $cahier,
+            'Cahier de texte · Réf. CT-' . $cahier->id
         );
     }
 
@@ -50,16 +57,24 @@ class CahierTextePdfService
 
         return $this->buildPdf(
             self::HISTORY_VIEW,
-            [
-                'cabinet'   => $this->getCabinet(),
+            array_merge($this->getCabinet(), [
                 'eleve'     => $eleve,
                 'cahiers'   => $cahiers,
                 'dateDebut' => $dateDebut,
                 'dateFin'   => $dateFin,
-            ],
+                'document_titre'    => 'Historique des cahiers de texte',
+                'document_sous_titre' => trim(
+                    ($eleve->user?->prenom ?? '') . ' ' . ($eleve->user?->nom ?? '')
+                ),
+                'document_reference' => 'CT-HIST-' . $eleve->id,
+                'date_edition'      => now(),
+                'ligne_meta'        => '<strong>Période :</strong> '
+                    . ($dateDebut ?? '—') . ' &rarr; ' . ($dateFin ?? '—'),
+            ]),
             $this->makeFilename($eleve, $dateDebut, $dateFin),
             PdfCollection::CAHIER_TEXTE,
-            null
+            null,
+            'Cahiers de texte · Élève ' . $eleve->id
         );
     }
 
@@ -98,11 +113,22 @@ class CahierTextePdfService
         array $data,
         string $filename,
         string $mediaCollection = 'cahier_texte_pdf',
-        ?object $model = null
+        ?object $model = null,
+        string $reference = 'Cahier de texte'
     ) {
         // 1. Générer le PDF en mémoire
         $pdf = Pdf::loadView($view, $data)
-            ->setPaper('a4', 'portrait');
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont' => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+            ]);
+
+        // Le pied de page n'est dessinable qu'après le rendu.
+        $pdf->render();
+
+        DocumentPdf::piedDePage($pdf->getDomPDF(), $reference);
 
         $output = $pdf->output();
 
@@ -166,9 +192,35 @@ class CahierTextePdfService
         );
     }
 
+    /**
+     * Identité du cabinet courant, mise en forme pour le gabarit commun.
+     */
     private function getCabinet(): array
     {
-        return CabinetInfo::all();
+        $cabinet = DocumentPdf::cabinet();
+
+        return [
+            'cabinet' => $cabinet,
+            'cabinet_nom' => $cabinet['nom'],
+            'cabinet_logo' => DocumentPdf::logo($cabinet['logo']),
+        ];
+    }
+
+    /**
+     * Ligne d'en-tête d'une séance : élève, matière, enseignant.
+     */
+    private function ligneMetaSeance(CahierTexte $cahier): string
+    {
+        $affectation = $cahier->affectation;
+        $eleve = $affectation?->contrat?->eleve?->user;
+        $enseignant = $affectation?->enseignant?->user;
+
+        return '<strong>Élève :</strong> '
+            . e(trim(($eleve?->prenom ?? '') . ' ' . ($eleve?->nom ?? '')) ?: '—')
+            . ' &nbsp;·&nbsp; <strong>Matière :</strong> '
+            . e($affectation?->matiere?->nom ?? '—')
+            . ' &nbsp;·&nbsp; <strong>Enseignant :</strong> '
+            . e(trim(($enseignant?->prenom ?? '') . ' ' . ($enseignant?->nom ?? '')) ?: '—');
     }
 
     /*

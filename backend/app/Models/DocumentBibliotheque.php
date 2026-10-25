@@ -34,6 +34,8 @@ class DocumentBibliotheque extends Model implements HasMedia
         'nb_vues',
         'nb_telechargements',
         'nombre_favoris',
+        'nb_aimes',
+        'nb_n_aimes',
         'note_moyenne',
         'nb_notes',
     ];
@@ -43,6 +45,8 @@ class DocumentBibliotheque extends Model implements HasMedia
         'nb_vues' => 'integer',
         'nb_telechargements' => 'integer',
         'nombre_favoris' => 'integer',
+        'nb_aimes' => 'integer',
+        'nb_n_aimes' => 'integer',
         'note_moyenne' => 'float',
         'nb_notes' => 'integer',
     ];
@@ -148,6 +152,11 @@ class DocumentBibliotheque extends Model implements HasMedia
         return $this->hasMany(FavoriBibliotheque::class, 'document_bibliotheque_id');
     }
 
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(DocumentReaction::class, 'document_bibliotheque_id');
+    }
+
     public function accessLogs(): HasMany
     {
         return $this->hasMany(DocumentAccessLog::class, 'document_bibliotheque_id');
@@ -206,7 +215,12 @@ class DocumentBibliotheque extends Model implements HasMedia
 
     public function scopeWithFavoriForUser(Builder $query, ?int $userId): Builder
     {
-        $query->addSelect('document_bibliotheques.*');
+        // `addSelect` uniquement si la colonne de sélection n'existe pas
+        // encore : enchaîné avec `withReactionForIdentity`, un second
+        // `document_bibliotheques.*` ferait échouer la requête PostgreSQL.
+        if ($query->getQuery()->columns === null) {
+            $query->addSelect('document_bibliotheques.*');
+        }
 
         if (!$userId) {
             return $query->selectRaw('false as is_favori');
@@ -216,5 +230,40 @@ class DocumentBibliotheque extends Model implements HasMedia
             'EXISTS (SELECT 1 FROM favori_bibliotheques WHERE favori_bibliotheques.document_bibliotheque_id = document_bibliotheques.id AND favori_bibliotheques.user_id = ?) as is_favori',
             [$userId]
         );
+    }
+
+    /**
+     * Colonne virtuelle `ma_reaction` pour l'identité courante (membre ou
+     * visiteur de session) : sous-requête SQL, pas de N+1 sur les listes.
+     */
+    public function scopeWithReactionForIdentity(Builder $query, ?string $identifiant): Builder
+    {
+        if ($query->getQuery()->columns === null) {
+            $query->addSelect('document_bibliotheques.*');
+        }
+
+        if (! $identifiant) {
+            return $query->selectRaw('null as ma_reaction');
+        }
+
+        return $query->selectRaw(
+            '(SELECT reaction FROM document_reactions WHERE document_reactions.document_bibliotheque_id = document_bibliotheques.id AND document_reactions.identifiant = ? LIMIT 1) as ma_reaction',
+            [$identifiant]
+        );
+    }
+
+    public function getMaReactionAttribute(): ?string
+    {
+        if (array_key_exists('ma_reaction', $this->attributes)) {
+            return $this->attributes['ma_reaction'];
+        }
+
+        $identifiant = app(DocumentReaction::class)::identiteCourante();
+
+        if (! $identifiant) {
+            return null;
+        }
+
+        return $this->reactions()->where('identifiant', $identifiant)->value('reaction');
     }
 }

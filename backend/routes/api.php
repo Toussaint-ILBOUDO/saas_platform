@@ -1,13 +1,20 @@
 <?php
 
 use App\Modules\Auth\Http\Controllers\Api\AuthApiController;
+use App\Modules\Auth\Http\Controllers\Api\ProfilApiController;
+use App\Modules\Audit\Http\Controllers\Api\AuditApiController;
+use App\Modules\Bibliotheque\Http\Controllers\Api\AdminBibliothequeApiController;
+use App\Modules\Bibliotheque\Http\Controllers\Api\BibliothequeApiController;
 use App\Modules\Bibliotheque\Http\Controllers\Api\PublicDocumentApiController;
 use App\Modules\Communication\Http\Controllers\Api\AdminActualiteApiController;
 use App\Modules\Communication\Http\Controllers\Api\AdminFaqQuestionApiController;
 use App\Modules\Communication\Http\Controllers\Api\AdminFaqSectionApiController;
 use App\Modules\Communication\Http\Controllers\Api\PublicActualiteApiController;
 use App\Modules\Communication\Http\Controllers\Api\PublicFaqApiController;
+use App\Modules\Librairie\Http\Controllers\Api\AdminLibrairieApiController;
+use App\Modules\Librairie\Http\Controllers\Api\MesCommandeApiController;
 use App\Modules\Librairie\Http\Controllers\Api\PublicCommandeApiController;
+use App\Modules\Librairie\Http\Controllers\Api\PublicPanierApiController;
 use App\Modules\Librairie\Http\Controllers\Api\PublicProduitApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\PublicDemandeCoursApiController;
 use App\Modules\Public\Http\Controllers\Api\AdminContenuPublicApiController;
@@ -18,6 +25,7 @@ use App\Modules\Public\Http\Controllers\Api\PublicStatsApiController;
 use App\Modules\Systeme\Http\Controllers\Api\AdminUtilisateurApiController;
 use App\Modules\Systeme\Http\Controllers\Api\NotificationApiController;
 use App\Modules\Systeme\Http\Controllers\Api\PushSubscriptionApiController;
+use App\Modules\Temoignages\Http\Controllers\Api\MesTemoignageApiController;
 use App\Modules\Temoignages\Http\Controllers\Api\PublicTemoignageApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\AffectationApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\CahierTexteApiController;
@@ -26,17 +34,21 @@ use App\Modules\Pedagogie\Http\Controllers\Api\ContratCoursApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\DemandeCoursAdminApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\MatiereApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\MesPlanningApiController;
+use App\Modules\Pedagogie\Http\Controllers\Api\ObjectifPedagogiqueApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\PlanningApiController;
 use App\Modules\Finance\Http\Controllers\Api\FactureApiController;
 use App\Modules\Finance\Http\Controllers\Api\BulletinPaieApiController;
 use App\Modules\Finance\Http\Controllers\Api\Enseignant\BulletinPaieApiController as EnseignantBulletinPaieApiController;
+use App\Modules\Plateforme\Http\Controllers\Api\CabinetContratApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\RapportMensuelApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\RapportSectionApiController;
 use App\Modules\Pedagogie\Http\Controllers\Api\TypeCoursApiController;
 use App\Modules\Users\Http\Controllers\Api\EnseignantApiController;
+use App\Modules\Users\Http\Controllers\Api\EleveApiController;
 use App\Modules\Users\Http\Controllers\Api\MesCoursApiController;
 use App\Modules\Users\Http\Controllers\Api\MesContratsApiController;
 use App\Modules\Users\Http\Controllers\Api\MesEnfantsApiController;
+use App\Modules\Users\Http\Controllers\Api\ParentApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -54,18 +66,43 @@ Route::prefix('public')->group(function () {
     Route::get('logo', [CabinetPublicApiController::class, 'logo']);
 
     Route::get('actualites', [PublicActualiteApiController::class, 'index']);
+    // Image en ligne : route contrôlée (disque public tenant non exposé).
+    Route::get('actualites/{slug}/image', [PublicActualiteApiController::class, 'image']);
     Route::get('actualites/{slug}', [PublicActualiteApiController::class, 'show']);
 
     Route::get('faq', [PublicFaqApiController::class, 'index']);
 
     Route::get('documents', [PublicDocumentApiController::class, 'index']);
+    // Avant `documents/{slug}` : sinon « referentiels » serait avalé par le slug.
+    Route::get('documents/referentiels', [PublicDocumentApiController::class, 'referentiels']);
     Route::get('documents/{slug}', [PublicDocumentApiController::class, 'show']);
+    Route::get('documents/{slug}/fichier', [PublicDocumentApiController::class, 'fichier']);
+    Route::get('documents/{slug}/telecharger', [PublicDocumentApiController::class, 'telecharger']);
+    Route::post('documents/{slug}/reactions', [PublicDocumentApiController::class, 'reactions'])
+        ->middleware('throttle:30,1');
+    // Signalement ouvert (anonyme ou membre) — plusieurs signalements possibles,
+    // throttles anti-abus (10/min/IP).
+    Route::post('documents/{slug}/signalements', [PublicDocumentApiController::class, 'signaler'])
+        ->middleware('throttle:10,1');
+    Route::post('documents/{slug}/favori', [PublicDocumentApiController::class, 'favori'])
+        ->middleware('auth:web');
 
     Route::get('produits', [PublicProduitApiController::class, 'index']);
+    // Avant `produits/{slug}` : sinon « referentiels » serait avalé par le slug.
+    Route::get('produits/referentiels', [PublicProduitApiController::class, 'categories']);
+    // Image en ligne : route contrôlée, le disque public tenant n'est pas
+    // exposé via `/storage` (voir SertMediaPublic).
+    Route::get('produits/{slug}/image', [PublicProduitApiController::class, 'image']);
+    Route::get('produits/{slug}', [PublicProduitApiController::class, 'show']);
+
+    // Devis serveur du panier (prix officiels recalculés en base).
+    Route::post('panier/devis', [PublicPanierApiController::class, 'devis'])
+        ->middleware('throttle:60,1');
 
     // Statistiques, enseignants, témoignages — P2 (page publique frontend).
     Route::get('stats', [PublicStatsApiController::class, 'index']);
     Route::get('enseignants', [PublicEnseignantApiController::class, 'index']);
+    Route::get('enseignants/{id}/photo', [PublicEnseignantApiController::class, 'photo']);
     Route::get('temoignages', [PublicTemoignageApiController::class, 'index']);
     Route::get('temoignages/{slug}', [PublicTemoignageApiController::class, 'show']);
     Route::get('references', [PublicReferencesApiController::class, 'index']);
@@ -73,6 +110,13 @@ Route::prefix('public')->group(function () {
     Route::post('demandes-cours', [PublicDemandeCoursApiController::class, 'store'])
         ->middleware('throttle:10,1');
     Route::post('commandes', [PublicCommandeApiController::class, 'store'])
+        ->middleware('throttle:10,1');
+    // Suivi public par code de commande (sans compte, sans donnée interne).
+    Route::get('commandes/{reference}', [PublicCommandeApiController::class, 'suivre'])
+        ->middleware('throttle:30,1');
+    Route::get('commandes/{reference}/recapitulatif', [PublicCommandeApiController::class, 'recapitulatif'])
+        ->middleware('throttle:10,1');
+    Route::post('commandes/{reference}/annuler', [PublicCommandeApiController::class, 'annuler'])
         ->middleware('throttle:10,1');
 });
 
@@ -88,8 +132,22 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:web')->group(function () {
         Route::post('deconnexion', [AuthApiController::class, 'deconnexion']);
         Route::get('moi', [AuthApiController::class, 'moi']);
+        // Mon profil : identité du compte, photo et blocs par rôle actif.
+        Route::put('moi', [ProfilApiController::class, 'updateMoi']);
+        Route::get('moi/photo', [ProfilApiController::class, 'photo']);
+        Route::post('moi/photo', [ProfilApiController::class, 'updatePhoto']);
+        Route::delete('moi/photo', [ProfilApiController::class, 'destroyPhoto']);
+        Route::get('moi/profils', [ProfilApiController::class, 'profils']);
+        Route::put('profil-enseignant', [ProfilApiController::class, 'updateEnseignant']);
+        Route::put('profil-parent', [ProfilApiController::class, 'updateParent']);
+        // Fiche élève : élève lui-même, parent, enseignant affecté ou admin.
+        Route::get('eleves/{eleve}', [ProfilApiController::class, 'showEleve']);
+        Route::put('eleves/{eleve}', [ProfilApiController::class, 'updateEleve']);
         Route::post('changer-mot-de-passe', [AuthApiController::class, 'changerMotDePasse']);
         Route::post('role-actif', [AuthApiController::class, 'roleActif']);
+        // Témoignage d'un membre connecté (publication immédiate, modération a posteriori).
+        Route::post('temoignages', [MesTemoignageApiController::class, 'store'])
+            ->middleware('throttle:10,1');
     });
 });
 
@@ -141,9 +199,39 @@ Route::middleware(['auth:web', 'role:admin_cabinet'])
         Route::patch('type-cours/{type_cours}/desactiver', [TypeCoursApiController::class, 'desactiver']);
 
         // Pas de delete : un enseignant porte rapports, bulletins et contrats.
+        // `import` et la photo sont déclarés AVANT l'apiResource : le segment
+        // `{enseignant}` de la ressource ne doit pas avaler `import`.
+        Route::post('enseignants/import', [EnseignantApiController::class, 'import']);
+        Route::get('enseignants/{enseignant}/photo', [EnseignantApiController::class, 'photo']);
+        Route::post('enseignants/{enseignant}/photo', [EnseignantApiController::class, 'majPhoto']);
+        Route::delete('enseignants/{enseignant}/photo', [EnseignantApiController::class, 'supprimerPhoto']);
         Route::apiResource('enseignants', EnseignantApiController::class)
             ->parameters(['enseignants' => 'enseignant'])
             ->except(['create', 'edit', 'destroy']);
+
+        // Création directe — parent / élève (sans demande de cours préalable).
+        // Le contrat direct existe déjà (`POST /contrats` porte `eleve_id`) ;
+        // ce qui manquait, c'était de fabriquer les identités hors du parcours
+        // demande. Pas de delete : un parent porte des factures, un élève porte
+        // des contrats, cahiers de texte et factures.
+        Route::get('parents', [ParentApiController::class, 'index']);
+        Route::post('parents', [ParentApiController::class, 'store']);
+        Route::get('eleves', [EleveApiController::class, 'index']);
+        Route::post('eleves', [EleveApiController::class, 'store']);
+
+        // M3 — scolarité : détail/édition admin des fiches + activation du
+        // compte élève. L'admin est le seul à toucher aux rattachements
+        // (`parent_id`/`classe_id`) : la fiche partagée
+        // (`PUT /auth/eleves/{eleve}`) les exclut. Pas de DELETE (cf. ci-dessus).
+        Route::get('parents/{parent}', [ParentApiController::class, 'show']);
+        Route::put('parents/{parent}', [ParentApiController::class, 'update']);
+        Route::get('eleves/{eleve}', [EleveApiController::class, 'show']);
+        Route::put('eleves/{eleve}', [EleveApiController::class, 'update']);
+        // Double flag `eleves.statut` + `users.statut` (AuthService) : les deux
+        // doivent bouger ensemble, sinon l'état du compte dépend de qui l'a
+        // touché en dernier.
+        Route::patch('eleves/{eleve}/activer', [EleveApiController::class, 'activer']);
+        Route::patch('eleves/{eleve}/suspendre', [EleveApiController::class, 'suspendre']);
 
         // Contrats de cours. Pas de DELETE : la suppression en cascade
         // contrat -> affectations -> lignes de facture / de bulletin effacerait
@@ -234,6 +322,34 @@ Route::middleware(['auth:web', 'role:enseignant'])
 Route::middleware(['auth:web', 'role:parent|eleve'])
     ->get('mes-enfants', [MesEnfantsApiController::class, 'index']);
 
+// ---------- Objectifs pédagogiques — enseignant (T7A.6, D-050) ----------
+// Une ligne par (élève, période comptable, enseignant). Les routes statiques
+// alimentent le formulaire de saisie ; `{objectif}` porte la property, tranchée
+// par la policy.
+Route::middleware(['auth:web', 'role:enseignant'])
+    ->prefix('enseignant/objectifs')
+    ->group(function () {
+        Route::get('/', [ObjectifPedagogiqueApiController::class, 'index']);
+        Route::post('/', [ObjectifPedagogiqueApiController::class, 'store']);
+        Route::get('eleves', [ObjectifPedagogiqueApiController::class, 'eleves']);
+        Route::get('periodes', [ObjectifPedagogiqueApiController::class, 'periodes']);
+        Route::get('matieres', [ObjectifPedagogiqueApiController::class, 'matieres']);
+        Route::put('{objectif}', [ObjectifPedagogiqueApiController::class, 'update']);
+        Route::delete('{objectif}', [ObjectifPedagogiqueApiController::class, 'destroy']);
+    });
+
+// ---------- Objectifs pédagogiques — administration (T7A.6) ----------
+// L'admin supervise et corrige tous les objectifs ; la création reste
+// réservée à l'enseignant (porteur de la relation, `policy::create`).
+Route::middleware(['auth:web', 'role:admin_cabinet'])
+    ->prefix('admin/pedagogie/objectifs')
+    ->group(function () {
+        Route::get('/', [ObjectifPedagogiqueApiController::class, 'index']);
+        Route::get('matieres', [ObjectifPedagogiqueApiController::class, 'matieres']);
+        Route::put('{objectif}', [ObjectifPedagogiqueApiController::class, 'update']);
+        Route::delete('{objectif}', [ObjectifPedagogiqueApiController::class, 'destroy']);
+    });
+
 // ---------- Rapport mensuel — enseignant (T7A.7) ----------
 // L'enseignant dépose/corrige/re-soumet/supprime ses seuls rapports, et les
 // transitions sont des routes explicites (`corriger`, `resoumettre`) plutôt
@@ -313,9 +429,14 @@ Route::middleware(['auth:web', 'role:admin_cabinet'])
         Route::get('/', [FactureApiController::class, 'indexAdmin']);
         Route::post('preview', [FactureApiController::class, 'preview']);
         Route::post('/', [FactureApiController::class, 'store']);
+        // Doit précéder `{facture}` : sinon « types-ajustement » serait résolu
+        // comme un identifiant de facture.
+        Route::get('types-ajustement', [FactureApiController::class, 'typesAjustement']);
         Route::get('{facture}', [FactureApiController::class, 'show']);
         Route::get('{facture}/pdf', [FactureApiController::class, 'pdf']);
         Route::post('{facture}/paiement', [FactureApiController::class, 'payer']);
+        Route::post('{facture}/ajustements', [FactureApiController::class, 'storeAjustement']);
+        Route::delete('{facture}/ajustements/{ajustement}', [FactureApiController::class, 'destroyAjustement']);
     });
 
 // ---------- Bulletin de paie — enseignant (T7A.9) ----------
@@ -367,6 +488,73 @@ Route::middleware(['auth:web', 'role:parent|eleve'])
         Route::get('historique-pdf', [CahierTexteApiController::class, 'historiquePdf']);
     });
 
+// ---------- Librairie — commandes du compte connecté (espace personnel) ----------
+// Consultation PAR RÉFÉRENCE publique (pas d'id interne) : impossible de
+// consulter la commande d'un autre client en modifiant l'URL.
+Route::middleware('auth:web')->prefix('mes-commandes')->group(function () {
+    Route::get('/', [MesCommandeApiController::class, 'index']);
+    Route::get('{reference}', [MesCommandeApiController::class, 'show']);
+    Route::get('{reference}/pdf', [MesCommandeApiController::class, 'pdf']);
+    Route::post('{reference}/annuler', [MesCommandeApiController::class, 'annuler']);
+});
+
+// ---------- Librairie — console du libraire / de l'administrateur ----------
+// `role:admin_cabinet|gestionnaire_librairie` : les rôles réels des bases
+// cabinet (D-007). La délégation commerciale (clés `parametres_librairie`)
+// est appliquée dans `AdminLibrairieApiController` — restriction serveur
+// insoupçonnable depuis le frontend. Les clés de délégation ne sont
+// modifiables QUE par le libraire : l'admin ne peut pas se réautoriser.
+Route::middleware(['auth:web', 'role:admin_cabinet|gestionnaire_librairie'])
+    ->prefix('admin/librairie')
+    ->group(function () {
+        Route::get('parametres', [AdminLibrairieApiController::class, 'parametres']);
+        Route::patch('parametres', [AdminLibrairieApiController::class, 'majParametres'])
+            ->middleware('role:gestionnaire_librairie');
+        Route::get('dashboard', [AdminLibrairieApiController::class, 'dashboard']);
+
+        Route::get('categories', [AdminLibrairieApiController::class, 'categories']);
+        Route::post('categories', [AdminLibrairieApiController::class, 'storeCategorie']);
+
+        Route::get('produits', [AdminLibrairieApiController::class, 'produits']);
+        Route::post('produits', [AdminLibrairieApiController::class, 'storeProduit']);
+        Route::get('produits/{produit}/image', [AdminLibrairieApiController::class, 'imageProduit']);
+        // PUT multipart n'est pas peuplé par PHP : POST accepté en complément
+        // (convention déjà employée pour les documents de la bibliothèque).
+        Route::match(['put', 'post'], 'produits/{produit}', [AdminLibrairieApiController::class, 'updateProduit']);
+        Route::patch('produits/{produit}/basculer', [AdminLibrairieApiController::class, 'basculerProduit']);
+        Route::delete('produits/{produit}', [AdminLibrairieApiController::class, 'destroyProduit']);
+
+        Route::get('commandes', [AdminLibrairieApiController::class, 'commandes']);
+        Route::get('commandes/{reference}', [AdminLibrairieApiController::class, 'commande']);
+        Route::get('commandes/{reference}/pdf', [AdminLibrairieApiController::class, 'pdf']);
+        Route::patch('commandes/{reference}/statut', [AdminLibrairieApiController::class, 'majStatut']);
+        Route::patch('commandes/{reference}/note-interne', [AdminLibrairieApiController::class, 'majNoteInterne']);
+    });
+
+// ---------- Bibliothèque — espace membre (Angular) ----------
+// Toute la logique vit dans `DocumentBibliothequeService`, déjà partagée avec
+// le parcours Blade. Le fichier étant sur un disque privé, la lecture et le
+// téléchargement passent par des routes contrôlées (policy + compteurs).
+Route::middleware('auth:web')->prefix('bibliotheque')->group(function () {
+    Route::get('dashboard', [BibliothequeApiController::class, 'dashboard']);
+    Route::get('mes-documents', [BibliothequeApiController::class, 'mesDocuments']);
+    Route::get('favoris', [BibliothequeApiController::class, 'favoris']);
+    Route::get('referentiels', [BibliothequeApiController::class, 'referentiels']);
+    Route::post('documents', [BibliothequeApiController::class, 'store']);
+    Route::get('documents/{documentBibliotheque}', [BibliothequeApiController::class, 'show']);
+    // POST en plus de PUT : un multipart en PUT n'est pas peuplé par PHP < 8.4
+    // (même raison que le logo du cabinet).
+    Route::match(['put', 'post'], 'documents/{documentBibliotheque}', [BibliothequeApiController::class, 'update']);
+    Route::delete('documents/{documentBibliotheque}', [BibliothequeApiController::class, 'destroy']);
+    Route::post('documents/{documentBibliotheque}/favori', [BibliothequeApiController::class, 'toggleFavori']);
+    Route::post('documents/{documentBibliotheque}/commentaires', [BibliothequeApiController::class, 'commenter']);
+    Route::post('documents/{documentBibliotheque}/notes', [BibliothequeApiController::class, 'noter']);
+    Route::post('documents/{documentBibliotheque}/signalements', [BibliothequeApiController::class, 'signaler'])
+        ->middleware('throttle:10,1');
+    Route::get('fichier/{documentBibliotheque}', [BibliothequeApiController::class, 'fichier']);
+    Route::get('telecharger/{documentBibliotheque}', [BibliothequeApiController::class, 'telecharger']);
+});
+
 // ---------- Backoffice MVP (authentifié, staff cabinet) — T3.5 ----------
 Route::middleware(['auth:web', 'role:admin_cabinet'])->prefix('admin')->name('admin.')->group(function () {
     // Contenu public (thème, pied de page, données)
@@ -379,6 +567,7 @@ Route::middleware(['auth:web', 'role:admin_cabinet'])->prefix('admin')->name('ad
     // Actualités
     Route::get('actualites', [AdminActualiteApiController::class, 'index']);
     Route::post('actualites', [AdminActualiteApiController::class, 'store']);
+    Route::get('actualites/{actualite}/image', [AdminActualiteApiController::class, 'image']);
     Route::get('actualites/{actualite}', [AdminActualiteApiController::class, 'show']);
     Route::match(['put', 'post'], 'actualites/{actualite}', [AdminActualiteApiController::class, 'update']);
     Route::delete('actualites/{actualite}', [AdminActualiteApiController::class, 'destroy']);
@@ -403,4 +592,29 @@ Route::middleware(['auth:web', 'role:admin_cabinet'])->prefix('admin')->name('ad
     Route::put('utilisateurs/{utilisateur}', [AdminUtilisateurApiController::class, 'update']);
     Route::patch('utilisateurs/{utilisateur}/activer', [AdminUtilisateurApiController::class, 'activer']);
     Route::patch('utilisateurs/{utilisateur}/suspendre', [AdminUtilisateurApiController::class, 'suspendre']);
+
+    // Bibliothèque — modération (Angular). Pas de DELETE sur les
+    // signalements : un signalement est une trace, il est « traité ».
+    Route::get('bibliotheque/signalements', [AdminBibliothequeApiController::class, 'signalements']);
+    Route::get('bibliotheque/signalements/{signalement}', [AdminBibliothequeApiController::class, 'showSignalement']);
+    Route::patch('bibliotheque/signalements/{signalement}', [AdminBibliothequeApiController::class, 'majSignalement']);
+    Route::patch('bibliotheque/signalements/{signalement}/traiter', [AdminBibliothequeApiController::class, 'traiterSignalement']);
+    Route::get('bibliotheque', [AdminBibliothequeApiController::class, 'index']);
+    Route::get('bibliotheque/{documentBibliotheque}', [AdminBibliothequeApiController::class, 'show']);
+    Route::patch('bibliotheque/{documentBibliotheque}/valider', [AdminBibliothequeApiController::class, 'valider']);
+    Route::patch('bibliotheque/{documentBibliotheque}/refuser', [AdminBibliothequeApiController::class, 'refuser']);
+    Route::patch('bibliotheque/{documentBibliotheque}/archiver', [AdminBibliothequeApiController::class, 'archiver']);
+    Route::delete('bibliotheque/{documentBibliotheque}', [AdminBibliothequeApiController::class, 'destroy']);
+
+    // Journal d'audit (M13) — lecture seule, entrées créées par les services
+    // métier via `AuditService::enregistrer()`.
+    Route::get('audit', [AuditApiController::class, 'index']);
+    Route::get('audit/actions', [AuditApiController::class, 'actions']);
+
+    // Contrat commercial et factures de la PLATEFORME (P8) —
+    // consultation SEULE pour l'admin du cabinet (read-only).
+    Route::get('mon-contrat', [CabinetContratApiController::class, 'index']);
+    Route::get('mes-factures-plateforme', [CabinetContratApiController::class, 'factures']);
+    Route::get('mes-factures-plateforme/{facture}', [CabinetContratApiController::class, 'facture']);
+    Route::get('mes-factures-plateforme/{facture}/pdf', [CabinetContratApiController::class, 'facturePdf']);
 });

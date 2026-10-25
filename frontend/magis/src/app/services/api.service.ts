@@ -51,6 +51,7 @@ import {
   RapportMensuelApercu,
   RapportSection,
   Facture,
+  FactureAjustement,
   FactureApercu,
   FactureFormulaire,
   FacturePaiement,
@@ -64,6 +65,42 @@ import {
   TypeAjustement,
   DemandeCoursAdmin,
   StatsDemandesCours,
+  ParentCabinet,
+  ParentFormulaire,
+  ParentEdition,
+  ParentScolarite,
+  EleveCabinet,
+  EleveFormulaire,
+  EleveEdition,
+  EleveScolarite,
+  DashboardBibliotheque,
+  DocumentBibliothequeEspace,
+  ReferentielsBibliotheque,
+  ReferentielsBibliothequePublique,
+  SignalementAdmin,
+  DevisPanier,
+  CommandeFormulaire,
+  CommandeCreee,
+  SuiviCommande,
+  CommandeSynthese,
+  CommandeDetail,
+  DashboardLibrairie,
+  ParametresLibrairie,
+  FicheEleve,
+  ProfilEnseignant,
+  ProfilParent,
+  ReponseProfils,
+  ObjectifFormulaire,
+  ObjectifPedagogique,
+  PeriodeObjectif,
+  RefEleveObjectif,
+  MatiereRefObjectif,
+  EntreeAudit,
+  FiltresAudit,
+  MonContratPlateforme,
+  DetailFacturePlateforme,
+  FacturePlateforme,
+  RapportImportEnseignant,
 } from '../models';
 
 /** Chemin de base de l'API (même origine en prod ; proxy /api en dev). */
@@ -107,16 +144,24 @@ export class ApiService {
       .pipe(map((r) => r.data));
   }
 
-  getEnseignants(page = 1): Observable<{ data: Enseignant[]; meta?: MetaPage }> {
+  getEnseignants(page = 1, parPage = 6): Observable<{ data: Enseignant[]; meta?: MetaPage }> {
     return this.http.get<{ data: Enseignant[]; meta?: MetaPage }>(
-      `${API_BASE}/public/enseignants?page=${page}`
+      `${API_BASE}/public/enseignants?page=${page}&per_page=${parPage}`
     );
   }
 
-  getTemoignages(page = 1): Observable<{ data: Temoignage[]; meta?: MetaPage }> {
+  getTemoignages(page = 1, parPage = 6): Observable<{ data: Temoignage[]; meta?: MetaPage }> {
     return this.http.get<{ data: Temoignage[]; meta?: MetaPage }>(
-      `${API_BASE}/public/temoignages?page=${page}`
+      `${API_BASE}/public/temoignages?page=${page}&per_page=${parPage}`
     );
+  }
+
+  /** Soumission d'un témoignage par un membre connecté (anonymat possible). */
+  creerTemoignage(contenu: string, anonyme: boolean): Observable<{ message: string; temoignage: Temoignage }> {
+    return this.http.post<{ message: string; temoignage: Temoignage }>(`${API_BASE}/auth/temoignages`, {
+      contenu,
+      anonyme,
+    });
   }
 
   getActualites(page = 1, perPage = 9): Observable<{ data: Actualite[]; meta: MetaPage }> {
@@ -135,24 +180,241 @@ export class ApiService {
       .pipe(map((r) => r.data));
   }
 
-  getDocuments(page = 1, perPage = 12, recherche = ''): Observable<{
-    data: DocumentBibliotheque[];
-    meta: MetaPage;
-  }> {
-    const q = recherche ? `&search=${encodeURIComponent(recherche)}` : '';
+  getDocuments(
+    page = 1,
+    perPage = 12,
+    recherche = '',
+    filtres: {
+      type_document_id?: number | null;
+      classe_id?: number | null;
+      matiere_id?: number | null;
+      periode_id?: number | null;
+      tag?: string | null;
+      sort?: string | null;
+    } = {}
+  ): Observable<{ data: DocumentBibliotheque[]; meta: MetaPage }> {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+    if (recherche) params.set('search', recherche);
+    if (filtres.type_document_id) params.set('type_document_id', String(filtres.type_document_id));
+    if (filtres.classe_id) params.set('classe_id', String(filtres.classe_id));
+    if (filtres.matiere_id) params.set('matiere_id', String(filtres.matiere_id));
+    if (filtres.periode_id) params.set('periode_id', String(filtres.periode_id));
+    if (filtres.tag) params.set('tag', filtres.tag);
+    if (filtres.sort) params.set('sort', filtres.sort);
     return this.http.get<{ data: DocumentBibliotheque[]; meta: MetaPage }>(
-      `${API_BASE}/public/documents?page=${page}&per_page=${perPage}${q}`
+      `${API_BASE}/public/documents?${params}`
     );
   }
 
-  getProduits(page = 1, perPage = 12, recherche = ''): Observable<{
-    data: Produit[];
-    meta: MetaPage;
+  /** Référentiels de la bibliothèque publique (filtres de la page). */
+  getReferentielsBibliothequePublique(): Observable<ReferentielsBibliothequePublique> {
+    return this.http
+      .get<{ data: ReferentielsBibliothequePublique }>(`${API_BASE}/public/documents/referentiels`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Détail public d'un document (compte la vue côté serveur, dédupliqué). */
+  getDocumentPublic(slug: string): Observable<DocumentBibliotheque> {
+    return this.http.get<DocumentBibliotheque>(`${API_BASE}/public/documents/${slug}`);
+  }
+
+  /** URL du fichier en ligne (lecteur intégré, Content-Disposition inline). */
+  urlFichierDocument(slug: string): string {
+    return `${API_BASE}/public/documents/${slug}/fichier`;
+  }
+
+  /** URL de téléchargement contrôlé. */
+  urlTelechargementDocument(slug: string): string {
+    return `${API_BASE}/public/documents/${slug}/telecharger`;
+  }
+
+  /** Réaction aime / n'aime pas (membre ou visiteur de session). */
+  reagirDocument(slug: string, reaction: 'aime' | 'n_aime_pas'): Observable<{
+    message: string;
+    reaction: 'aime' | 'n_aime_pas' | null;
+    nb_aimes: number;
+    nb_n_aimes: number;
   }> {
+    return this.http.post<{ message: string; reaction: 'aime' | 'n_aime_pas' | null; nb_aimes: number; nb_n_aimes: number }>(
+      `${API_BASE}/public/documents/${slug}/reactions`,
+      { reaction }
+    );
+  }
+
+  /** Ajout / retrait d'un favori public (membre connecté requis). */
+  favoriDocumentPublic(slug: string): Observable<{ message: string; is_favori: boolean; nombre_favoris: number }> {
+    return this.http.post<{ message: string; is_favori: boolean; nombre_favoris: number }>(
+      `${API_BASE}/public/documents/${slug}/favori`,
+      {}
+    );
+  }
+
+  getProduits(
+    page = 1,
+    perPage = 12,
+    recherche = '',
+    tri: 'recent' | 'prix_asc' | 'prix_desc' | null = null
+  ): Observable<{ data: Produit[]; meta: MetaPage }> {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+    if (recherche) params.set('search', recherche);
+    if (tri) params.set('sort', tri);
+    return this.http.get<{ data: Produit[]; meta: MetaPage }>(`${API_BASE}/public/produits?${params}`);
+  }
+
+  /** Fiche produit : la réponse serveur enveloppe `{ data, similaires }`. */
+  getProduitPublic(slug: string): Observable<Produit> {
+    return this.http
+      .get<{ data: Produit; similaires: Produit[] }>(`${API_BASE}/public/produits/${slug}`)
+      .pipe(map((r) => ({ ...(r.data ?? ({} as Produit)), similaires: r.similaires ?? [] })));
+  }
+
+  getCategoriesProduits(): Observable<{ id: number; nom: string }[]> {
+    return this.http
+      .get<{ data: { id: number; nom: string }[] }>(`${API_BASE}/public/produits/referentiels`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Devis serveur du panier (prix officiels recalculés en base). */
+  devisPanier(lignes: { produit_id: number; quantite: number }[]): Observable<DevisPanier> {
+    return this.http
+      .post<{ data: DevisPanier }>(`${API_BASE}/public/panier/devis`, { lignes })
+      .pipe(map((r) => r.data));
+  }
+
+  /** Validation d'une commande (sans compte ou connecté). */
+  passerCommande(payload: CommandeFormulaire): Observable<CommandeCreee> {
+    return this.http.post<CommandeCreee>(`${API_BASE}/public/commandes`, payload);
+  }
+
+  /** Suivi PUBLIC d'une commande par sa référence. */
+  suivreCommande(reference: string): Observable<SuiviCommande> {
+    return this.http.get<{ data: SuiviCommande }>(`${API_BASE}/public/commandes/${reference}`).pipe(map((r) => r.data));
+  }
+
+  /** Annulation (immédiate ou demande tracée) par le client. */
+  annulerCommandePublique(reference: string, motif?: string): Observable<{ message: string; statut: string; annulation_demandee: boolean }> {
+    return this.http.post<{ message: string; statut: string; annulation_demandee: boolean }>(
+      `${API_BASE}/public/commandes/${reference}/annuler`,
+      motif ? { motif } : {}
+    );
+  }
+
+  /** URL du récapitulatif PDF public. */
+  urlRecapitulatifCommande(reference: string): string {
+    return `${API_BASE}/public/commandes/${reference}/recapitulatif`;
+  }
+
+  /* ============================================================
+     Mes commandes (espace personnel, membre connecté)
+     ============================================================ */
+
+  mesCommandes(page = 1): Observable<{ data: CommandeSynthese[]; meta: MetaPage }> {
+    return this.http.get<{ data: CommandeSynthese[]; meta: MetaPage }>(
+      `${API_BASE}/mes-commandes?page=${page}`
+    );
+  }
+
+  maCommande(reference: string): Observable<CommandeDetail> {
+    return this.http.get<{ data: CommandeDetail }>(`${API_BASE}/mes-commandes/${reference}`).pipe(map((r) => r.data));
+  }
+
+  annulerMaCommande(reference: string, motif?: string): Observable<{ message: string; statut: string; annulation_demandee: boolean }> {
+    return this.http.post<{ message: string; statut: string; annulation_demandee: boolean }>(
+      `${API_BASE}/mes-commandes/${reference}/annuler`,
+      motif ? { motif } : {}
+    );
+  }
+
+  urlPdfMaCommande(reference: string): string {
+    return `${API_BASE}/mes-commandes/${reference}/pdf`;
+  }
+
+  /* ============================================================
+     Console librairie (admin_cabinet | gestionnaire_librairie)
+     ============================================================ */
+
+  librairieParametres(): Observable<ParametresLibrairie> {
+    return this.http.get<ParametresLibrairie>(`${API_BASE}/admin/librairie/parametres`);
+  }
+
+  majLibrairieParametres(payload: Partial<ParametresLibrairie>): Observable<ParametresLibrairie> {
+    return this.http.patch<ParametresLibrairie>(`${API_BASE}/admin/librairie/parametres`, payload);
+  }
+
+  librairieDashboard(): Observable<DashboardLibrairie> {
+    return this.http.get<DashboardLibrairie>(`${API_BASE}/admin/librairie/dashboard`);
+  }
+
+  librairieProduits(page = 1, recherche = ''): Observable<{ data: Produit[]; meta: MetaPage }> {
     const q = recherche ? `&search=${encodeURIComponent(recherche)}` : '';
     return this.http.get<{ data: Produit[]; meta: MetaPage }>(
-      `${API_BASE}/public/produits?page=${page}&per_page=${perPage}${q}`
+      `${API_BASE}/admin/librairie/produits?page=${page}${q}`
     );
+  }
+
+  librairieCategories(): Observable<{ id: number; nom: string; slug?: string; ordre?: number }[]> {
+    return this.http
+      .get<{ data: { id: number; nom: string; slug?: string; ordre?: number }[] }>(
+        `${API_BASE}/admin/librairie/categories`
+      )
+      .pipe(map((r) => r.data));
+  }
+
+  librairieCreerCategorie(nom: string): Observable<{ message: string; categorie: { id: number; nom: string; slug?: string } }> {
+    return this.http.post<{ message: string; categorie: { id: number; nom: string; slug?: string } }>(
+      `${API_BASE}/admin/librairie/categories`,
+      { nom }
+    );
+  }
+
+  librairieCreerProduit(form: FormData): Observable<{ message: string; produit: { id: number; slug: string } }> {
+    return this.http.post<{ message: string; produit: { id: number; slug: string } }>(
+      `${API_BASE}/admin/librairie/produits`,
+      form
+    );
+  }
+
+  librairieMajProduit(id: number, form: FormData): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${API_BASE}/admin/librairie/produits/${id}`, form);
+  }
+
+  librairieBasculerProduit(id: number): Observable<{ message: string; is_active: boolean }> {
+    return this.http.patch<{ message: string; is_active: boolean }>(
+      `${API_BASE}/admin/librairie/produits/${id}/basculer`,
+      {}
+    );
+  }
+
+  librairieSupprimerProduit(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${API_BASE}/admin/librairie/produits/${id}`);
+  }
+
+  librairieCommandes(page = 1, statut = ''): Observable<{ data: CommandeSynthese[]; meta: MetaPage }> {
+    const s = statut ? `&statut=${encodeURIComponent(statut)}` : '';
+    return this.http.get<{ data: CommandeSynthese[]; meta: MetaPage }>(
+      `${API_BASE}/admin/librairie/commandes?page=${page}${s}`
+    );
+  }
+
+  librairieCommande(reference: string): Observable<CommandeDetail> {
+    return this.http.get<{ data: CommandeDetail }>(`${API_BASE}/admin/librairie/commandes/${reference}`).pipe(map((r) => r.data));
+  }
+
+  librairieMajStatut(reference: string, statut: string, motif?: string): Observable<{ message: string; statut: string }> {
+    return this.http.patch<{ message: string; statut: string }>(
+      `${API_BASE}/admin/librairie/commandes/${reference}/statut`,
+      motif ? { statut, motif } : { statut }
+    );
+  }
+
+  librairieNoteInterne(reference: string, note: string | null): Observable<{ message: string }> {
+    return this.http.patch<{ message: string }>(`${API_BASE}/admin/librairie/commandes/${reference}/note-interne`, {
+      note_interne: note,
+    });
+  }
+
+  urlPdfCommandeAdmin(reference: string): string {
+    return `${API_BASE}/admin/librairie/commandes/${reference}/pdf`;
   }
 
   envoyerDemandeCours(payload: DemandeCours): Observable<ApiReponse> {
@@ -200,6 +462,69 @@ export class ApiService {
       mot_de_passe_actuel: motDePasseActuel,
       nouveau_mot_de_passe: nouveauMotDePasse,
     });
+  }
+
+  /* ---------------------------------------------------------------
+     Mon profil (identité, photo, blocs par rôle, fiche élève)
+     --------------------------------------------------------------- */
+
+  updateMoi(donnees: {
+    nom: string;
+    prenom: string;
+    email?: string | null;
+    telephone_whatsapp?: string | null;
+    telephone_appel?: string | null;
+  }): Observable<{ message: string; user: SessionUtilisateur }> {
+    return this.http.put<{ message: string; user: SessionUtilisateur }>(`${API_BASE}/auth/moi`, donnees);
+  }
+
+  /** Upload de la photo de profil (FormData multipart, max 2 Mo). */
+  updatePhoto(photo: File): Observable<{ message: string; photo_url: string }> {
+    const formulaire = new FormData();
+    formulaire.append('photo', photo);
+    return this.http.post<{ message: string; photo_url: string }>(`${API_BASE}/auth/moi/photo`, formulaire);
+  }
+
+  deletePhoto(): Observable<{ message: string; photo_url: null }> {
+    return this.http.delete<{ message: string; photo_url: null }>(`${API_BASE}/auth/moi/photo`);
+  }
+
+  /** Blocs de profil (enseignant / parent / élève) selon le rôle actif. */
+  getProfils(): Observable<{ data: ReponseProfils }> {
+    return this.http.get<{ data: ReponseProfils }>(`${API_BASE}/auth/moi/profils`);
+  }
+
+  updateProfilEnseignant(donnees: Partial<ProfilEnseignant>): Observable<ApiReponse> {
+    return this.http.put<ApiReponse>(`${API_BASE}/auth/profil-enseignant`, {
+      numero_orange_money: donnees.numero_orange_money ?? null,
+      diplome_max: donnees.diplome_max ?? null,
+      lieu_de_service: donnees.lieu_de_service ?? null,
+      domicile: donnees.domicile ?? null,
+      matieres: donnees.matieres ?? [],
+    });
+  }
+
+  updateProfilParent(donnees: Partial<ProfilParent>): Observable<ApiReponse> {
+    return this.http.put<ApiReponse>(`${API_BASE}/auth/profil-parent`, {
+      adresse_domicile: donnees.adresse_domicile ?? null,
+      profession: donnees.profession ?? null,
+      nombre_enfants: donnees.nombre_enfants ?? 0,
+    });
+  }
+
+  /**
+   * Fiche élève : l'API applique les droits partagés (élève lui-même,
+   * parent, enseignant affecté, admin) — un 403 est possible.
+   */
+  getEleve(eleveId: number): Observable<{ eleve: FicheEleve }> {
+    return this.http.get<{ eleve: FicheEleve }>(`${API_BASE}/auth/eleves/${eleveId}`);
+  }
+
+  updateEleve(eleveId: number, donnees: Partial<FicheEleve>): Observable<{ message: string; eleve: FicheEleve }> {
+    return this.http.put<{ message: string; eleve: FicheEleve }>(
+      `${API_BASE}/auth/eleves/${eleveId}`,
+      donnees
+    );
   }
 
   /* ============================================================
@@ -596,6 +921,40 @@ export class ApiService {
     return this.http
       .put<{ data: EnseignantReferentiel }>(`${API_BASE}/pedagogie/enseignants/${id}`, payload)
       .pipe(map((r) => r.data));
+  }
+
+  /* ---------- IAM (M1) : import CSV + photo de profil ---------- */
+
+  /** Import CSV en masse (multipart : le fichier n'est pas du JSON). */
+  importerEnseignants(
+    fichier: File,
+    passwordDefaut: string
+  ): Observable<{ message: string; data: RapportImportEnseignant }> {
+    const form = new FormData();
+    form.append('fichier', fichier);
+    form.append('password_defaut', passwordDefaut);
+
+    return this.http.post<{ message: string; data: RapportImportEnseignant }>(
+      `${API_BASE}/pedagogie/enseignants/import`,
+      form
+    );
+  }
+
+  /** Photo de profil enseignant (FormData : PHP ne peuple pas $_FILES sur PUT). */
+  majPhotoEnseignant(id: number, photo: File): Observable<{ message: string; photo_url: string }> {
+    const form = new FormData();
+    form.append('photo', photo);
+
+    return this.http.post<{ message: string; photo_url: string }>(
+      `${API_BASE}/pedagogie/enseignants/${id}/photo`,
+      form
+    );
+  }
+
+  supprimerPhotoEnseignant(id: number): Observable<{ message: string; photo_url: null }> {
+    return this.http.delete<{ message: string; photo_url: null }>(
+      `${API_BASE}/pedagogie/enseignants/${id}/photo`
+    );
   }
 
   /* ============================================================
@@ -995,6 +1354,35 @@ export class ApiService {
       .pipe(map((r) => r.data));
   }
 
+  /** Types d'ajustement actifs (crédit/débit) pour une facture. */
+  typesAjustementFacture(): Observable<TypeAjustement[]> {
+    return this.http
+      .get<{ data: TypeAjustement[] }>(
+        `${API_BASE}/admin/factures/types-ajustement`
+      )
+      .pipe(map((r) => r.data));
+  }
+
+  /** Ajoute un ajustement (bonus/débit) à une facture non réglée. */
+  ajouterAjustementFacture(
+    id: number,
+    payload: { type_ajustement_id: number; libelle: string; montant: number }
+  ): Observable<FactureAjustement> {
+    return this.http
+      .post<{ data: FactureAjustement }>(
+        `${API_BASE}/admin/factures/${id}/ajustements`,
+        payload
+      )
+      .pipe(map((r) => r.data));
+  }
+
+  /** Supprime un ajustement d'une facture. */
+  supprimerAjustementFacture(id: number, ajustementId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${API_BASE}/admin/factures/${id}/ajustements/${ajustementId}`
+    );
+  }
+
   /* ============================================================
      T7A.9 — Bulletin de paie : enseignant
      ============================================================ */
@@ -1219,17 +1607,35 @@ export class ApiService {
       // Le corps est typé nullable par Angular (une 204 n'en aurait pas) ;
       // l'endpoint renvoie toujours un JsonResource, donc on l'affirme ici
       // plutôt que de propager un `| undefined` dans tout l'écran.
-      .pipe(map((r): ReponseCahierTexte => ({ ...(r.body as ReponseCahierTexte), cree: r.status === 201 })));
+      .pipe(
+        map((r): ReponseCahierTexte => ({
+          ...(r.body as ReponseCahierTexte),
+          cree: r.status === 201,
+          // T4.5 : réponse 202 fabriquée par `fileOfflineInterceptor` — la
+          // saisie attend son tour de départ, elle n'est pas au serveur.
+          misEnFile: r.headers.get('X-MPC-File') === '1',
+        }))
+      );
   }
 
-  majCahierTexte(id: number, payload: CahierTexteCorrection): Observable<CahierTexte> {
+  /**
+   * Correction d'une séance. Seul le statut compte pour l'appelant : la
+   * réponse 202 hors-ligne (`misEnFile`) signale une mise en file, et un
+   * succès réel ne porte aucune information utile à l'écran.
+   */
+  majCahierTexte(id: number, payload: CahierTexteCorrection): Observable<{ misEnFile: boolean }> {
     return this.http
-      .put<{ data: CahierTexte }>(`${API_BASE}/enseignant/cahiers-textes/${id}`, payload)
-      .pipe(map((r) => r.data));
+      .put<{ data: CahierTexte }>(`${API_BASE}/enseignant/cahiers-textes/${id}`, payload, {
+        observe: 'response',
+      })
+      .pipe(map((r) => ({ misEnFile: r.headers.get('X-MPC-File') === '1' })));
   }
 
-  supprimerCahierTexte(id: number): Observable<void> {
-    return this.http.delete<void>(`${API_BASE}/enseignant/cahiers-textes/${id}`);
+  /** Retrait d'une séance — même lecture de statut que la correction. */
+  supprimerCahierTexte(id: number): Observable<{ misEnFile: boolean }> {
+    return this.http
+      .delete<void>(`${API_BASE}/enseignant/cahiers-textes/${id}`, { observe: 'response' })
+      .pipe(map((r) => ({ misEnFile: r.headers.get('X-MPC-File') === '1' })));
   }
 
   /**
@@ -1351,5 +1757,423 @@ export class ApiService {
     return this.http
       .post<{ data: DemandeCoursAdmin }>(`${API_BASE}/pedagogie/demandes-cours/${id}/contrat`, payload)
       .pipe(map((r) => r.data));
+  }
+
+  /* ============================================================
+     Création directe — parents & élèves (`role:admin_cabinet`)
+     ============================================================ */
+
+  getParentsReferentiel(page = 1, perPage = 100, search = ''): Observable<{ data: ParentCabinet[]; meta: MetaPage }> {
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('per_page', String(perPage));
+    if (search.trim()) q.set('search', search.trim());
+
+    return this.http.get<{ data: ParentCabinet[]; meta: MetaPage }>(`${API_BASE}/pedagogie/parents?${q.toString()}`);
+  }
+
+  creerParent(payload: ParentFormulaire): Observable<ParentCabinet> {
+    return this.http
+      .post<{ data: ParentCabinet }>(`${API_BASE}/pedagogie/parents`, payload)
+      .pipe(map((r) => r.data));
+  }
+
+  getElevesReferentiel(
+    page = 1,
+    perPage = 100,
+    search = '',
+    parentId: number | null = null
+  ): Observable<{ data: EleveCabinet[]; meta: MetaPage }> {
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('per_page', String(perPage));
+    if (search.trim()) q.set('search', search.trim());
+    if (parentId) q.set('parent_id', String(parentId));
+
+    return this.http.get<{ data: EleveCabinet[]; meta: MetaPage }>(`${API_BASE}/pedagogie/eleves?${q.toString()}`);
+  }
+
+  creerEleve(payload: EleveFormulaire): Observable<EleveCabinet> {
+    return this.http
+      .post<{ data: EleveCabinet }>(`${API_BASE}/pedagogie/eleves`, payload)
+      .pipe(map((r) => r.data));
+  }
+
+  /* ============================================================
+     M3 — Scolarité : détail/édition admin + compte élève
+     ============================================================ */
+
+  getParentScolarite(id: number): Observable<ParentScolarite> {
+    return this.http
+      .get<{ data: ParentScolarite }>(`${API_BASE}/pedagogie/parents/${id}`)
+      .pipe(map((r) => r.data));
+  }
+
+  majParentScolarite(id: number, payload: ParentEdition): Observable<ParentScolarite> {
+    return this.http
+      .put<{ data: ParentScolarite }>(`${API_BASE}/pedagogie/parents/${id}`, payload)
+      .pipe(map((r) => r.data));
+  }
+
+  getEleveScolarite(id: number): Observable<EleveScolarite> {
+    return this.http
+      .get<{ data: EleveScolarite }>(`${API_BASE}/pedagogie/eleves/${id}`)
+      .pipe(map((r) => r.data));
+  }
+
+  majEleveScolarite(id: number, payload: EleveEdition): Observable<EleveScolarite> {
+    return this.http
+      .put<{ data: EleveScolarite }>(`${API_BASE}/pedagogie/eleves/${id}`, payload)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Activation du compte élève : mot de passe optionnel (jamais renvoyé). */
+  activerCompteEleve(id: number, password?: string): Observable<EleveScolarite> {
+    return this.http
+      .patch<{ data: EleveScolarite }>(`${API_BASE}/pedagogie/eleves/${id}/activer`, password ? { password } : {})
+      .pipe(map((r) => r.data));
+  }
+
+  suspendreCompteEleve(id: number): Observable<EleveScolarite> {
+    return this.http
+      .patch<{ data: EleveScolarite }>(`${API_BASE}/pedagogie/eleves/${id}/suspendre`, {})
+      .pipe(map((r) => r.data));
+  }
+
+  /* ============================================================
+     Bibliothèque — espace membre (enseignant, parent, élève, admin)
+     ============================================================ */
+
+  getDashboardBibliotheque(): Observable<DashboardBibliotheque> {
+    return this.http
+      .get<{ data: DashboardBibliotheque }>(`${API_BASE}/bibliotheque/dashboard`)
+      .pipe(map((r) => r.data));
+  }
+
+  getMesDocuments(
+    page = 1,
+    perPage = 15,
+    filtres: { search?: string; statut?: string; is_public?: boolean | null } = {}
+  ): Observable<{ data: DocumentBibliothequeEspace[]; meta: MetaPage }> {
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('per_page', String(perPage));
+    if (filtres.search?.trim()) q.set('search', filtres.search.trim());
+    if (filtres.statut) q.set('statut', filtres.statut);
+    if (filtres.is_public !== undefined && filtres.is_public !== null) {
+      q.set('is_public', filtres.is_public ? '1' : '0');
+    }
+    return this.http.get<{ data: DocumentBibliothequeEspace[]; meta: MetaPage }>(
+      `${API_BASE}/bibliotheque/mes-documents?${q.toString()}`
+    );
+  }
+
+  getFavorisBibliotheque(page = 1, perPage = 15): Observable<{ data: DocumentBibliothequeEspace[]; meta: MetaPage }> {
+    return this.http.get<{ data: DocumentBibliothequeEspace[]; meta: MetaPage }>(
+      `${API_BASE}/bibliotheque/favoris?page=${page}&per_page=${perPage}`
+    );
+  }
+
+  getReferentielsBibliotheque(): Observable<ReferentielsBibliotheque> {
+    return this.http
+      .get<{ data: ReferentielsBibliotheque }>(`${API_BASE}/bibliotheque/referentiels`)
+      .pipe(map((r) => r.data));
+  }
+
+  getDocumentBibliotheque(id: number): Observable<DocumentBibliothequeEspace> {
+    return this.http
+      .get<{ data: DocumentBibliothequeEspace }>(`${API_BASE}/bibliotheque/documents/${id}`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** L'upload passe en FormData : PHP ne peuple pas $_FILES sur un PUT. */
+  creerDocumentBibliotheque(formulaire: FormData): Observable<DocumentBibliothequeEspace> {
+    return this.http
+      .post<{ data: DocumentBibliothequeEspace }>(`${API_BASE}/bibliotheque/documents`, formulaire)
+      .pipe(map((r) => r.data));
+  }
+
+  majDocumentBibliotheque(id: number, formulaire: FormData): Observable<DocumentBibliothequeEspace> {
+    return this.http
+      .post<{ data: DocumentBibliothequeEspace }>(`${API_BASE}/bibliotheque/documents/${id}`, formulaire)
+      .pipe(map((r) => r.data));
+  }
+
+  supprimerDocumentBibliotheque(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${API_BASE}/bibliotheque/documents/${id}`);
+  }
+
+  basculerFavori(id: number): Observable<DocumentBibliothequeEspace> {
+    return this.http
+      .post<{ data: DocumentBibliothequeEspace }>(`${API_BASE}/bibliotheque/documents/${id}/favori`, {})
+      .pipe(map((r) => r.data));
+  }
+
+  commenterDocument(id: number, contenu: string, parentId: number | null = null): Observable<unknown> {
+    return this.http.post(`${API_BASE}/bibliotheque/documents/${id}/commentaires`, {
+      contenu,
+      ...(parentId ? { parent_id: parentId } : {}),
+    });
+  }
+
+  noterDocument(id: number, note: number): Observable<DocumentBibliothequeEspace> {
+    return this.http
+      .post<{ data: DocumentBibliothequeEspace }>(`${API_BASE}/bibliotheque/documents/${id}/notes`, { note })
+      .pipe(map((r) => r.data));
+  }
+
+  signalerDocument(id: number, motif: string, description: string | null = null): Observable<unknown> {
+    return this.http.post(`${API_BASE}/bibliotheque/documents/${id}/signalements`, { motif, description });
+  }
+
+  /**
+   * Signalement public (connecté ou anonyme) — ouvert depuis le lecteur.
+   * Protections anti-abus côté serveur (throttle + empreinte IP 24 h).
+   */
+  signalerDocumentPublic(
+    slug: string,
+    corps: { motif: string; description?: string | null; precisions?: string | null; email_contact?: string | null }
+  ): Observable<{ message: string }> {
+    return this.http
+      .post<{ message: string }>(`${API_BASE}/public/documents/${slug}/signalements`, corps)
+      .pipe(map((r) => ({ message: r.message })));
+  }
+
+  /** URL de téléchargement contrôlé (cookie de session requis). */
+  urlTelechargementBibliotheque(id: number): string {
+    return `${API_BASE}/bibliotheque/telecharger/${id}`;
+  }
+
+  /* ============================================================
+     Bibliothèque — modération (admin_cabinet)
+     ============================================================ */
+
+  getDocumentsModeration(
+    page = 1,
+    perPage = 15,
+    filtres: { search?: string; statut?: string } = {}
+  ): Observable<{ data: DocumentBibliothequeEspace[]; meta: MetaPage & { stats: Record<string, number> } }> {
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('per_page', String(perPage));
+    if (filtres.search?.trim()) q.set('search', filtres.search.trim());
+    if (filtres.statut) q.set('statut', filtres.statut);
+    return this.http.get<{ data: DocumentBibliothequeEspace[]; meta: MetaPage & { stats: Record<string, number> } }>(
+      `${API_BASE}/admin/bibliotheque?${q.toString()}`
+    );
+  }
+
+  getDocumentModeration(id: number): Observable<DocumentBibliothequeEspace> {
+    return this.http
+      .get<{ data: DocumentBibliothequeEspace }>(`${API_BASE}/admin/bibliotheque/${id}`)
+      .pipe(map((r) => r.data));
+  }
+
+  validerDocumentModeration(id: number): Observable<DocumentBibliothequeEspace> {
+    return this.http
+      .patch<{ data: DocumentBibliothequeEspace }>(`${API_BASE}/admin/bibliotheque/${id}/valider`, {})
+      .pipe(map((r) => r.data));
+  }
+
+  refuserDocumentModeration(id: number): Observable<DocumentBibliothequeEspace> {
+    return this.http
+      .patch<{ data: DocumentBibliothequeEspace }>(`${API_BASE}/admin/bibliotheque/${id}/refuser`, {})
+      .pipe(map((r) => r.data));
+  }
+
+  archiverDocumentModeration(id: number): Observable<DocumentBibliothequeEspace> {
+    return this.http
+      .patch<{ data: DocumentBibliothequeEspace }>(`${API_BASE}/admin/bibliotheque/${id}/archiver`, {})
+      .pipe(map((r) => r.data));
+  }
+
+  supprimerDocumentModeration(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${API_BASE}/admin/bibliotheque/${id}`);
+  }
+
+  getSignalementsModeration(
+    page = 1,
+    perPage = 15,
+    filtres: { statut?: string; motif?: string; date_debut?: string; date_fin?: string } = {}
+  ): Observable<{ data: SignalementAdmin[]; meta: MetaPage & { stats?: Record<string, number> } }> {
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('per_page', String(perPage));
+    if (filtres.statut) q.set('statut', filtres.statut);
+    if (filtres.motif) q.set('motif', filtres.motif);
+    if (filtres.date_debut) q.set('date_debut', filtres.date_debut);
+    if (filtres.date_fin) q.set('date_fin', filtres.date_fin);
+    return this.http.get<{ data: SignalementAdmin[]; meta: MetaPage & { stats?: Record<string, number> } }>(
+      `${API_BASE}/admin/bibliotheque/signalements?${q.toString()}`
+    );
+  }
+
+  getSignalementModeration(id: number): Observable<SignalementAdmin> {
+    return this.http
+      .get<{ data: SignalementAdmin }>(`${API_BASE}/admin/bibliotheque/signalements/${id}`)
+      .pipe(map((r) => r.data));
+  }
+
+  majSignalementModeration(
+    id: number,
+    corps: { statut?: string; note_admin?: string | null }
+  ): Observable<SignalementAdmin> {
+    return this.http
+      .patch<{ data: SignalementAdmin }>(`${API_BASE}/admin/bibliotheque/signalements/${id}`, corps)
+      .pipe(map((r) => r.data));
+  }
+
+  traiterSignalement(id: number): Observable<SignalementAdmin> {
+    return this.http
+      .patch<{ data: SignalementAdmin }>(`${API_BASE}/admin/bibliotheque/signalements/${id}/traiter`, {})
+      .pipe(map((r) => r.data));
+  }
+
+  /* ============================================================
+     T7A.6 — Objectifs pédagogiques (D-050)
+     ============================================================ */
+
+  /** Index enseignant : ses seuls objectifs. */
+  getObjectifs(
+    page = 1,
+    perPage = 15,
+    filtres: { search?: string; periode_id?: number | null } = {}
+  ): Observable<{ data: ObjectifPedagogique[]; meta: MetaPage }> {
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('per_page', String(perPage));
+    if (filtres.periode_id) q.set('periode_id', String(filtres.periode_id));
+    if (filtres.search?.trim()) q.set('search', filtres.search.trim());
+
+    return this.http.get<{ data: ObjectifPedagogique[]; meta: MetaPage }>(
+      `${API_BASE}/enseignant/objectifs?${q.toString()}`
+    );
+  }
+
+  /** Index administration : tous les objectifs du cabinet. */
+  getObjectifsAdmin(
+    page = 1,
+    perPage = 15,
+    filtres: { search?: string; periode_id?: number | null } = {}
+  ): Observable<{ data: ObjectifPedagogique[]; meta: MetaPage }> {
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('per_page', String(perPage));
+    if (filtres.periode_id) q.set('periode_id', String(filtres.periode_id));
+    if (filtres.search?.trim()) q.set('search', filtres.search.trim());
+
+    return this.http.get<{ data: ObjectifPedagogique[]; meta: MetaPage }>(
+      `${API_BASE}/admin/pedagogie/objectifs?${q.toString()}`
+    );
+  }
+
+  /** Création — réservée à l'enseignant (le serveur refuse un POST admin). */
+  creerObjectif(payload: ObjectifFormulaire): Observable<ObjectifPedagogique> {
+    return this.http
+      .post<{ data: ObjectifPedagogique }>(`${API_BASE}/enseignant/objectifs`, payload)
+      .pipe(map((r) => r.data));
+  }
+
+  modifierObjectif(id: number, payload: Partial<ObjectifFormulaire>): Observable<ObjectifPedagogique> {
+    return this.http
+      .put<{ data: ObjectifPedagogique }>(`${API_BASE}/enseignant/objectifs/${id}`, payload)
+      .pipe(map((r) => r.data));
+  }
+
+  modifierObjectifAdmin(id: number, payload: Partial<ObjectifFormulaire>): Observable<ObjectifPedagogique> {
+    return this.http
+      .put<{ data: ObjectifPedagogique }>(`${API_BASE}/admin/pedagogie/objectifs/${id}`, payload)
+      .pipe(map((r) => r.data));
+  }
+
+  supprimerObjectif(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${API_BASE}/enseignant/objectifs/${id}`);
+  }
+
+  supprimerObjectifAdmin(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${API_BASE}/admin/pedagogie/objectifs/${id}`);
+  }
+
+  /** Élèves réellement suivis par l'enseignant (formulaire de création). */
+  elevesObjectifs(): Observable<RefEleveObjectif[]> {
+    return this.http
+      .get<{ data: RefEleveObjectif[] }>(`${API_BASE}/enseignant/objectifs/eleves`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Toutes les périodes, ouvertes comme clôturées (filtre + formulaire). */
+  periodesObjectifs(): Observable<PeriodeObjectif[]> {
+    return this.http
+      .get<{ data: PeriodeObjectif[] }>(`${API_BASE}/enseignant/objectifs/periodes`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Matières actives de la ventilation (formulaire enseignant). */
+  matieresObjectifs(): Observable<MatiereRefObjectif[]> {
+    return this.http
+      .get<{ data: MatiereRefObjectif[] }>(`${API_BASE}/enseignant/objectifs/matieres`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Matières actives de la ventilation (formulaires d'administration). */
+  matieresObjectifsAdmin(): Observable<MatiereRefObjectif[]> {
+    return this.http
+      .get<{ data: MatiereRefObjectif[] }>(`${API_BASE}/admin/pedagogie/objectifs/matieres`)
+      .pipe(map((r) => r.data));
+  }
+
+  /* ============================================================
+     Audit — journal d'activité du cabinet (M13)
+     ============================================================ */
+
+  getAudit(
+    page = 1,
+    perPage = 25,
+    filtres: FiltresAudit = {}
+  ): Observable<{ data: EntreeAudit[]; meta: MetaPage }> {
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('per_page', String(perPage));
+    if (filtres.action) q.set('action', filtres.action);
+    if (filtres.q?.trim()) q.set('q', filtres.q.trim());
+    if (filtres.du) q.set('du', filtres.du);
+    if (filtres.au) q.set('au', filtres.au);
+
+    return this.http.get<{ data: EntreeAudit[]; meta: MetaPage }>(
+      `${API_BASE}/admin/audit?${q.toString()}`
+    );
+  }
+
+  /** Actions déjà journalisées (alimente le sélecteur de filtre). */
+  getAuditActions(): Observable<string[]> {
+    return this.http
+      .get<{ data: string[] }>(`${API_BASE}/admin/audit/actions`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Contrat commercial de la PLATEFORME validé du cabinet (P8) — 404 si aucun. */
+  getMonContratPlateforme(): Observable<MonContratPlateforme> {
+    return this.http
+      .get<{ data: { contrat: MonContratPlateforme } }>(`${API_BASE}/admin/mon-contrat`)
+      .pipe(map((r) => r.data.contrat));
+  }
+
+  /** Factures de la plateforme du cabinet (P8, lecture seule). */
+  getMesFacturesPlateforme(): Observable<FacturePlateforme[]> {
+    return this.http
+      .get<{ data: FacturePlateforme[] }>(`${API_BASE}/admin/mes-factures-plateforme`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** Détail d'une facture plateforme (lignes, paiements, conditions). */
+  getFacturePlateforme(id: number): Observable<DetailFacturePlateforme> {
+    return this.http
+      .get<{ data: DetailFacturePlateforme }>(`${API_BASE}/admin/mes-factures-plateforme/${id}`)
+      .pipe(map((r) => r.data));
+  }
+
+  /** URL du PDF d'une facture plateforme (téléchargement direct). */
+  urlPdfFacturePlateforme(id: number): string {
+    return `${API_BASE}/admin/mes-factures-plateforme/${id}/pdf`;
   }
 }

@@ -125,10 +125,16 @@ class RapportMensuelResource extends JsonResource
         $actions = ['pdf'];
 
         if ($user->can('update', $this->resource)) {
-            $actions[] = 'modifier';
+            /*
+             * Les actions reflètent EXACTEMENT la machine à états du service :
+             * `corriger()` n'accepte qu'un rapport « soumis » et
+             * `resoumettre()` qu'un rapport « rejeté ». Proposer « Modifier »
+             * sur un rapport rejeté ne mènerait qu'à un 422.
+             */
+            if ($this->estSoumis()) {
+                $actions[] = 'modifier';
+            }
 
-            // Un rapport rejeté se re-soumet ; un rapport soumis attend le
-            // verdict de l'administration.
             if ($this->estRejete()) {
                 $actions[] = 'resoumettre';
             }

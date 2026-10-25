@@ -8,6 +8,7 @@ import { messageErreurApi } from '../../services/messages';
 import {
   ContratCours,
   Facture,
+  FactureAjustement,
   FactureApercu,
   FactureFormulaire,
   FacturePaiement,
@@ -16,6 +17,7 @@ import {
   MODES_PAIEMENT,
   PeriodeComptable,
   StatutPaiement,
+  TypeAjustement,
 } from '../../models';
 import { ouvrirDetailDepuisRoute } from '../detail-de-route';
 
@@ -48,7 +50,40 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
       .alerte { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.8rem 0.95rem; border-radius: 0.9rem; background: var(--mpc-rouge-clair); color: #7a1d1d; font-size: 0.85rem; margin-bottom: 0.9rem; }
       .lignes-mini { font-size: 0.82rem; }
       .lignes-mini tr:last-child td { border-bottom: none; }
-      .apercu-zone { background: #f8fafc; border: 1px dashed var(--mpc-bordure); border-radius: 1rem; padding: 1rem; }
+
+      /* En-tête de facture (identité + métriques) — même dessin que le bulletin */
+      .identite { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-bottom: 0.9rem; }
+      .identite .ident-item { font-size: 0.85rem; }
+      .identite .ident-label { display: block; font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .identite .ident-valeur { font-weight: 600; color: #1f2937; }
+      .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.7rem; margin-bottom: 1.1rem; }
+      .metric { background: #f8fafc; border: 1px solid var(--mpc-bordure); border-radius: 0.9rem; padding: 0.7rem 0.9rem; }
+      .metric-label { font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .metric-value { font-size: 1.1rem; font-weight: 800; color: var(--mpc-bleu); font-variant-numeric: tabular-nums; }
+      .metric-value.accent { color: #0a5d35; }
+      .section-titre { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mpc-texte-doux); margin: 1.1rem 0 0.5rem; }
+      .table-clair tfoot th { background: #f1f5f9; font-size: 0.82rem; }
+
+      .recap-ligne { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; padding: 0.12rem 0; min-width: 240px; }
+      .recap-total { border-top: 1px solid var(--mpc-bordure); margin-top: 0.25rem; padding-top: 0.35rem; font-weight: 800; font-size: 1rem; color: #0a5d35; }
+
+      .badge-direction { font-size: 0.66rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 99px; white-space: nowrap; }
+      .badge-credit { background: var(--mpc-vert-pale); color: #0a5d35; }
+      .badge-debit { background: var(--mpc-rouge-clair); color: #7a1d1d; }
+      .ajout-ajustement { background: #f8fafc; border: 1px dashed var(--mpc-bordure); border-radius: 0.9rem; padding: 0.85rem; }
+
+      /* Aperçu de génération — panneau par facture (même dessin que la paie) */
+      .apercu-facture { background: #f8fafc; border: 1px solid var(--mpc-bordure); border-radius: 1rem; padding: 0.9rem 1rem; margin-top: 1rem; }
+      .apercu-entete { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.6rem; }
+      .apercu-nom { font-weight: 800; color: var(--mpc-bleu); font-size: 0.95rem; }
+      .apercu-resume { font-size: 0.82rem; color: var(--mpc-texte-doux); }
+      .apercu-reglages { display: flex; flex-wrap: wrap; gap: 0.9rem; align-items: flex-end; margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px dashed var(--mpc-bordure); }
+      .reglage { display: flex; flex-direction: column; gap: 0.2rem; }
+      .reglage-label { font-size: 0.7rem; font-weight: 700; color: var(--mpc-texte-doux); }
+      .reglage input { width: 130px; }
+      .apercu-net { margin-left: auto; text-align: right; }
+      .apercu-net .net-label { font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .apercu-net .net-valeur { font-size: 1.05rem; font-weight: 800; color: #0a5d35; font-variant-numeric: tabular-nums; }
     `,
   ],
   template: `
@@ -193,29 +228,131 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
               </div>
 
               @if (apercu() && apercu()!.lignes.length > 0) {
-                <div class="apercu-zone mt-3">
-                  <div class="fw-bold mb-2">
-                    Aperçu — {{ apercu()!.eleve }} · {{ apercu()!.periode_label }}
-                    <span class="text-doux-tiny fw-normal"> (parent : {{ apercu()!.parent }})</span>
+                <div class="apercu-facture">
+                  <div class="apercu-entete">
+                    <div>
+                      <span class="apercu-nom">{{ apercu()!.eleve }}</span>
+                      <span class="ms-2 text-doux-tiny">
+                        parent : {{ apercu()!.parent }} · {{ apercu()!.periode_label }}
+                      </span>
+                    </div>
+                    <div class="apercu-resume">
+                      Heures <b>{{ chiffre(apercu()!.volume_horaire_total) }}</b> ·
+                      Cours <b>{{ monnaie(apercu()!.montant_cours) }}</b>
+                    </div>
                   </div>
-                  <table class="table table-sm lignes-mini">
-                    <thead><tr><th>Enseignant</th><th>matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr></thead>
-                    <tbody>
-                      @for (l of apercu()!.lignes; track l.affectation_enseignant_id) {
+
+                  <div class="table-responsive">
+                    <table class="table table-sm lignes-mini table-clair mb-0 align-middle">
+                      <thead>
+                        <tr><th>Enseignant</th><th>Matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr>
+                      </thead>
+                      <tbody>
+                        @for (l of apercu()!.lignes; track l.affectation_enseignant_id) {
+                          <tr>
+                            <td>{{ l.enseignant }}</td>
+                            <td>{{ l.matiere }}</td>
+                            <td class="text-end">{{ chiffre(l.nombre_heures) }} h</td>
+                            <td class="text-end">{{ monnaie(l.taux_horaire) }}</td>
+                            <td class="text-end">{{ monnaie(l.montant) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                      <tfoot>
                         <tr>
-                          <td>{{ l.enseignant }}</td><td>{{ l.matiere }}</td>
-                          <td class="text-end">{{ chiffre(l.nombre_heures) }} h</td>
-                          <td class="text-end">{{ monnaie(l.taux_horaire) }}</td>
-                          <td class="text-end">{{ monnaie(l.montant) }}</td>
+                          <th colspan="2">Total</th>
+                          <th class="text-end">{{ chiffre(apercu()!.volume_horaire_total) }} h</th>
+                          <th></th>
+                          <th class="text-end montant">{{ monnaie(apercu()!.montant_cours) }}</th>
                         </tr>
-                      }
-                    </tbody>
-                  </table>
-                  <div class="d-flex justify-content-end gap-3 mt-2">
-                    <span>Cours : <b class="montant">{{ monnaie(apercu()!.montant_cours) }}</b></span>
-                    <span>Frais : <b class="montant">{{ monnaie(fraisCibles()) }}</b></span>
-                    @if (remiseCible() > 0) { <span>Remise : <b class="montant">−{{ monnaie(remiseCible()) }}</b></span> }
-                    <span class="fs-5 fw-bold montant">Total {{ monnaie(totalCible()) }}</span>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  @if (ajustementsSaisis().length > 0) {
+                    <div class="section-titre">Bonus &amp; débits</div>
+                    <table class="table table-sm lignes-mini table-clair mb-0">
+                      <thead><tr><th>Libellé</th><th>Nature</th><th class="text-end">Montant</th><th></th></tr></thead>
+                      <tbody>
+                        @for (a of ajustementsSaisis(); track $index) {
+                          <tr>
+                            <td>{{ a.libelle }}</td>
+                            <td>
+                              <span class="badge-direction" [class.badge-credit]="directionType(a.type_ajustement_id) === 'credit'" [class.badge-debit]="directionType(a.type_ajustement_id) === 'debit'">
+                                {{ directionType(a.type_ajustement_id) === 'credit' ? 'Crédit' : 'Débit' }}
+                              </span>
+                            </td>
+                            <td class="text-end montant">{{ directionType(a.type_ajustement_id) === 'credit' ? '+' : '−' }}{{ monnaie(a.montant) }}</td>
+                            <td class="text-end">
+                              <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" (click)="retirerAjustementCreation($index)" title="Retirer cette ligne"><i class="bi bi-x"></i></button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <th colspan="2">Totaux bonus / débits</th>
+                          <th class="text-end">+{{ monnaie(totauxCreation().credits) }} / −{{ monnaie(totauxCreation().debits) }}</th>
+                          <th></th>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  }
+
+                  <div class="ajout-ajustement mt-3">
+                    <div class="fw-semibold mb-2"><i class="bi bi-plus-circle me-1"></i>Ajouter une ligne (bonus ou débit)</div>
+                    <div class="row g-2 align-items-end">
+                      <div class="col-md-4">
+                        <label class="form-label small mb-1">Type</label>
+                        <select class="form-select form-select-sm" [(ngModel)]="ajustementCreationForm.type_ajustement_id" name="crea_aj_type">
+                          <option [ngValue]="null">— Choisir —</option>
+                          <option *ngFor="let t of typesAjustement()" [ngValue]="t.id">{{ t.libelle }} ({{ t.direction === 'credit' ? 'crédit' : 'débit' }})</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label small mb-1">Libellé</label>
+                        <input class="form-control form-control-sm" [(ngModel)]="ajustementCreationForm.libelle" name="crea_aj_libelle" maxlength="255" placeholder="Ex. Remise fidélité" />
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label small mb-1">Montant</label>
+                        <input type="number" min="1" class="form-control form-control-sm" [(ngModel)]="ajustementCreationForm.montant" name="crea_aj_montant" />
+                      </div>
+                      <div class="col-md-2">
+                        <button type="button" class="btn btn-mpc btn-sm w-100" (click)="ajouterAjustementCreation()">
+                          <i class="bi bi-plus-lg"></i> Ajouter
+                        </button>
+                      </div>
+                    </div>
+                    @if (erreurAjustementCreation()) {
+                      <div class="text-danger small mt-2"><i class="bi bi-exclamation-circle me-1"></i>{{ erreurAjustementCreation() }}</div>
+                    }
+                  </div>
+
+                  <div class="apercu-reglages">
+                    <div class="reglage">
+                      <span class="reglage-label">Frais de suivi</span>
+                      <b class="montant">{{ monnaie(form.frais_suivi) }}</b>
+                    </div>
+                    <div class="reglage">
+                      <span class="reglage-label">Autres frais</span>
+                      <b class="montant">{{ monnaie(form.autres_frais) }}</b>
+                    </div>
+                    <div class="reglage">
+                      <span class="reglage-label">Remise</span>
+                      <b class="montant">{{ remiseCible() > 0 ? '−' : '' }}{{ monnaie(remiseCible()) }}</b>
+                    </div>
+                    <div class="reglage">
+                      <span class="reglage-label">Bonus (crédits)</span>
+                      <b class="montant">+{{ monnaie(totauxCreation().credits) }}</b>
+                    </div>
+                    <div class="reglage">
+                      <span class="reglage-label">Débits</span>
+                      <b class="montant">−{{ monnaie(totauxCreation().debits) }}</b>
+                    </div>
+                    <div class="apercu-net">
+                      <div class="net-label">Total à payer</div>
+                      <div class="net-valeur">{{ monnaie(totalCible()) }}</div>
+                    </div>
                   </div>
                 </div>
               } @else if (apercu() !== null) {
@@ -251,31 +388,166 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
               <button type="button" class="btn-close" (click)="fermerDetail()"></button>
             </div>
             <div class="modal-body">
-              <p class="text-doux-tiny">
-                {{ detail()!.eleve?.nom }} · {{ detail()!.parent?.nom }} ·
-                {{ detail()!.periode?.label }} · {{ detail()!.type_cours?.libelle }}
-              </p>
+              <div class="identite">
+                <div class="ident-item">
+                  <span class="ident-label">Élève</span>
+                  <span class="ident-valeur">{{ detail()!.eleve?.nom ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Parent</span>
+                  <span class="ident-valeur">{{ detail()!.parent?.nom ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Période</span>
+                  <span class="ident-valeur">{{ detail()!.periode?.label ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Type de cours</span>
+                  <span class="ident-valeur">{{ detail()!.type_cours?.libelle ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Émise le</span>
+                  <span class="ident-valeur">{{ dateCourte(detail()!.created_at) }}</span>
+                </div>
+                @if (detail()!.date_limite_paiement) {
+                  <div class="ident-item">
+                    <span class="ident-label">Échéance</span>
+                    <span class="ident-valeur">{{ detail()!.date_limite_paiement }}</span>
+                  </div>
+                }
+              </div>
 
-              <table class="table table-sm lignes-mini">
-                <thead><tr><th>Enseignant</th><th>Matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr></thead>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-label">Heures facturées</div>
+                  <div class="metric-value">{{ chiffre(volumeDetail()) }} h</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Montant cours</div>
+                  <div class="metric-value">{{ monnaie(montantCoursDetail()) }}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Frais &amp; déductions</div>
+                  <div class="metric-value">{{ monnaie(fraisEtDeductionsDetail()) }}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Total à payer</div>
+                  <div class="metric-value accent">{{ monnaie(detail()!.montant_total) }}</div>
+                </div>
+              </div>
+
+              <div class="section-titre">Détail des lignes de cours</div>
+              <table class="table table-sm lignes-mini table-clair">
+                <thead>
+                  <tr><th>Enseignant</th><th>Matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr>
+                </thead>
                 <tbody>
                   @for (l of detail()!.lignes; track l.id) {
                     <tr>
-                      <td>{{ l.enseignant }}</td><td>{{ l.matiere }}</td>
+                      <td>{{ l.enseignant ?? '—' }}</td>
+                      <td>{{ l.matiere ?? '—' }}</td>
                       <td class="text-end">{{ chiffre(l.nombre_heures) }} h</td>
                       <td class="text-end">{{ monnaie(l.taux_horaire) }}</td>
                       <td class="text-end">{{ monnaie(l.montant) }}</td>
                     </tr>
+                  } @empty {
+                    <tr><td colspan="5" class="text-center text-doux-tiny py-3">Aucune ligne sur cette facture.</td></tr>
                   }
                 </tbody>
+                @if (detail()!.lignes.length > 0) {
+                  <tfoot>
+                    <tr>
+                      <th colspan="2">Total</th>
+                      <th class="text-end">{{ chiffre(volumeDetail()) }} h</th>
+                      <th></th>
+                      <th class="text-end montant">{{ monnaie(montantCoursDetail()) }}</th>
+                    </tr>
+                  </tfoot>
+                }
               </table>
 
-              <div class="d-flex flex-column align-items-end mt-3 gap-1">
-                <div class="text-doux-tiny">Cours — <b class="montant">{{ monnaie(montantCoursDetail()) }}</b></div>
-                @if (detail()!.frais_suivi > 0) { <div class="text-doux-tiny">Frais de suivi — <b class="montant">{{ monnaie(detail()!.frais_suivi) }}</b></div> }
-                @if (detail()!.autres_frais > 0) { <div class="text-doux-tiny">Autres frais — <b class="montant">{{ monnaie(detail()!.autres_frais) }}</b></div> }
-                @if (detail()!.remise > 0) { <div class="text-doux-tiny">Remise — <b class="montant">−{{ monnaie(detail()!.remise) }}</b></div> }
-                <div class="fw-bold montant fs-5">Total {{ monnaie(detail()!.montant_total) }}</div>
+              @if (detail()!.ajustements.length > 0) {
+                <div class="section-titre">Bonus &amp; débits</div>
+                <table class="table table-sm lignes-mini table-clair">
+                  <thead><tr><th>Libellé</th><th>Nature</th><th class="text-end">Montant</th><th></th></tr></thead>
+                  <tbody>
+                    @for (a of detail()!.ajustements; track a.id) {
+                      <tr>
+                        <td>{{ a.libelle }}</td>
+                        <td>
+                          <span class="badge-direction" [class.badge-credit]="a.type === 'credit'" [class.badge-debit]="a.type === 'debit'">
+                            {{ a.type === 'credit' ? 'Crédit' : 'Débit' }}
+                          </span>
+                        </td>
+                        <td class="text-end montant">{{ a.type === 'credit' ? '+' : '−' }}{{ monnaie(a.montant) }}</td>
+                        <td class="text-end">
+                          @if (detail()!.actions.includes('ajuster')) {
+                            <button class="btn btn-sm btn-outline-danger py-0 px-1" (click)="supprimerAjustement(a)" title="Retirer cette ligne"><i class="bi bi-x"></i></button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th colspan="2">Totaux bonus / débits</th>
+                      <th class="text-end">+{{ monnaie(detail()!.total_credits ?? 0) }} / −{{ monnaie(detail()!.total_debits ?? 0) }}</th>
+                      <th></th>
+                    </tr>
+                  </tfoot>
+                </table>
+              }
+
+              @if (detail()!.actions.includes('ajuster')) {
+                <div class="section-titre">Ajouter un bonus ou un débit</div>
+                <div class="ajout-ajustement">
+                  <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                      <label class="form-label small mb-1">Type</label>
+                      <select class="form-select form-select-sm" [(ngModel)]="ajustementForm.type_ajustement_id" name="aj_type">
+                        <option [ngValue]="null">— Choisir —</option>
+                        <option *ngFor="let t of typesAjustement()" [ngValue]="t.id">{{ t.libelle }} ({{ t.direction === 'credit' ? 'crédit' : 'débit' }})</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small mb-1">Libellé</label>
+                      <input class="form-control form-control-sm" [(ngModel)]="ajustementForm.libelle" name="aj_libelle" maxlength="255" placeholder="Ex. Remise inscription" />
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label small mb-1">Montant</label>
+                      <input type="number" min="1" class="form-control form-control-sm" [(ngModel)]="ajustementForm.montant" name="aj_montant" />
+                    </div>
+                    <div class="col-md-2">
+                      <button type="button" class="btn btn-mpc btn-sm w-100" (click)="ajouterAjustement()" [disabled]="ajustementEnregistrement()">
+                        @if (ajustementEnregistrement()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Ajouter
+                      </button>
+                    </div>
+                  </div>
+                  @if (erreurAjustement()) { <div class="text-danger small mt-2"><i class="bi bi-exclamation-circle me-1"></i>{{ erreurAjustement() }}</div> }
+                </div>
+              }
+
+              <div class="d-flex justify-content-end mt-3">
+                <div>
+                  <div class="recap-ligne"><span>Cours ({{ chiffre(volumeDetail()) }} h)</span><b class="montant">{{ monnaie(montantCoursDetail()) }}</b></div>
+                  @if (detail()!.frais_suivi > 0) {
+                    <div class="recap-ligne"><span>Frais de suivi</span><b class="montant">{{ monnaie(detail()!.frais_suivi) }}</b></div>
+                  }
+                  @if (detail()!.autres_frais > 0) {
+                    <div class="recap-ligne"><span>Autres frais</span><b class="montant">{{ monnaie(detail()!.autres_frais) }}</b></div>
+                  }
+                  @if (detail()!.remise > 0) {
+                    <div class="recap-ligne"><span>Remise</span><b class="montant">−{{ monnaie(detail()!.remise) }}</b></div>
+                  }
+                  @if ((detail()!.total_credits ?? 0) > 0) {
+                    <div class="recap-ligne"><span>Bonus (crédits)</span><b class="montant">+{{ monnaie(detail()!.total_credits) }}</b></div>
+                  }
+                  @if ((detail()!.total_debits ?? 0) > 0) {
+                    <div class="recap-ligne"><span>Débits</span><b class="montant">−{{ monnaie(detail()!.total_debits) }}</b></div>
+                  }
+                  <div class="recap-ligne recap-total"><span>Total à payer</span><b class="montant">{{ monnaie(detail()!.montant_total) }}</b></div>
+                </div>
               </div>
 
               @if (detail()!.commentaire) { <div class="mt-3 p-2 bg-light rounded-3 small">{{ detail()!.commentaire }}</div> }
@@ -361,6 +633,27 @@ export class FacturesAdminComponent implements OnInit {
   protected apercu = signal<FactureApercu | null>(null);
   protected erreurPaiement = signal('');
 
+  /** Types d'ajustement (bonus/débit) et état de la saisie d'ajustement. */
+  protected typesAjustement = signal<TypeAjustement[]>([]);
+  protected ajustementForm: {
+    type_ajustement_id: number | null;
+    libelle: string;
+    montant: number | null;
+  } = { type_ajustement_id: null, libelle: '', montant: null };
+  protected ajustementEnregistrement = signal(false);
+  protected erreurAjustement = signal('');
+
+  /**
+   * Lignes bonus/débit saisies dans l'aperçu de GÉNÉRATION : elles ne sont
+   * écrites qu'à la création, comme les frais, et voyagent dans `form`.
+   */
+  protected ajustementCreationForm: {
+    type_ajustement_id: number | null;
+    libelle: string;
+    montant: number | null;
+  } = { type_ajustement_id: null, libelle: '', montant: null };
+  protected erreurAjustementCreation = signal('');
+
   protected filtres = signal<{ periode_id: number | null; statut: string; search: string }>({
     periode_id: null,
     statut: '',
@@ -369,11 +662,15 @@ export class FacturesAdminComponent implements OnInit {
 
   protected MODES = MODES_PAIEMENT;
 
-  protected form: FactureFormulaire = { contrat_cours_id: null, periode_id: null, frais_suivi: 0, autres_frais: 0, remise: 0, date_limite_paiement: null, commentaire: '' };
+  protected form: FactureFormulaire = { contrat_cours_id: null, periode_id: null, frais_suivi: 0, autres_frais: 0, remise: 0, date_limite_paiement: null, commentaire: '', ajustements: [] };
   protected paiementForm: FacturePaiement = { date_paiement: new Date().toISOString().slice(0, 10), mode_paiement: 'especes', reference_paiement: '' };
 
   protected montantCoursDetail = computed<number>(() =>
     (this.detail()?.lignes ?? []).reduce((s: number, l: LigneFacture) => s + l.montant, 0)
+  );
+
+  protected volumeDetail = computed<number>(() =>
+    (this.detail()?.lignes ?? []).reduce((s: number, l: LigneFacture) => s + l.nombre_heures, 0)
   );
 
   /**
@@ -393,7 +690,64 @@ export class FacturesAdminComponent implements OnInit {
 
   /** Total recalculé à la volée, l'aperçu serveur servant de base au cours. */
   protected totalCible(): number {
-    return (this.apercu()?.montant_cours ?? 0) + this.fraisCibles() - this.remiseCible();
+    const { credits, debits } = this.totauxCreation();
+    return (
+      (this.apercu()?.montant_cours ?? 0)
+      + this.fraisCibles()
+      - this.remiseCible()
+      + credits
+      - debits
+    );
+  }
+
+  /** Lignes bonus/débit saisies dans l'aperçu de génération. */
+  protected ajustementsSaisis(): { type_ajustement_id: number; libelle: string; montant: number }[] {
+    return this.form.ajustements ?? [];
+  }
+
+  /** Direction (crédit/débit) d'un type d'ajustement. */
+  protected directionType(typeId: number | null): 'credit' | 'debit' {
+    return this.typesAjustement().find((t) => t.id === typeId)?.direction ?? 'credit';
+  }
+
+  protected totauxCreation(): { credits: number; debits: number } {
+    let credits = 0;
+    let debits = 0;
+    for (const a of this.ajustementsSaisis()) {
+      if (this.directionType(a.type_ajustement_id) === 'debit') {
+        debits += Number(a.montant || 0);
+      } else {
+        credits += Number(a.montant || 0);
+      }
+    }
+    return { credits, debits };
+  }
+
+  /** Ajoute une ligne bonus/débit à l'aperçu (aucune écriture avant génération). */
+  protected ajouterAjustementCreation(): void {
+    const { type_ajustement_id, libelle, montant } = this.ajustementCreationForm;
+    if (!type_ajustement_id) {
+      this.erreurAjustementCreation.set('Choisissez un type d\'ajustement.');
+      return;
+    }
+    if (!libelle.trim()) {
+      this.erreurAjustementCreation.set('Le libellé est obligatoire.');
+      return;
+    }
+    if (!montant || montant <= 0) {
+      this.erreurAjustementCreation.set('Le montant doit être supérieur à zéro.');
+      return;
+    }
+    this.form.ajustements = [
+      ...this.ajustementsSaisis(),
+      { type_ajustement_id, libelle: libelle.trim(), montant: Math.round(Number(montant)) },
+    ];
+    this.ajustementCreationForm = { type_ajustement_id: null, libelle: '', montant: null };
+    this.erreurAjustementCreation.set('');
+  }
+
+  protected retirerAjustementCreation(index: number): void {
+    this.form.ajustements = this.ajustementsSaisis().filter((_, i) => i !== index);
   }
 
   async ngOnInit(): Promise<void> {
@@ -439,6 +793,16 @@ export class FacturesAdminComponent implements OnInit {
     } catch {
       // Les listes de contexte manquantes ne bloquent pas la consultation.
     }
+
+    // Les types d'ajustement ne bloquent pas non plus l'écran : la saisie
+    // d'une ligne bonus/débit reste indisponible si la liste est vide.
+    try {
+      this.typesAjustement.set(
+        await firstValueFrom(this.api.typesAjustementFacture())
+      );
+    } catch {
+      this.typesAjustement.set([]);
+    }
   }
 
   protected rechercher(): void {
@@ -456,7 +820,9 @@ export class FacturesAdminComponent implements OnInit {
   protected ouvrirCreation(): void {
     this.creation.set(true);
     this.apercu.set(null);
-    this.form = { contrat_cours_id: null, periode_id: null, frais_suivi: 0, autres_frais: 0, remise: 0, date_limite_paiement: null, commentaire: '' };
+    this.form = { contrat_cours_id: null, periode_id: null, frais_suivi: 0, autres_frais: 0, remise: 0, date_limite_paiement: null, commentaire: '', ajustements: [] };
+    this.ajustementCreationForm = { type_ajustement_id: null, libelle: '', montant: null };
+    this.erreurAjustementCreation.set('');
   }
 
   protected fermerCreation(): void {
@@ -493,12 +859,83 @@ export class FacturesAdminComponent implements OnInit {
     }
   }
 
-  protected ouvrirDetail(f: Facture): void {
-    this.detail.set(f);
+  protected async ouvrirDetail(f: Facture): Promise<void> {
+    // La liste ne transporte pas les lignes ni les ajustements : on affiche
+    // la ligne tout de suite puis on recharge le détail complet.
+    this.detail.set({ ...f, lignes: f.lignes ?? [], ajustements: f.ajustements ?? [] });
+    this.erreurAjustement.set('');
+    this.reinitialiserAjustement();
+    try {
+      this.detail.set(await firstValueFrom(this.api.getFacture(f.id)));
+    } catch (e) {
+      this.alerte.set(messageErreurApi(e));
+    }
   }
 
   protected fermerDetail(): void {
     this.detail.set(null);
+    this.erreurAjustement.set('');
+  }
+
+  private reinitialiserAjustement(): void {
+    this.ajustementForm = { type_ajustement_id: null, libelle: '', montant: null };
+  }
+
+  /** Ajoute une ligne bonus/débit à la facture ouverte, puis rafraîchit. */
+  protected async ajouterAjustement(): Promise<void> {
+    const cible = this.detail();
+    if (!cible) return;
+
+    const { type_ajustement_id, libelle, montant } = this.ajustementForm;
+    if (!type_ajustement_id) {
+      this.erreurAjustement.set('Choisissez un type d\'ajustement.');
+      return;
+    }
+    if (!libelle.trim()) {
+      this.erreurAjustement.set('Le libellé est obligatoire.');
+      return;
+    }
+    if (!montant || montant <= 0) {
+      this.erreurAjustement.set('Le montant doit être supérieur à zéro.');
+      return;
+    }
+
+    this.ajustementEnregistrement.set(true);
+    this.erreurAjustement.set('');
+    try {
+      await firstValueFrom(
+        this.api.ajouterAjustementFacture(cible.id, {
+          type_ajustement_id,
+          libelle: libelle.trim(),
+          montant,
+        })
+      );
+      this.reinitialiserAjustement();
+      this.detail.set(await firstValueFrom(this.api.getFacture(cible.id)));
+      await this.charger();
+    } catch (e) {
+      this.erreurAjustement.set(messageErreurApi(e));
+    } finally {
+      this.ajustementEnregistrement.set(false);
+    }
+  }
+
+  /** Retire une ligne bonus/débit de la facture ouverte. */
+  protected async supprimerAjustement(ajustement: FactureAjustement): Promise<void> {
+    const cible = this.detail();
+    if (!cible) return;
+    if (!confirm(`Retirer « ${ajustement.libelle} » ?`)) return;
+
+    this.erreurAjustement.set('');
+    try {
+      await firstValueFrom(
+        this.api.supprimerAjustementFacture(cible.id, ajustement.id)
+      );
+      this.detail.set(await firstValueFrom(this.api.getFacture(cible.id)));
+      await this.charger();
+    } catch (e) {
+      this.erreurAjustement.set(messageErreurApi(e));
+    }
   }
 
   protected ouvrirPaiement(f: Facture): void {
@@ -566,6 +1003,18 @@ export class FacturesAdminComponent implements OnInit {
 
   protected chiffre(v: number | null | undefined): string {
     return Number(v ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+  }
+
+  /** Frais, remises et ajustements : l'écart entre le total et les cours. */
+  protected fraisEtDeductionsDetail(): number {
+    const d = this.detail();
+    return (d?.montant_total ?? 0) - this.montantCoursDetail();
+  }
+
+  protected dateCourte(v: string | null | undefined): string {
+    if (!v) return '—';
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR');
   }
 
   protected monnaie(v: number | null | undefined): string {

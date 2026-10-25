@@ -1,7 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../services/api.service';
-import { MetaPage, UtilisateurAdmin } from '../../models';
+import { ClasseReferentiel, MetaPage, ParentCabinet, UtilisateurAdmin } from '../../models';
 import { messageErreurApi } from '../../services/messages';
 
 const ROLES_DISPONIBLES = ['admin_cabinet', 'enseignant', 'parent', 'eleve', 'gestionnaire_librairie'];
@@ -32,6 +33,12 @@ interface ModeleUtilisateur {
   password: string;
   statut: boolean;
   roles: string[];
+  /** Uniquement création-élève : rattachement obligatoire. */
+  parent_id: number | null;
+  classe_id: number | null;
+  /** Uniquement création-parent : champs du profil. */
+  profession: string;
+  adresse_domicile: string;
 }
 
 const VIDE = (): ModeleUtilisateur => ({
@@ -44,6 +51,10 @@ const VIDE = (): ModeleUtilisateur => ({
   password: '',
   statut: true,
   roles: [],
+  parent_id: null,
+  classe_id: null,
+  profession: '',
+  adresse_domicile: '',
 });
 
 /** Écran admin « Utilisateurs » : liste, recherche, création, édition, activation/suspension. */
@@ -494,7 +505,7 @@ const VIDE = (): ModeleUtilisateur => ({
               </label>
             </div>
             <label class="champ">
-              <span>Adresse e-mail *</span>
+              <span>Adresse e-mail@if (!modele().id && creationParent()) { (facultatif — le WhatsApp suffit) }@if (!creationParent()) { * }</span>
               <input type="email" [(ngModel)]="modele().email" name="email" />
             </label>
             <div class="grille">
@@ -508,9 +519,45 @@ const VIDE = (): ModeleUtilisateur => ({
               </label>
             </div>
             <label class="champ">
-              <span>{{ modele().id ? 'Nouveau mot de passe (laisser vide pour conserver)' : 'Mot de passe provisoire *' }}</span>
-              <input type="password" [(ngModel)]="modele().password" name="password" placeholder="8 caractères minimum" />
+              <span>{{ modele().id ? 'Nouveau mot de passe (laisser vide pour conserver)' : 'Mot de passe provisoire' }}@if (!modele().id && !creationParent()) { * }@if (creationParent()) { * (mot de passe définitif) }</span>
+              <input type="password" [(ngModel)]="modele().password" name="password" [placeholder]="creationParent() ? '8 caractères minimum — communiqué au parent' : '8 caractères minimum'" />
             </label>
+
+            @if (creationEleve()) {
+              <label class="champ">
+                <span>Parent de l’élève *</span>
+                <select [(ngModel)]="modele().parent_id" name="parent_id">
+                  <option [ngValue]="null">— Choisir un parent —</option>
+                  @for (p of parents(); track p.id) {
+                    <option [ngValue]="p.id">{{ p.prenom }} {{ p.nom }}@if (p.telephone_whatsapp) { ({{ p.telephone_whatsapp }}) }</option>
+                  }
+                </select>
+                <span class="attention">Un élève doit être rattaché à un parent du cabinet.</span>
+              </label>
+              <label class="champ">
+                <span>Classe *</span>
+                <select [(ngModel)]="modele().classe_id" name="classe_id">
+                  <option [ngValue]="null">— Choisir une classe —</option>
+                  @for (c of classes(); track c.id) {
+                    <option [ngValue]="c.id">{{ c.nom }} ({{ c.sigle }})</option>
+                  }
+                </select>
+              </label>
+            }
+
+            @if (creationParent()) {
+              <div class="grille">
+                <label class="champ">
+                  <span>Profession</span>
+                  <input [(ngModel)]="modele().profession" name="profession" />
+                </label>
+                <label class="champ">
+                  <span>Adresse au domicile</span>
+                  <input [(ngModel)]="modele().adresse_domicile" name="adresse_domicile" />
+                </label>
+              </div>
+            }
+
             <label class="champ">
               <span>Rôles</span>
               <span class="roles">
@@ -521,7 +568,7 @@ const VIDE = (): ModeleUtilisateur => ({
                   </span>
                 }
               </span>
-              <span class="attention">Au moins un rôle est requis. « Élève » s’utilise avec le compte de l’élève lui-même.</span>
+              <span class="attention">Au moins un rôle est requis. « Parent » et « Élève » créent aussi le profil associé.</span>
             </label>
             <label class="role-coche" style="justify-self:start">
               <input type="checkbox" [(ngModel)]="modele().statut" name="statut" />
@@ -558,6 +605,23 @@ export class UtilisateursComponent implements OnInit {
   protected readonly sauvegarde = signal(false);
   protected readonly modele = signal<ModeleUtilisateur>(VIDE());
   protected recherche = '';
+
+  /** Référentiels chargés à la demande pour les créations parent/élève. */
+  protected readonly parents = signal<ParentCabinet[]>([]);
+  protected readonly classes = signal<ClasseReferentiel[]>([]);
+
+  /**
+   * Création orientée rôle (D-création-directe) : « parent » et « élève »
+   * passent par leurs endpoints dédiés qui créent aussi le profil — un
+   * `POST /admin/utilisateurs` nu laisserait un compte sans `parent_profils`
+   * ni `eleves`, incapable de se connecter.
+   */
+  protected readonly creationParent = computed(
+    () => !this.modele().id && this.modele().roles.length === 1 && this.modele().roles[0] === 'parent',
+  );
+  protected readonly creationEleve = computed(
+    () => !this.modele().id && this.modele().roles.length === 1 && this.modele().roles[0] === 'eleve',
+  );
 
   protected readonly roleLibelle = (r: string) => ROLE_LIBELLE[r] ?? r;
 
@@ -608,6 +672,10 @@ export class UtilisateursComponent implements OnInit {
       password: '',
       statut: u.statut,
       roles: [...u.roles],
+      parent_id: null,
+      classe_id: null,
+      profession: '',
+      adresse_domicile: '',
     });
     this.formulaireOuvert.set(true);
   }
@@ -623,38 +691,138 @@ export class UtilisateursComponent implements OnInit {
     if (coche) roles.add(role);
     else roles.delete(role);
     this.modele.set({ ...m, roles: Array.from(roles) });
+
+    // Le référentiel des classes ne sert qu'à la création-élève : chargé à la
+    // première demande plutôt qu'à chaque ouverture du formulaire.
+    if (this.creationEleve()) {
+      void this.chargerClasses();
+    }
+    if (this.creationParent() || this.creationEleve()) {
+      void this.chargerParents();
+    }
+  }
+
+  private async chargerParents(): Promise<void> {
+    if (this.parents().length > 0) return;
+    try {
+      const r = await firstValueFrom(this.api.getParentsReferentiel(1, 200));
+      this.parents.set(r.data ?? []);
+    } catch {
+      // L'erreur bloquera à la soumission, le champ reste vide.
+    }
+  }
+
+  private async chargerClasses(): Promise<void> {
+    if (this.classes().length > 0) return;
+    try {
+      const r = await firstValueFrom(this.api.getClasses(1, 200));
+      this.classes.set(r.data ?? []);
+    } catch {
+      // Idem.
+    }
   }
 
   protected async enregistrer(): Promise<void> {
     this.toast.set('');
     const m = this.modele();
-    if (!m.nom.trim() || !m.email.trim()) {
-      this.toast.set('Le nom et l’adresse e-mail sont obligatoires.');
-      return;
-    }
+
     if (m.roles.length === 0) {
       this.toast.set('Choisissez au moins un rôle.');
       return;
     }
-    if (!m.id && m.password.length < 8) {
-      this.toast.set('Le mot de passe provisoire doit contenir au moins 8 caractères.');
+
+    // Validations propres à chaque parcours de création.
+    if (!m.id && this.creationParent()) {
+      if (!m.nom.trim() || !m.prenom.trim()) {
+        this.toast.set('Le nom et le prénom du parent sont obligatoires.');
+        return;
+      }
+      if (m.password.length < 8) {
+        this.toast.set('Le mot de passe définitif doit contenir au moins 8 caractères.');
+        return;
+      }
+    } else if (!m.id && this.creationEleve()) {
+      if (!m.prenom.trim()) {
+        this.toast.set('Le prénom de l’élève est obligatoire.');
+        return;
+      }
+      if (!m.parent_id) {
+        this.toast.set('Choisissez le parent : un élève doit être rattaché à un parent du cabinet.');
+        return;
+      }
+      if (!m.classe_id) {
+        this.toast.set('Choisissez la classe de l’élève.');
+        return;
+      }
+      if (m.password && m.password.length < 8) {
+        this.toast.set('Le mot de passe doit contenir au moins 8 caractères.');
+        return;
+      }
+    } else if (!m.id) {
+      if (!m.nom.trim() || !m.email.trim()) {
+        this.toast.set('Le nom et l’adresse e-mail sont obligatoires.');
+        return;
+      }
+      if (m.password.length < 8) {
+        this.toast.set('Le mot de passe provisoire doit contenir au moins 8 caractères.');
+        return;
+      }
+    } else if (!m.nom.trim() || !m.email.trim()) {
+      this.toast.set('Le nom et l’adresse e-mail sont obligatoires.');
       return;
     }
+
     this.sauvegarde.set(true);
-    const payload: Record<string, string | boolean | string[]> = {
-      nom: m.nom.trim(),
-      prenom: m.prenom.trim(),
-      email: m.email.trim(),
-      telephone_whatsapp: m.telephone_whatsapp.trim(),
-      telephone_appel: m.telephone_appel.trim(),
-      statut: m.statut,
-      roles: m.roles,
-    };
-    if (m.password) payload['password'] = m.password;
     try {
       if (m.id) {
+        const payload: Record<string, string | boolean | string[]> = {
+          nom: m.nom.trim(),
+          prenom: m.prenom.trim(),
+          email: m.email.trim(),
+          telephone_whatsapp: m.telephone_whatsapp.trim(),
+          telephone_appel: m.telephone_appel.trim(),
+          statut: m.statut,
+          roles: m.roles,
+        };
+        if (m.password) payload['password'] = m.password;
         await this.api.majUtilisateur(m.id, payload).toPromise();
+      } else if (this.creationParent()) {
+        await this.api.creerParent({
+          nom: m.nom.trim(),
+          prenom: m.prenom.trim(),
+          telephone_whatsapp: m.telephone_whatsapp.trim() || null,
+          telephone_appel: m.telephone_appel.trim() || null,
+          email: m.email.trim() || null,
+          password: m.password,
+          profession: m.profession.trim() || null,
+          adresse_domicile: m.adresse_domicile.trim() || null,
+          nombre_enfants: null,
+        }).toPromise();
+      } else if (this.creationEleve()) {
+        await this.api.creerEleve({
+          parent_id: m.parent_id,
+          prenom: m.prenom.trim(),
+          nom: m.nom.trim() || null,
+          classe_id: m.classe_id,
+          date_naissance: null,
+          lieu_naissance: null,
+          ecole: null,
+          email: m.email.trim() || null,
+          telephone_whatsapp: m.telephone_whatsapp.trim() || null,
+          telephone_appel: m.telephone_appel.trim() || null,
+          password: m.password || null,
+        }).toPromise();
       } else {
+        const payload: Record<string, string | boolean | string[]> = {
+          nom: m.nom.trim(),
+          prenom: m.prenom.trim(),
+          email: m.email.trim(),
+          telephone_whatsapp: m.telephone_whatsapp.trim(),
+          telephone_appel: m.telephone_appel.trim(),
+          statut: m.statut,
+          roles: m.roles,
+        };
+        if (m.password) payload['password'] = m.password;
         await this.api.creerUtilisateur(payload).toPromise();
       }
       this.formulaireOuvert.set(false);

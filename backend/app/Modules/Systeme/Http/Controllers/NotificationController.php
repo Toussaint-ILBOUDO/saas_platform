@@ -42,15 +42,18 @@ class NotificationController extends Controller
 
         return match ($notification->type) {
 
+            /*
+            | Les écrans web contrats, factures, rapports mensuels et
+            | demandes de cours ont été retirés avec le web KEduc
+            | (T7A.11) : on revient à la liste plutôt que de viser une
+            | route qui n'existe plus.
+            */
             'contrat',
-            'affectation' => redirect()->route(
-                'contrats.show',
-                $data['contrat_id'] ?? 0
-            ),
-
-            'facture' => redirect()->route(
-                'finance.factures.show',
-                $data['facture_id'] ?? 0
+            'affectation',
+            'facture',
+            'rapport',
+            'demande_cours' => redirect()->route(
+                'notifications.index'
             ),
 
             'librairie_commande' => redirect()->route(
@@ -63,16 +66,6 @@ class NotificationController extends Controller
             'actualite' => redirect()->route(
                 'actualites.show',
                 $data['actualite_slug'] ?? $data['actualite_id'] ?? ''
-            ),
-
-            'rapport' => redirect()->route(
-                'rapports-mensuels.show',
-                $data['rapport_id'] ?? 0
-            ),
-
-            'demande_cours' => redirect()->route(
-                'demande-cours.show',
-                $data['demande_cours_id'] ?? 0
             ),
 
             'temoignage' => redirect()->route(

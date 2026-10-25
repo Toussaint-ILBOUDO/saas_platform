@@ -298,6 +298,7 @@ export const CONTENT = {
       { libelle: 'Services', cible: '/#services' },
       { libelle: 'Bibliothèque', cible: '/bibliotheque' },
       { libelle: 'Actualités', cible: '/actualites' },
+      { libelle: 'Témoignages', cible: '/temoignages' },
       { libelle: 'Boutique', cible: '/boutique' },
       { libelle: 'FAQ', cible: '/faq' },
       { libelle: 'Contact', cible: '/#contact' },

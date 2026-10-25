@@ -889,8 +889,8 @@ class ReglesMetierFinanceTest extends TenantTestCase
 
         $this->assertNotNull($notification, 'La consultation doit notifier l\'enseignant.');
         $this->assertSame(
-            route('mes-bulletins.show', $bulletin),
-            $notification->url
+            '/espace/modules/mes-bulletins/' . $bulletin->id,
+            $notification->route_angular
         );
 
         // L'administration reçoit la confirmation de réception : elle doit
@@ -898,12 +898,12 @@ class ReglesMetierFinanceTest extends TenantTestCase
         $this->actingAs($c['admin']);
 
         $this->assertSame(
-            route('finance.bulletins-paie.show', $bulletin),
+            '/espace/finance/bulletins-paie/' . $bulletin->id,
             Notification::where('type', 'bulletin_paie')
                 ->where('user_id', $c['admin']->id)
                 ->latest()
                 ->first()
-                ?->url
+                ?->route_angular
         );
 
         tenancy()->end();

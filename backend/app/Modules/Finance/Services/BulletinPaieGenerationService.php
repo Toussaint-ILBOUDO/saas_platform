@@ -8,6 +8,7 @@ use App\Models\BulletinPaieLigne;
 use App\Models\EnseignantProfil;
 use App\Models\PeriodeComptable;
 use App\Models\TypeAjustement;
+use App\Modules\Audit\Services\AuditService;
 use App\Modules\Systeme\Services\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 
@@ -230,6 +231,13 @@ class BulletinPaieGenerationService
                 }
 
                 $this->notifier->bulletinGenere($bulletin);
+
+                AuditService::enregistrer(
+                    'bulletin.genere',
+                    'Bulletin ' . $bulletin->numero . ' généré',
+                    $bulletin,
+                    ['enseignant_id' => $bulletin->enseignant_id]
+                );
 
                 $bulletins[] = $bulletin->load([
                     'enseignant.user',

@@ -100,16 +100,6 @@
 
                         <div class="notif-card-actions">
 
-                            @if($notification->url && $notification->action_label)
-                                <a
-                                    href="{{ $notification->url }}"
-                                    class="btn btn-sm btn-primary"
-                                >
-                                    <i class="bi {{ $notification->icone_html }} me-1"></i>
-                                    {{ $notification->action_label }}
-                                </a>
-                            @endif
-
                             @if(!$notification->lu)
                                 <form
                                     method="POST"

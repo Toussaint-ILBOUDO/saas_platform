@@ -1,0 +1,6 @@
+2026/10/13-21:39:19.553 5300 Creating DB C:\projets\Saas\backend\storage\edge-prof\Default\IndexedDB\https_app.tactiq.io_0.indexeddb.leveldb since it was missing.
+2026/10/13-21:39:19.573 5300 Reusing MANIFEST C:\projets\Saas\backend\storage\edge-prof\Default\IndexedDB\https_app.tactiq.io_0.indexeddb.leveldb/MANIFEST-000001
+2026/10/13-21:39:20.058 4f8 Level-0 table #5: started
+2026/10/13-21:39:20.065 4f8 Level-0 table #5: 2083 bytes OK
+2026/10/13-21:39:20.078 4f8 Delete type=0 #3
+2026/10/13-21:39:20.079 4f8 Manual compaction at level-0 from '\x00\x02\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x03\x00\x00\x00' @ 0 : 0; will stop at (end)

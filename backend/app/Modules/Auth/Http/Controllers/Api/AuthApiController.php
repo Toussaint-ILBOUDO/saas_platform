@@ -48,8 +48,24 @@ class AuthApiController extends Controller
             ], 403);
         }
 
-        Auth::guard('web')->login($user);
+        // « Rester connecté » systématique (décision PWA) : cookie recaller
+        // 400 jours, re-poussé à chaque visite → le téléphone reste connecté
+        // tant que l'app est ouverte au moins une fois par période.
+        Auth::guard('web')->login($user, true);
         $request->session()->regenerate();
+
+        // Fusion des réactions anonymes (identifiant de session) avec le
+        // compte : après connexion, une même identité ne peut pas avoir à la
+        // fois une réaction « visiteur » et une réaction « membre » sur un
+        // même document. Aucune donnée n'est perdue, aucun doublon n'est créé.
+        // Un échec ici (table absente, lock, etc.) ne doit JAMAIS bloquer la
+        // connexion : la session est déjà ouverte.
+        try {
+            app(\App\Modules\Bibliotheque\Services\DocumentBibliothequeService::class)
+                ->transfertReactionsVersMembre((int) $user->id);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         // Rôle actif : seul rôle → directement actif ; plusieurs → choisi côté
         // frontend puis confirmé via /role-actif.
@@ -77,9 +93,42 @@ class AuthApiController extends Controller
 
     public function moi(Request $request): JsonResponse
     {
+        $user = $request->user('web');
+
+        // Fenêtre « rester connecté » glissante : la visite /auth/moi (chaque
+        // ouverture de l'app) re-pousse le cookie recaller de 400 jours.
+        $this->repousserCookieRecaller($user);
+
         return response()->json([
-            'user' => new UserResource($request->user('web')->load('eleve')),
+            'user' => new UserResource($user->load('eleve')),
         ]);
+    }
+
+    /**
+     * Re-calcule le cookie « rester connecté » (recaller) pour l'utilisateur
+     * courant : identique à `SessionGuard::queueRecallerCookie()` (méthode
+     * protégée), en repoussant l'échéance à chaque visite.
+     */
+    private function repousserCookieRecaller(mixed $user): void
+    {
+        if ($user === null || ! $user instanceof \Illuminate\Contracts\Auth\Authenticatable) {
+            return;
+        }
+
+        if (empty($user->getRememberToken())) {
+            $user->setRememberToken(\Illuminate\Support\Str::random(60));
+            $user->save();
+        }
+
+        $guard = Auth::guard('web');
+
+        $guard->getCookieJar()->queue($guard->getCookieJar()->make(
+            $guard->getRecallerName(),
+            $user->getAuthIdentifier().'|'.
+            $user->getRememberToken().'|'.
+            $guard->hashPasswordForCookie($user->getAuthPassword()),
+            576000 // 400 jours — maximum supporté par les navigateurs.
+        ));
     }
 
     public function roleActif(RoleActifApiRequest $request): JsonResponse
@@ -126,7 +175,7 @@ class AuthApiController extends Controller
             function ($user, $password) {
                 // Cast « hashed » du modèle : on stocke le clair, haché une fois.
                 $user->forceFill(['password' => $password])->save();
-                Auth::guard('web')->login($user);
+                Auth::guard('web')->login($user, true);
                 $request = request();
                 $request->session()->regenerate();
             }

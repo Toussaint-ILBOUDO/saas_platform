@@ -34,6 +34,10 @@ class RapportMensuelQueryService
                 'enseignant.user',
                 'contratCours.eleve.user',
                 'contratCours.typeCours',
+                // La liste affiche le résumé des matières et un montant estimé :
+                // sans ces lignes chargées, `whenLoaded('lignes')` les retire de
+                // la réponse et l'écran affiche des tableaux vides.
+                'lignes.affectation.matiere',
             ])
             ->withSum('lignes', 'nombre_heures')
             ->when(
@@ -86,6 +90,7 @@ class RapportMensuelQueryService
                 'periode',
                 'contratCours.eleve.user',
                 'contratCours.typeCours',
+                'lignes.affectation.matiere',
             ])
             ->withSum('lignes', 'nombre_heures')
             ->when(

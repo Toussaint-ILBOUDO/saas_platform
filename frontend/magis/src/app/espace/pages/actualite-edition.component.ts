@@ -151,7 +151,11 @@ import { messageErreurApi } from '../../services/messages';
       .apercu img {
         width: 70px;
         height: 48px;
-        object-fit: cover;
+        box-sizing: border-box;
+        object-fit: contain;
+        background: #fff;
+        padding: 2px;
+        border: 1px solid var(--mpc-bordure, #d9e2ef);
         border-radius: 0.5rem;
       }
       .pied {

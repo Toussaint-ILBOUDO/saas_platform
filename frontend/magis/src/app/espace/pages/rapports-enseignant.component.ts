@@ -216,6 +216,12 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
             </div>
             <div class="modal-footer">
               <span class="ms-auto me-2 fw-bold">Montant estimé {{ monnaie(totalDetail()) }}</span>
+              @if (detail()!.actions.includes('modifier')) {
+                <button type="button" class="btn btn-outline-mpc" (click)="corrigerDepuisDetail()"><i class="bi bi-pencil"></i> Modifier</button>
+              }
+              @if (detail()!.actions.includes('resoumettre')) {
+                <button type="button" class="btn btn-outline-mpc" (click)="resoumettreDepuisDetail()"><i class="bi bi-arrow-repeat"></i> Re-soumettre</button>
+              }
               @if (detail()!.actions.includes('pdf')) {
                 <a class="btn btn-mpc" [href]="api.urlPdfRapport(detail()!.id)" target="_blank"><i class="bi bi-filetype-pdf"></i> PDF</a>
               }
@@ -508,6 +514,22 @@ export class RapportsEnseignantComponent implements OnInit {
     this.detail.set(null);
   }
 
+  /** Ouvre la modale de correction d'un rapport encore soumis. */
+  protected corrigerDepuisDetail(): void {
+    const rapport = this.detail();
+    if (!rapport) return;
+    this.fermerDetail();
+    void this.ouvrirSaisie(rapport, false);
+  }
+
+  /** Ouvre la modale de re-soumission d'un rapport rejeté. */
+  protected resoumettreDepuisDetail(): void {
+    const rapport = this.detail();
+    if (!rapport) return;
+    this.fermerDetail();
+    void this.ouvrirSaisie(rapport, true);
+  }
+
   protected fermerSaisie(): void {
     this.saisieOuverte.set(false);
     this.saisie.set(null);
@@ -663,7 +685,7 @@ export class RapportsEnseignantComponent implements OnInit {
   }
 
   protected resumeMatieres(r: RapportMensuel): string {
-    const noms = r.lignes.map((l) => l.matiere_nom).filter(Boolean);
+    const noms = (r.lignes ?? []).map((l) => l.matiere_nom).filter(Boolean);
     return noms.length ? noms.join(', ') : '—';
   }
 

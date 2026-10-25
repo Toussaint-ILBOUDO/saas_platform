@@ -30,6 +30,32 @@
             </div>
         </div>
 
+        {{-- P8 : identité de la société éditrice (PDF contrats / factures) --}}
+        <div class="card-header bg-white fw-semibold border-top">Identité de la société éditrice</div>
+        <div class="card-body">
+            <p class="text-secondary mb-3">
+                Nom affiché sur les contrats et factures PDF. La plateforme K'EduC est développée et
+                commercialisée par <strong>Magis Plus Center</strong>.
+            </p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold mb-1">Nom</label>
+                    <input type="text" name="plateforme_nom" id="plateforme_nom" maxlength="120"
+                           class="form-control" value="{{ old('plateforme_nom', $identite['nom']) }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold mb-1">Slogan</label>
+                    <input type="text" name="plateforme_tagline" id="plateforme_tagline" maxlength="300"
+                           class="form-control" value="{{ old('plateforme_tagline', $identite['tagline']) }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold mb-1">Contact</label>
+                    <input type="text" name="plateforme_contact" id="plateforme_contact" maxlength="300"
+                           class="form-control" value="{{ old('plateforme_contact', $identite['contact']) }}">
+                </div>
+            </div>
+        </div>
+
         <div class="card-footer d-flex justify-content-end">
             <button type="submit" class="btn btn-primary">Enregistrer</button>
         </div>

@@ -104,8 +104,9 @@ import { messageErreurApi } from '../../services/messages';
       .article-image {
         height: 150px;
         background: var(--mpc-surface-teintee);
-        display: grid;
-        place-items: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         color: var(--mpc-texte-doux);
         font-size: 2.4rem;
         overflow: hidden;
@@ -113,7 +114,9 @@ import { messageErreurApi } from '../../services/messages';
       .article-image img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        box-sizing: border-box;
+        object-fit: contain;
+        padding: 0.5rem;
       }
       .article-corps {
         flex: 1;

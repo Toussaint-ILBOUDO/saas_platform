@@ -24,22 +24,6 @@
 
         <div class="col-md-4">
             <div class="card p-3">
-                <h5>Planning</h5>
-                <p class="text-muted mb-2">Les séances de vos enfants</p>
-                <a href="{{ route('planning.index') }}">Consulter</a>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3">
-                <h5>Factures</h5>
-                <p class="text-muted mb-2">Vos factures et paiements</p>
-                <a href="{{ route('mes-factures.index') }}">Voir</a>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3">
                 <h5>Actualités</h5>
                 <p class="text-muted mb-2">Les dernières nouvelles de l'école</p>
                 <a href="{{ route('actualites.internes') }}">Suivre</a>

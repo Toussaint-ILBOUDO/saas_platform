@@ -264,7 +264,8 @@ class BulletinPaieApiTest extends TenantTestCase
             ->assertJsonPath('data.0.enseignant.id', $socle['prof_a'])
             ->assertJsonPath('data.0.montant_brut', 5000)
             ->assertJsonPath('data.0.lignes.0.nombre_heures', 2)
-            ->assertJsonCount(2, 'types_ajustement')
+            ->assertJsonFragment(['libelle' => 'Prime de transport', 'direction' => 'credit'])
+            ->assertJsonFragment(['libelle' => 'Retenue d\'assurance', 'direction' => 'debit'])
             ->assertJsonPath('types_ajustement.0.direction', 'credit')
             ->assertJsonStructure(['data' => [['enseignant', 'lignes', 'montant_net']]]);
 
@@ -577,6 +578,23 @@ class BulletinPaieApiTest extends TenantTestCase
         ])
             ->assertUnprocessable()
             ->assertJsonStructure(['message', 'code', 'erreurs' => ['bulletin']]);
+    }
+
+    // ------------------------------------------------------------------- PDF
+
+    public function test_pdf_du_bulletin(): void
+    {
+        $socle = $this->socle('c1');
+        $this->injRapportsValides($socle);
+        $this->connecte('c1', $socle['admin_email']);
+
+        $id = $this->idBulletinA(
+            $this->postJson($this->adminApi('c1'), $this->payload($socle))->json()
+        );
+
+        $this->get($this->adminApi('c1', "/{$id}/pdf"))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
     }
 
     // ------------------------------------------------------------- périmètre

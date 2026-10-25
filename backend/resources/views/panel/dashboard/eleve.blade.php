@@ -9,50 +9,10 @@
     <h1 class="mb-1">Dashboard Élève</h1>
 
     <p class="text-muted mb-4">
-        Bienvenue chez K'Educ — vos cours, séances et objectifs en un coup d'œil.
+        Bienvenue chez K'Educ — vos documents, actualités et notifications en un coup d'œil.
     </p>
 
     <div class="row g-3">
-
-        <div class="col-md-4">
-            <div class="card p-3">
-                <h5>Mes cours</h5>
-                <p class="text-muted mb-2">Vos contrats de cours en cours</p>
-                <a href="{{ route('mes-cours.index') }}">Voir</a>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3">
-                <h5>Planning</h5>
-                <p class="text-muted mb-2">Vos séances de la semaine</p>
-                <a href="{{ route('planning.index') }}">Consulter</a>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3">
-                <h5>Évaluations</h5>
-                <p class="text-muted mb-2">Vos appréciations de cours</p>
-                <a href="{{ route('evaluations.index') }}">Voir</a>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3">
-                <h5>Objectifs pédagogiques</h5>
-                <p class="text-muted mb-2">Les objectifs définis pour vous</p>
-                <a href="{{ route('objectifs-pedagogiques.index') }}">Consulter</a>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3">
-                <h5>Cahiers de textes</h5>
-                <p class="text-muted mb-2">Le contenu de vos séances</p>
-                <a href="{{ route('cahiers-textes.index') }}">Consulter</a>
-            </div>
-        </div>
 
         <div class="col-md-4">
             <div class="card p-3">

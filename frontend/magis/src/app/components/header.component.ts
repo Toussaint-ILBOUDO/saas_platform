@@ -4,6 +4,8 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { CONTENT } from '../../content';
 import { FicheCabinet } from '../models';
 import { ApiService } from '../services/api.service';
+import { AuthService } from '../services/auth.service';
+import { PanierService } from '../services/panier.service';
 
 interface LienNav {
   libelle: string;
@@ -191,6 +193,122 @@ interface LienNav {
         margin-inline-start: auto;
         cursor: pointer;
       }
+      .actions-entete {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+      }
+      .lien-icone {
+        position: relative;
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 1px solid var(--mpc-bordure);
+        background: var(--mpc-fond);
+        color: var(--mpc-bleu);
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        text-decoration: none;
+        font-size: 1.05rem;
+        cursor: pointer;
+      }
+      .lien-icone:hover {
+        border-color: var(--mpc-primaire);
+        color: var(--mpc-primaire);
+      }
+      .badge-panier {
+        position: absolute;
+        top: -0.4rem;
+        right: -0.4rem;
+        min-width: 1.15rem;
+        height: 1.15rem;
+        border-radius: 999px;
+        background: var(--mpc-accent);
+        color: #fff;
+        font-size: 0.68rem;
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+        padding: 0 0.25rem;
+      }
+      .avatar-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        border: 1.5px solid var(--mpc-bleu);
+        background: transparent;
+        color: var(--mpc-bleu);
+        border-radius: 999px;
+        padding: 0.35rem 0.7rem 0.35rem 0.35rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        max-width: 11rem;
+      }
+      .avatar-btn:hover {
+        background: var(--mpc-bleu);
+        color: #fff;
+      }
+      .avatar-cercle {
+        width: 1.8rem;
+        height: 1.8rem;
+        border-radius: 50%;
+        background: var(--mpc-primaire);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+      .avatar-nom {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 6.5rem;
+      }
+      .menu-profil {
+        position: absolute;
+        top: calc(100% + 0.45rem);
+        inset-inline-end: 0;
+        min-width: 13rem;
+        background: #fff;
+        border: 1px solid var(--mpc-bordure);
+        border-radius: 14px;
+        box-shadow: 0 14px 34px rgba(18, 48, 94, 0.16);
+        padding: 0.45rem;
+        z-index: 90;
+      }
+      .menu-profil a,
+      .menu-profil button {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        width: 100%;
+        padding: 0.65rem 0.75rem;
+        border: 0;
+        background: transparent;
+        border-radius: 10px;
+        color: var(--mpc-texte);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.92rem;
+        cursor: pointer;
+        text-align: start;
+      }
+      .menu-profil a:hover,
+      .menu-profil button:hover {
+        background: var(--mpc-primaire-tint);
+        color: var(--mpc-primaire);
+      }
+      .menu-profil .deconnexion {
+        color: #b3261e;
+      }
+      .menu-profil .deconnexion:hover {
+        background: #fdecea;
+        color: #b3261e;
+      }
+      .position-relative-profil {
+        position: relative;
+      }
       .voile {
         position: fixed;
         inset: 0;
@@ -296,6 +414,9 @@ interface LienNav {
         .barre-top .reseaux-top {
           display: none;
         }
+        .lien-icone {
+          display: none;
+        }
       }
     `,
   ],
@@ -341,8 +462,43 @@ interface LienNav {
              [fragment]="lien.fragment"
              [class._actif]="estActif(lien)">{{ lien.libelle }}</a>
         </nav>
-        <a class="connexion connexion-desktop" routerLink="/connexion"><i class="bi bi-box-arrow-in-right"></i>Se connecter</a>
-        <a class="cta cta-desktop" routerLink="/demande-cours"><i class="bi bi-send"></i>Demander un cours</a>
+
+        <div class="actions-entete">
+          <a class="lien-icone" routerLink="/panier" aria-label="Panier">
+            <i class="bi bi-cart3"></i>
+            <span class="badge-panier" *ngIf="panier.nombreLignes() > 0">{{ panier.nombreLignes() }}</span>
+          </a>
+
+          @if (auth.utilisateur()) {
+            <div class="position-relative-profil">
+              <button type="button" class="avatar-btn connexion-desktop" (click)="menuProfilOuvert = !menuProfilOuvert"
+                      [attr.aria-expanded]="menuProfilOuvert" aria-label="Menu du profil">
+                <span class="avatar-cercle">{{ auth.initiales() || 'U' }}</span>
+                <span class="avatar-nom">{{ auth.nomComplet() || 'Mon compte' }}</span>
+                <i class="bi bi-chevron-down"></i>
+              </button>
+              <div class="menu-profil" *ngIf="menuProfilOuvert">
+                <a routerLink="/espace/profil" (click)="menuProfilOuvert = false">
+                  <i class="bi bi-person"></i> Mon profil
+                </a>
+                <a routerLink="/espace" (click)="menuProfilOuvert = false">
+                  <i class="bi bi-grid"></i> Mon espace
+                </a>
+                <a routerLink="/espace/mes-commandes" (click)="menuProfilOuvert = false">
+                  <i class="bi bi-bag-check"></i> Mes commandes
+                </a>
+                <button type="button" class="deconnexion" (click)="seDeconnecter()">
+                  <i class="bi bi-box-arrow-right"></i> Déconnexion
+                </button>
+              </div>
+            </div>
+          } @else {
+            <a class="connexion connexion-desktop" routerLink="/connexion">
+              <i class="bi bi-box-arrow-in-right"></i>Se connecter
+            </a>
+          }
+          <a class="cta cta-desktop" routerLink="/demande-cours"><i class="bi bi-send"></i>Demander un cours</a>
+        </div>
 
         <button type="button" class="burger" (click)="menuOuvert = true" aria-label="Ouvrir le menu">
           <i class="bi bi-list"></i>
@@ -373,10 +529,34 @@ interface LienNav {
            (click)="menuOuvert = false">
           {{ lien.libelle }}<i class="bi bi-chevron-right"></i>
         </a>
+        <a routerLink="/panier" (click)="menuOuvert = false">
+          Panier
+          <span *ngIf="panier.nombreLignes() > 0" class="badge-panier" style="position:static">
+            {{ panier.nombreLignes() }}
+          </span>
+          <i class="bi bi-chevron-right"></i>
+        </a>
       </nav>
-      <a class="connexion tiroir-connexion" routerLink="/connexion" (click)="menuOuvert = false">
-        <i class="bi bi-box-arrow-in-right"></i>Se connecter
-      </a>
+      @if (auth.utilisateur()) {
+        <nav class="tiroir-nav" style="border-top:1px solid var(--mpc-bordure);margin-top:.5rem">
+          <a routerLink="/espace" (click)="menuOuvert = false">
+            Mon espace<i class="bi bi-chevron-right"></i>
+          </a>
+          <a routerLink="/espace/mes-commandes" (click)="menuOuvert = false">
+            Mes commandes<i class="bi bi-chevron-right"></i>
+          </a>
+          <a routerLink="/espace/profil" (click)="menuOuvert = false">
+            Mon profil<i class="bi bi-chevron-right"></i>
+          </a>
+        </nav>
+        <button type="button" class="connexion tiroir-connexion" (click)="seDeconnecter(); menuOuvert = false">
+          <i class="bi bi-box-arrow-right"></i>Déconnexion
+        </button>
+      } @else {
+        <a class="connexion tiroir-connexion" routerLink="/connexion" (click)="menuOuvert = false">
+          <i class="bi bi-box-arrow-in-right"></i>Se connecter
+        </a>
+      }
       <a class="cta tiroir-cta" routerLink="/demande-cours" (click)="menuOuvert = false">
         <i class="bi bi-send"></i>Demander un cours
       </a>
@@ -393,9 +573,12 @@ export class HeaderComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
   private readonly element = inject(ElementRef<HTMLElement>);
+  protected readonly auth = inject(AuthService);
+  protected readonly panier = inject(PanierService);
 
   protected readonly CONTENT = CONTENT;
   protected menuOuvert = false;
+  protected menuProfilOuvert = false;
   protected readonly deplie = signal(false);
   protected readonly sectionActive = signal('');
   protected readonly routePage = signal(this.router.url.split('#')[0] ?? '');
@@ -429,6 +612,7 @@ export class HeaderComponent implements OnInit {
         requestAnimationFrame(() => this.mettreAJourSection());
       }
     });
+    void this.auth.initialiser();
     this.api.getCabinetPublic().subscribe((cabinet) => {
       const fiche: FicheCabinet | null = cabinet.donnees?.fiche ?? null;
       this.telephone.set(fiche?.contact?.telephone ?? '');
@@ -456,6 +640,20 @@ export class HeaderComponent implements OnInit {
   protected surScroll(): void {
     this.deplie.set((window.scrollY ?? 0) > 24);
     this.mettreAJourSection();
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected surClicExterieur(e: MouseEvent): void {
+    if (!this.menuProfilOuvert) return;
+    const cible = e.target as HTMLElement | null;
+    if (cible?.closest?.('.position-relative-profil')) return;
+    this.menuProfilOuvert = false;
+  }
+
+  protected async seDeconnecter(): Promise<void> {
+    this.menuProfilOuvert = false;
+    await this.auth.deconnexion();
+    await this.router.navigateByUrl('/');
   }
 
   protected mettreAJourSection(): void {

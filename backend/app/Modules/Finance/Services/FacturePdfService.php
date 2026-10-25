@@ -3,7 +3,7 @@
 namespace App\Modules\Finance\Services;
 
 use App\Models\Facture;
-use App\Support\CabinetInfo;
+use App\Support\Pdf\DocumentPdf;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
@@ -56,7 +56,7 @@ class FacturePdfService
     {
         $data = $this->prepareData($facture);
 
-        return Pdf::loadView(
+        $pdf = Pdf::loadView(
                 'pdf.facture-parent',
                 $data
             )
@@ -66,6 +66,17 @@ class FacturePdfService
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled' => true,
             ]);
+
+        // Le pied de page n'est dessinable qu'après le rendu : dompdf ne
+        // connaît le nombre de pages qu'une fois le flux posé.
+        $pdf->render();
+
+        DocumentPdf::piedDePage(
+            $pdf->getDomPDF(),
+            'Facture · Réf. ' . $facture->numero_facture
+        );
+
+        return $pdf;
     }
 
     /**
@@ -78,30 +89,82 @@ class FacturePdfService
             'contrat.eleve.user',
             'contrat.eleve.classe',
             'contrat.typeCours',
-            'contrat.affectations.matiere',
-            'contrat.affectations.enseignant.user',
             'parent',
             'periode',
             'lignes.affectation.enseignant.user',
             'lignes.affectation.matiere',
+            'ajustements.typeAjustement',
         ]);
 
-        $cabinet = CabinetInfo::all();
+        $cabinet = DocumentPdf::cabinet();
 
-        $montantCours = $facture->montant_total
-            - $facture->frais_suivi
-            - $facture->autres_frais
-            + $facture->remise;
+        $ajustements = $facture->ajustements;
+        $totalCredits = (int) $ajustements->where('type', 'credit')->sum('montant');
+        $totalDebits = (int) $ajustements->where('type', 'debit')->sum('montant');
 
         return [
-            'facture'       => $facture,
-            'eleve'         => $facture->contrat?->eleve,
-            'parent'        => $facture->parent,
-            'periode'       => $facture->periode,
-            'lignes'        => $facture->lignes,
-            'montantCours'  => $montantCours,
-            'cabinet'       => $cabinet,
+            'facture'           => $facture,
+            'eleve'             => $facture->contrat?->eleve,
+            'parent'            => $facture->parent,
+            'periode'           => $facture->periode,
+            'lignes'            => $facture->lignes,
+            'ajustements'       => $ajustements,
+            'total_credits'     => $totalCredits,
+            'total_debits'      => $totalDebits,
+            'montantCours'      => (int) $facture->lignes->sum('montant'),
+
+            // Gabarit commun.
+            'cabinet'           => $cabinet,
+            'cabinet_nom'       => $cabinet['nom'],
+            'cabinet_logo'      => DocumentPdf::logo($cabinet['logo']),
+            'document_titre'    => 'Facture',
+            'document_sous_titre' => 'Règlement des cours',
+            'document_reference' => $facture->numero_facture,
+            'date_edition'      => $facture->created_at ?? now(),
+            'badge'             => $this->badge($facture),
+            'ligne_meta'        => $this->ligneMeta($facture),
         ];
+    }
+
+    /**
+     * Badge de statut de paiement (couleurs du gabarit).
+     */
+    protected function badge(Facture $facture): array
+    {
+        if ($facture->estPayee()) {
+            return ['libelle' => 'Payée', 'classe' => 'valide'];
+        }
+
+        if ($facture->estEnAttente()) {
+            return ['libelle' => 'En attente', 'classe' => 'soumis'];
+        }
+
+        return [
+            'libelle' => ucfirst(str_replace('_', ' ', (string) $facture->statut_paiement)),
+            'classe' => 'info',
+        ];
+    }
+
+    /**
+     * Ligne d'en-tête contextuelle (période couverte).
+     */
+    protected function ligneMeta(Facture $facture): string
+    {
+        if ($facture->periode) {
+            $meta = '<strong>Période :</strong> ' . e($facture->periode->label);
+
+            if ($facture->periode->date_debut && $facture->periode->date_fin) {
+                $meta .= ' &mdash; du '
+                    . $facture->periode->date_debut->format('d/m/Y')
+                    . ' au '
+                    . $facture->periode->date_fin->format('d/m/Y');
+            }
+
+            return $meta;
+        }
+
+        return '<strong>Facture émise le</strong> '
+            . ($facture->created_at?->format('d/m/Y') ?? '—');
     }
 
     /**

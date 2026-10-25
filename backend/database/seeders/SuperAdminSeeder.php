@@ -15,6 +15,7 @@ use Illuminate\Database\Seeder;
  * Identifiants par défaut (à surcharger via les variables d'environnement) :
  *   LANDLORD_EMAIL    (défaut : admin@saascd.test)
  *   LANDLORD_PASSWORD (défaut : placé ci-dessous — changer après première connexion)
+ * http://admin.localhost:8080/admin/
  */
 class SuperAdminSeeder extends Seeder
 {

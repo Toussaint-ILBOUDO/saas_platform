@@ -42,9 +42,7 @@ Route::middleware([
 ])->group(function () {
     require __DIR__ . '/web.php';
     require __DIR__ . '/auth.php';
-    require __DIR__ . '/pedagogie.php';
     require __DIR__ . '/notifications.php';
-    require __DIR__ . '/finance.php';
     require __DIR__ . '/bibliotheque.php';
     require __DIR__ . '/librairie.php';
     require __DIR__ . '/cms.php';

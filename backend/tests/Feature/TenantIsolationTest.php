@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ParametrePublic;
 use App\Models\ParametresPlateforme;
+use App\Models\TypeAjustement;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Spatie\Permission\Models\Role;
@@ -91,6 +92,14 @@ class TenantIsolationTest extends TenantTestCase
 
         $this->assertSame(1, ParametrePublic::count());
         $this->assertArrayHasKey('couleurs', ParametrePublic::first()->theme);
+
+        // Le catalogue des types d'ajustement est seedé par défaut : sans lui,
+        // les formulaires « Ajouter une ligne » (facture, bulletin) n'offrent
+        // aucun choix.
+        $types = TypeAjustement::pluck('direction', 'libelle')->all();
+        $this->assertNotEmpty($types);
+        $this->assertSame('credit', $types['Prime'] ?? null);
+        $this->assertSame('debit', $types['Retenue'] ?? null);
 
         tenancy()->end();
     }

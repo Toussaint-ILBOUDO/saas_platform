@@ -12,6 +12,7 @@ import {
   EnseignantReferentiel,
   MatiereReferentiel,
   MetaPage,
+  RapportImportEnseignant,
   TypeCoursReferentiel,
 } from '../../models';
 
@@ -566,6 +567,127 @@ const MODELE_TYPE: CreneauTypeCours = { code: '', libelle: '', description: null
         cursor: pointer;
       }
 
+      /* ---------- IAM (M1) : import CSV + photo ---------- */
+      .voile {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgb(15 23 42 / 45%);
+      }
+      .modale {
+        width: min(640px, 100%);
+        max-height: 88vh;
+        overflow-y: auto;
+        background: var(--mpc-fond, #fff);
+        border: 1px solid var(--mpc-separateur);
+        border-radius: 1rem;
+        padding: 1.1rem 1.2rem;
+        box-shadow: 0 18px 48px rgb(15 23 42 / 25%);
+      }
+      .modale h2 {
+        margin: 0 0 0.35rem;
+        font-size: 1.05rem;
+        color: var(--mpc-bleu);
+      }
+      .modale .intro {
+        margin: 0 0 0.8rem;
+        font-size: 0.83rem;
+        color: var(--mpc-texte-doux);
+      }
+      .colonnes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-bottom: 0.85rem;
+      }
+      .colonnes code {
+        padding: 0.15rem 0.45rem;
+        border-radius: 0.45rem;
+        background: var(--mpc-fond, #eef2f7);
+        border: 1px solid var(--mpc-separateur);
+        font-size: 0.72rem;
+      }
+      .champs-import {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.7rem;
+        margin-bottom: 0.85rem;
+      }
+      .champs-import label {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--mpc-texte);
+      }
+      .champs-import input {
+        display: block;
+        width: 100%;
+        margin-top: 0.3rem;
+        padding: 0.5rem 0.6rem;
+        border: 1px solid var(--mpc-separateur);
+        border-radius: 0.6rem;
+        font-size: 0.85rem;
+        background: #fff;
+      }
+      .rapport-import {
+        margin-top: 0.9rem;
+        border-radius: 0.8rem;
+        border: 1px solid var(--mpc-separateur);
+        padding: 0.75rem 0.9rem;
+        font-size: 0.83rem;
+      }
+      .rapport-import._succes {
+        border-color: var(--mpc-succes);
+        background: var(--mpc-succes-tint);
+      }
+      .rapport-import ul {
+        margin: 0.4rem 0 0;
+        padding-left: 1.1rem;
+      }
+      .photo-bloc {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin-top: 0.35rem;
+        padding: 0.7rem 0.85rem;
+        border: 1px dashed var(--mpc-separateur);
+        border-radius: 0.8rem;
+      }
+      .photo-bloc img {
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid var(--mpc-separateur);
+      }
+      .photo-bloc .vide-photo {
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--mpc-fond);
+        color: var(--mpc-texte-doux);
+        font-size: 1.3rem;
+      }
+      .photo-bloc .zone {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        font-size: 0.78rem;
+        color: var(--mpc-texte-doux);
+      }
+      .photo-bloc .boutons {
+        display: flex;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+      }
+
       .spin {
         display: inline-block;
         animation: tourner 0.9s linear infinite;
@@ -653,6 +775,11 @@ const MODELE_TYPE: CreneauTypeCours = { code: '', libelle: '', description: null
       <button class="btn-primaire" type="button" (click)="ouvrirCreation()">
         <i class="bi bi-plus-lg"></i> {{ libelleAjout() }}
       </button>
+      @if (onglet() === 'enseignants') {
+        <button class="btn-neutral" type="button" (click)="ouvrirImport()">
+          <i class="bi bi-filetype-csv"></i> Importer un CSV
+        </button>
+      }
     </div>
 
     <p class="phrase"><i class="bi bi-info-circle"></i>{{ phrase() }}</p>
@@ -1037,6 +1164,31 @@ const MODELE_TYPE: CreneauTypeCours = { code: '', libelle: '', description: null
                     <small>Repère de suivi administratif de l’enseignant.</small>
                   </span>
                 </label>
+                @if (enseignant().id) {
+                  <div class="photo-bloc">
+                    @if (photoEnseignant(); as photo) {
+                      <img [src]="photo" alt="Photo de profil" (error)="photoEnseignant.set(null)" />
+                    } @else {
+                      <span class="vide-photo"><i class="bi bi-person"></i></span>
+                    }
+                    <div class="zone">
+                      <span>Photo de profil — affichée sur la fiche publique du cabinet (2 Mo max).</span>
+                      <div class="boutons">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          [disabled]="actionEnCours()"
+                          (change)="chargerPhoto($event)"
+                        />
+                        @if (photoEnseignant()) {
+                          <button class="mini" type="button" [disabled]="actionEnCours()" (click)="supprimerPhoto()">
+                            <i class="bi bi-trash"></i> Retirer
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
               </div>
             }
           }
@@ -1051,6 +1203,105 @@ const MODELE_TYPE: CreneauTypeCours = { code: '', libelle: '', description: null
               }
             </button>
           </div>
+        </div>
+      </div>
+    }
+
+    <!-- IAM (M1) : import CSV en masse d'enseignants -->
+    @if (importOuvert()) {
+      <div class="voile" (click)="fermerImport()">
+        <div
+          class="modale"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Importer des enseignants"
+          (click)="$event.stopPropagation()"
+        >
+          <h2>Importer des enseignants (CSV)</h2>
+          <p class="intro">
+            En-tête obligatoire : <b>nom</b> et <b>prenom</b> (ordre libre, casse et accents
+            indifférents, séparateur <b>;</b> — accepte aussi <b>,</b> ou <b>tabulation</b>). Chaque ligne
+            est traitée à part : une ligne en erreur n’annule pas les autres.
+          </p>
+          <div class="colonnes">
+            <code>nom*</code>
+            <code>prenom*</code>
+            <code>email</code>
+            <code>telephone_whatsapp</code>
+            <code>telephone_appel</code>
+            <code>diplome_max</code>
+            <code>lieu_de_service</code>
+            <code>domicile</code>
+            <code>numero_orange_money</code>
+            <code>frais_annuel_regle</code>
+            <code>password</code>
+            <code>matieres (séparées par |)</code>
+          </div>
+
+          <div class="champs-import">
+            <label>
+              Fichier CSV
+              <input type="file" accept=".csv,text/csv" (change)="choisirFichierImport($event)" />
+              @if (fichierImport(); as fichier) {
+                <span class="aide">{{ fichier.name }}</span>
+              }
+            </label>
+            <label>
+              Mot de passe par défaut *
+              <input
+                type="password"
+                autocomplete="new-password"
+                placeholder="Pour les lignes sans colonne password"
+                [ngModel]="passwordDefautImport()"
+                (ngModelChange)="passwordDefautImport.set($event)"
+              />
+            </label>
+          </div>
+
+          <div class="actions-form">
+            <button class="btn-neutral" type="button" (click)="telechargerModeleImport()">
+              <i class="bi bi-download"></i> Modèle CSV
+            </button>
+            <button class="btn-neutral" type="button" (click)="fermerImport()">Fermer</button>
+            <button
+              class="btn-primaire"
+              type="button"
+              [disabled]="importEnCours() || !fichierImport() || !passwordDefautImport().trim()"
+              (click)="lancerImport()"
+            >
+              @if (importEnCours()) {
+                <i class="bi bi-arrow-repeat spin"></i> Import en cours…
+              } @else {
+                <i class="bi bi-file-earmark-spreadsheet"></i> Importer
+              }
+            </button>
+          </div>
+
+          @if (rapportImport(); as rapport) {
+            <div class="rapport-import" [class._succes]="rapport.importees > 0">
+              <b>{{ rapport.importees }} enseignant(s) importé(s)</b> — {{ rapport.ignorees }} ligne(s)
+              ignorée(s).
+              @if (rapport.erreurs.length) {
+                <ul>
+                  @for (err of rapport.erreurs; track err.ligne) {
+                    <li>Ligne {{ err.ligne }} — {{ err.message }}</li>
+                  }
+                </ul>
+              }
+              @if (rapport.avertissements.length) {
+                <ul>
+                  @for (av of rapport.avertissements; track av.ligne) {
+                    <li>Avertissement ligne {{ av.ligne }} — {{ av.message }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+          @if (messageImport()) {
+            <div class="alerte" style="margin-top: 0.7rem">
+              <i class="bi bi-exclamation-triangle"></i><span>{{ messageImport() }}</span>
+            </div>
+          }
         </div>
       </div>
     }
@@ -1298,6 +1549,7 @@ export class ReferentielsComponent implements OnInit {
           frais_annuel_regle: false,
           matieres: [],
         });
+        this.photoEnseignant.set(null);
         break;
     }
     this.formulaireOuvert.set(true);
@@ -1336,12 +1588,14 @@ export class ReferentielsComponent implements OnInit {
       frais_annuel_regle: e.profil?.frais_annuel_regle ?? false,
       matieres: e.profil?.matieres?.map((m) => m.id) ?? [],
     });
+    this.photoEnseignant.set(e.photo_url ?? null);
     this.erreurs.set({});
     this.formulaireOuvert.set(true);
   }
 
   protected fermerFormulaire(): void {
     this.formulaireOuvert.set(false);
+    this.photoEnseignant.set(null);
   }
 
   protected titreFormulaire(): string {
@@ -1392,6 +1646,108 @@ export class ReferentielsComponent implements OnInit {
       ...this.enseignant(),
       matieres: actuelles.includes(id) ? actuelles.filter((m) => m !== id) : [...actuelles, id],
     });
+  }
+
+  /* ---------- IAM (M1) : import CSV + photo de profil ---------- */
+
+  protected readonly importOuvert = signal(false);
+  protected readonly fichierImport = signal<File | null>(null);
+  protected readonly passwordDefautImport = signal('');
+  protected readonly importEnCours = signal(false);
+  protected readonly rapportImport = signal<RapportImportEnseignant | null>(null);
+  protected readonly messageImport = signal('');
+  protected readonly photoEnseignant = signal<string | null>(null);
+
+  protected ouvrirImport(): void {
+    this.fichierImport.set(null);
+    this.passwordDefautImport.set('');
+    this.rapportImport.set(null);
+    this.messageImport.set('');
+    this.importOuvert.set(true);
+  }
+
+  protected fermerImport(): void {
+    this.importOuvert.set(false);
+  }
+
+  protected choisirFichierImport(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    this.fichierImport.set(input.files?.[0] ?? null);
+  }
+
+  protected async lancerImport(): Promise<void> {
+    const fichier = this.fichierImport();
+    const motDePasse = this.passwordDefautImport().trim();
+    if (!fichier || !motDePasse) return;
+
+    this.importEnCours.set(true);
+    this.messageImport.set('');
+    this.rapportImport.set(null);
+    try {
+      const r = await firstValueFrom(this.api.importerEnseignants(fichier, motDePasse));
+      this.rapportImport.set(r.data);
+      // La liste derrière la modale reflète l'import.
+      await this.charger(this.metaCourant()?.current_page ?? 1);
+    } catch (e) {
+      this.messageImport.set(messageErreurApi(e));
+    } finally {
+      this.importEnCours.set(false);
+    }
+  }
+
+  /** Modèle téléchargeable : en-tête attendu + 2 lignes d'exemple. */
+  protected telechargerModeleImport(): void {
+    const lignes = [
+      'nom;prenom;email;telephone_whatsapp;telephone_appel;diplome_max;lieu_de_service;domicile;numero_orange_money;frais_annuel_regle;matieres',
+      'Koffi;Samuel;koffi@exemple.test;0707070707;0707070707;Licence;Société Générale;Cocody;1234567890;oui;Mathématiques|Physique',
+      'Diallo;Awa;;0606060606;0606060606;Bac;District;;0987654321;non;',
+    ];
+    const csv = '\uFEFF' + lignes.join('\r\n') + '\r\n';
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const lien = document.createElement('a');
+    lien.href = url;
+    lien.download = 'modele-import-enseignants.csv';
+    lien.click();
+    URL.revokeObjectURL(url);
+  }
+
+  protected async chargerPhoto(e: Event): Promise<void> {
+    const input = e.target as HTMLInputElement;
+    const fichier = input.files?.[0];
+    const id = this.enseignant().id;
+    if (!fichier || !id) return;
+
+    this.actionEnCours.set(true);
+    this.message.set('');
+    this.succes.set('');
+    try {
+      const r = await firstValueFrom(this.api.majPhotoEnseignant(id, fichier));
+      this.photoEnseignant.set(r.photo_url);
+      this.succes.set('Photo mise à jour.');
+    } catch (err) {
+      this.message.set(messageErreurApi(err));
+    } finally {
+      this.actionEnCours.set(false);
+      input.value = '';
+    }
+  }
+
+  protected async supprimerPhoto(): Promise<void> {
+    const id = this.enseignant().id;
+    if (!id) return;
+
+    this.actionEnCours.set(true);
+    this.message.set('');
+    this.succes.set('');
+    try {
+      await firstValueFrom(this.api.supprimerPhotoEnseignant(id));
+      this.photoEnseignant.set(null);
+      this.succes.set('Photo retirée.');
+    } catch (err) {
+      this.message.set(messageErreurApi(err));
+    } finally {
+      this.actionEnCours.set(false);
+    }
   }
 
   /* ---------- Écriture ---------- */

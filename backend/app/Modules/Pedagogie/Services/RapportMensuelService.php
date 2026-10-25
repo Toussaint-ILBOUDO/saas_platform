@@ -3,9 +3,12 @@
 namespace App\Modules\Pedagogie\Services;
 
 use App\Models\AffectationEnseignant;
+use App\Models\EvenementFacturable;
 use App\Models\PeriodeComptable;
 use App\Models\RapportMensuelEnseignant;
+use App\Modules\Audit\Services\AuditService;
 use App\Modules\Finance\Services\GardePeriodeOuverte;
+use App\Modules\Plateforme\Services\JournalFacturable;
 use App\Modules\Systeme\Services\NotificationDispatcher;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -216,6 +219,23 @@ class RapportMensuelService
 
             $this->notificationDispatcher->reportValidated($rapport);
 
+            AuditService::enregistrer(
+                'rapport.valide',
+                'Rapport mensuel #' . $rapport->id . ' validé',
+                $rapport,
+                ['periode_id' => $rapport->periode_id]
+            );
+
+            // P8 : journalisation facturable — rapport mensuel validé
+            // (frais par rapport tarifés au contrat de la plateforme).
+            JournalFacturable::capturer(
+                EvenementFacturable::TYPE_RAPPORT_VALIDE,
+                'rapport',
+                $rapport->id,
+                'Rapport mensuel validé — période #'.$rapport->periode_id,
+                meta: ['periode_id' => $rapport->periode_id],
+            );
+
             return $rapport->fresh(['periode', 'lignes.affectation.matiere']);
         });
     }
@@ -248,6 +268,14 @@ class RapportMensuelService
             ]);
 
             $this->notificationDispatcher->reportRejected($rapport, $motif);
+
+            AuditService::enregistrer(
+                'rapport.rejete',
+                'Rapport mensuel #' . $rapport->id . ' rejeté',
+                $rapport,
+                ['motif' => $motif],
+                'warning'
+            );
 
             return $rapport->fresh(['periode', 'lignes.affectation.matiere']);
         });

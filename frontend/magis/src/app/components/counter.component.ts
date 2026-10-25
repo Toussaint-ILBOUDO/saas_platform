@@ -1,8 +1,12 @@
-import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild, signal } from '@angular/core';
 
 /**
  * Compteur animé : défile de 0 vers la valeur à l'entrée dans le viewport
  * (requestAnimationFrame). Accepte un suffixe (ex. « + ») et un format français.
+ *
+ * La valeur affichée est un signal : l'application est zoneless, les callbacks
+ * natifs (rAF, IntersectionObserver) ne déclenchent pas la change detection —
+ * seules les mutations de signal (ou markForCheck) rafraîchissent le template.
  */
 @Component({
   selector: 'app-counter',
@@ -14,7 +18,7 @@ import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@ang
       }
     `,
   ],
-  template: `<ng-content></ng-content><span #cible class="counter-valeur">{{ affichage }}</span>`,
+  template: `<ng-content></ng-content><span #cible class="counter-valeur">{{ affichage() }}</span>`,
 })
 export class CounterComponent implements OnInit, OnDestroy {
   @Input() fin = 0;
@@ -22,7 +26,7 @@ export class CounterComponent implements OnInit, OnDestroy {
 
   @ViewChild('cible', { static: true }) private cible!: ElementRef<HTMLElement>;
 
-  protected affichage = '0';
+  protected readonly affichage = signal('0');
   private observer?: IntersectionObserver;
   private frame = 0;
 
@@ -51,7 +55,7 @@ export class CounterComponent implements OnInit, OnDestroy {
     const etape = (maintenant: number) => {
       const progression = Math.min((maintenant - debut) / duree, 1);
       const adouci = 1 - Math.pow(1 - progression, 3);
-      this.affichage = Math.round(this.fin * adouci).toLocaleString('fr-FR') + this.suffixe;
+      this.affichage.set(Math.round(this.fin * adouci).toLocaleString('fr-FR') + this.suffixe);
       if (progression < 1) {
         this.frame = requestAnimationFrame(etape);
       }

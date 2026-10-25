@@ -40,7 +40,16 @@ import { Actualite } from '../models';
       .article-illustration img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        box-sizing: border-box;
+        object-fit: contain;
+        padding: 0.6rem;
+      }
+      .article-illustration .img-lien {
+        position: absolute;
+        inset: 0;
+        display: block;
+        color: var(--mpc-accent);
+        cursor: pointer;
       }
       .article-date {
         position: absolute;
@@ -101,9 +110,15 @@ import { Actualite } from '../models';
             <article class="article-carte">
               <div class="article-illustration">
                 <ng-container *ngIf="article.image_url; else sansImage">
-                  <img [src]="article.image_url" [alt]="article.titre" loading="lazy" />
+                  <a class="img-lien" [routerLink]="['/actualites', article.slug]" [attr.aria-label]="'Lire : ' + article.titre">
+                    <img [src]="article.image_url" [alt]="article.titre" loading="lazy" />
+                  </a>
                 </ng-container>
-                <ng-template #sansImage><i class="bi bi-newspaper"></i></ng-template>
+                <ng-template #sansImage>
+                  <a class="img-lien" [routerLink]="['/actualites', article.slug]" [attr.aria-label]="'Lire : ' + article.titre">
+                    <i class="bi bi-newspaper"></i>
+                  </a>
+                </ng-template>
                 <span class="article-date" *ngIf="dateCourte(article)">{{ dateCourte(article) }}</span>
               </div>
               <div class="article-corps">

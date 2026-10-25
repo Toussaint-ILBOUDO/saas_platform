@@ -71,16 +71,6 @@
                     <i class="bi bi-eye"></i> Fiche
                 </a>
 
-                <a href="{{ route('planning.index', ['eleve' => $eleve->id]) }}"
-                   class="btn btn-light">
-                    <i class="bi bi-calendar3"></i> Planning
-                </a>
-
-                <a href="{{ route('mes-factures.index', ['eleve' => $eleve->id]) }}"
-                   class="btn btn-light">
-                    <i class="bi bi-receipt"></i> Factures
-                </a>
-
             </div>
 
         </div>

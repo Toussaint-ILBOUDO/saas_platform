@@ -41,8 +41,10 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
       libelle: 'Pédagogie',
       items: [
         { libelle: 'Référentiels', icone: 'bi-journal-bookmark', route: '/espace/pedagogie/referentiels' },
+        { libelle: 'Scolarité', icone: 'bi-mortarboard', route: '/espace/pedagogie/scolarite' },
         { libelle: 'Contrats de cours', icone: 'bi-file-earmark-text', route: '/espace/pedagogie/contrats' },
         { libelle: 'Rapports mensuels', icone: 'bi-file-earmark-bar-graph', route: '/espace/pedagogie/rapports-mensuels' },
+        { libelle: 'Objectifs pédagogiques', icone: 'bi-bullseye', route: '/espace/pedagogie/objectifs' },
         { libelle: 'Modèle de rapport', icone: 'bi-ui-checks', route: '/espace/pedagogie/modele-rapport' },
         { libelle: 'Demandes de cours', icone: 'bi-journal-text', route: '/espace/pedagogie/demandes-cours' },
       ],
@@ -59,6 +61,20 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
       items: [{ libelle: 'Rapports', icone: 'bi-file-earmark-bar-graph', route: '/espace/rapports' }],
     },
     {
+      libelle: 'Bibliothèque',
+      items: [
+        { libelle: 'Ma bibliothèque', icone: 'bi-book', route: '/espace/modules/bibliotheque' },
+        { libelle: 'Modération', icone: 'bi-shield-check', route: '/espace/bibliotheque-admin' },
+      ],
+    },
+    {
+      libelle: 'Librairie',
+      items: [
+        { libelle: 'Console librairie', icone: 'bi-shop-window', route: '/espace/librairie' },
+        { libelle: 'Mes commandes', icone: 'bi-bag-check', route: '/espace/mes-commandes' },
+      ],
+    },
+    {
       libelle: 'La communauté',
       items: [{ libelle: 'Utilisateurs', icone: 'bi-people', route: '/espace/utilisateurs' }],
     },
@@ -73,6 +89,8 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
     {
       libelle: 'Mon espace',
       items: [
+        { libelle: 'Journal d\'audit', icone: 'bi-clipboard-data', route: '/espace/audit' },
+        { libelle: 'Mon contrat', icone: 'bi-file-earmark-text', route: '/espace/contrat-plateforme' },
         { libelle: 'Notifications', icone: 'bi-bell', route: '/espace/notifications' },
         { libelle: 'Mon profil', icone: 'bi-person-circle', route: '/espace/profil' },
       ],
@@ -86,7 +104,9 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
         { libelle: 'Mon planning', icone: 'bi-calendar3', route: '/espace/modules/planning' },
         { libelle: 'Cahier de texte', icone: 'bi-journal-text', route: '/espace/modules/cahier-de-texte' },
         { libelle: 'Rapports mensuels', icone: 'bi-file-earmark-bar-graph', route: '/espace/modules/rapports-mensuels' },
+        { libelle: 'Objectifs pédagogiques', icone: 'bi-bullseye', route: '/espace/modules/objectifs' },
         { libelle: 'Mes bulletins de paie', icone: 'bi-cash-stack', route: '/espace/modules/mes-bulletins' },
+        { libelle: 'Bibliothèque', icone: 'bi-book', route: '/espace/modules/bibliotheque' },
       ],
     },
     {
@@ -105,6 +125,8 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
         { libelle: 'Cahier de texte', icone: 'bi-journal-text', route: '/espace/modules/cahier-de-texte' },
         { libelle: 'Mes contrats', icone: 'bi-file-earmark-text', route: '/espace/modules/mes-contrats' },
         { libelle: 'Mes factures', icone: 'bi-receipt', route: '/espace/modules/mes-factures' },
+        { libelle: 'Bibliothèque', icone: 'bi-book', route: '/espace/modules/bibliotheque' },
+        { libelle: 'Mes commandes', icone: 'bi-bag-check', route: '/espace/mes-commandes' },
       ],
     },
     {
@@ -122,6 +144,7 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
         { libelle: 'Mes cours', icone: 'bi-journal-bookmark', route: '/espace/modules/mes-cours' },
         { libelle: 'Mon planning', icone: 'bi-calendar3', route: '/espace/modules/planning' },
         { libelle: 'Cahier de texte', icone: 'bi-journal-text', route: '/espace/modules/cahier-de-texte' },
+        { libelle: 'Bibliothèque', icone: 'bi-book', route: '/espace/modules/bibliotheque' },
       ],
     },
     {
@@ -136,7 +159,8 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
     {
       items: [
         { libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
-        { libelle: 'Boutique', icone: 'bi-bag', route: '/espace/modules/boutique' },
+        { libelle: 'Console librairie', icone: 'bi-shop-window', route: '/espace/librairie' },
+        { libelle: 'Mes commandes', icone: 'bi-bag-check', route: '/espace/mes-commandes' },
       ],
     },
     {
@@ -150,11 +174,11 @@ export const RUBRIQUES_PAR_ROLE: Record<RoleEspace, RubriqueEspace[]> = {
 };
 
 export const ROADMAP_PAR_ROLE: Record<RoleEspace, string[]> = {
-  admin_cabinet: ['Pédagogie', 'Bibliothèque', 'Boutique', 'Témoignages'],
-  enseignant: ['Objectifs', 'Bibliothèque'],
-  parent: ['Mes enfants', 'Paiements', 'Bibliothèque'],
-  eleve: ['Évaluations', 'Documents', 'Bibliothèque'],
-  gestionnaire_librairie: ['Catégories', 'Produits', 'Commandes'],
+  admin_cabinet: ['Pédagogie', 'Témoignages'],
+  enseignant: [],
+  parent: ['Mes enfants', 'Paiements'],
+  eleve: ['Évaluations', 'Documents'],
+  gestionnaire_librairie: ['Catégories avancées', 'Statistiques'],
 };
 
 export const ONGLETS_MOBILE_PAR_ROLE: Record<RoleEspace, OngletMobile[]> = {
@@ -191,7 +215,7 @@ export const ONGLETS_MOBILE_PAR_ROLE: Record<RoleEspace, OngletMobile[]> = {
   ],
   gestionnaire_librairie: [
     { id: 'accueil', libelle: 'Accueil', icone: 'bi-house-door', route: '/espace' },
-    { id: 'boutique', libelle: 'Boutique', icone: 'bi-bag', route: '/espace/modules/boutique' },
+    { id: 'librairie', libelle: 'Librairie', icone: 'bi-shop-window', route: '/espace/librairie' },
     { id: 'notifs', libelle: 'Messages', icone: 'bi-bell', route: '/espace/notifications' },
     { id: 'plus', libelle: 'Plus', icone: 'bi-grid-3x3-gap' },
   ],
@@ -227,7 +251,12 @@ export const MODULES_DESCRIPTION: Record<string, ModuleDescription> = {
   boutique: {
     titre: 'Boutique en ligne',
     icone: 'bi-bag',
-    phrase: 'Catégories, produits, commandes et dashboard boutique.',
+    phrase: 'Catalogue public : produits, panier et commandes.',
+  },
+  librairie: {
+    titre: 'Console librairie',
+    icone: 'bi-shop-window',
+    phrase: 'Dashboard, produits, commandes et délégation admin → librairie.',
   },
 };
 
@@ -273,5 +302,7 @@ export function titreDeRoute(chemin: string): string {
   if (racine === '/espace/faq') return 'FAQ';
   if (racine === '/espace/notifications') return 'Notifications';
   if (racine === '/espace/profil') return 'Mon profil';
+  if (racine === '/espace/librairie') return 'Console librairie';
+  if (racine === '/espace/mes-commandes') return 'Mes commandes';
   return 'Espace cabinet';
 }

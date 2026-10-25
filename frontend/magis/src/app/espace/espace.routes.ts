@@ -54,6 +54,12 @@ export const ESPACE_ROUTES: Routes = [
         loadComponent: () => import('./pages/contrats.component').then((m) => m.ContratsComponent),
       },
       {
+        // M3 — scolarité : fiches parents/élèves + activation du compte élève.
+        path: 'pedagogie/scolarite',
+        canActivate: [roleAdminGuard],
+        loadComponent: () => import('./pages/scolarite.component').then((m) => m.ScolariteComponent),
+      },
+      {
         // Fiche d'un contrat ouverte depuis une notification admin : sans ce
         // segment `:id`, `/espace/pedagogie/contrats/12` ne matchait aucun
         // enfant et le `**` racine renvoyait sur le site public.
@@ -156,6 +162,14 @@ export const ESPACE_ROUTES: Routes = [
         loadComponent: () => import('./pages/modele-rapport.component').then((m) => m.ModeleRapportComponent),
       },
       {
+        // T7A.6 — objectifs pédagogiques (admin) : suivi du cabinet,
+        // corrections (moyennes obtenues, commentaire) et suppressions.
+        // La création appartient à l'enseignant.
+        path: 'pedagogie/objectifs',
+        canActivate: [roleAdminGuard],
+        loadComponent: () => import('./pages/objectifs.component').then((m) => m.ObjectifsComponent),
+      },
+      {
         // T7A.5 — cahier de texte partagé enseignant (écrit) / parent / élève
         // (lecture). Même trio de rôles que le planning : l'enseignant saisit,
         // la famille consulte et exporte en PDF.
@@ -179,10 +193,42 @@ export const ESPACE_ROUTES: Routes = [
         loadComponent: () => import('./pages/rapports-enseignant.component').then((m) => m.RapportsEnseignantComponent),
       },
       {
+        // T7A.6 — objectifs pédagogiques de l'enseignant (D-050) : saisie du
+        // triplet élève × période, ventilé par matière, sur période ouverte.
+        path: 'modules/objectifs',
+        canActivate: [roleGuard('enseignant')],
+        loadComponent: () => import('./pages/objectifs.component').then((m) => m.ObjectifsComponent),
+      },
+      {
         // T7A.4 — planning partagé enseignant / parent / élève.
         path: 'modules/planning',
         canActivate: [rolePedagogieGuard],
         loadComponent: () => import('./pages/planning.component').then((m) => m.PlanningComponent),
+      },
+      {
+        // Bibliothèque — espace membre : dashboard, mes documents, favoris,
+        // dépôt et consultation. Tous les rôles du cabinet y ont accès
+        // (`bibliotheque.view` est porté par enseignant, parent, élève et
+        // admin_cabinet dans le PermissionSeeder).
+        path: 'modules/bibliotheque',
+        loadComponent: () => import('./pages/bibliotheque.component').then((m) => m.BibliothequeComponent),
+      },
+      {
+        // Bibliothèque — modération (admin du cabinet).
+        path: 'bibliotheque-admin',
+        canActivate: [roleAdminGuard],
+        loadComponent: () => import('./pages/bibliotheque-admin.component').then((m) => m.BibliothequeAdminComponent),
+      },
+      {
+        // Mes commandes boutique (membre connecté).
+        path: 'mes-commandes',
+        loadComponent: () => import('./pages/mes-commandes.component').then((m) => m.MesCommandesComponent),
+      },
+      {
+        // Console librairie (admin_cabinet selon délégation | gestionnaire_librairie).
+        path: 'librairie',
+        canActivate: [roleGuard('admin_cabinet', 'gestionnaire_librairie')],
+        loadComponent: () => import('./pages/librairie.component').then((m) => m.LibrairieConsoleComponent),
       },
 
       // ---------------------------------------------------------------------
@@ -220,6 +266,19 @@ export const ESPACE_ROUTES: Routes = [
         path: 'utilisateurs',
         canActivate: [roleAdminGuard],
         loadComponent: () => import('./pages/utilisateurs.component').then((m) => m.UtilisateursComponent),
+      },
+      {
+        // M13 — journal d'audit du cabinet (lecture seule, admin).
+        path: 'audit',
+        canActivate: [roleAdminGuard],
+        loadComponent: () => import('./pages/audit.component').then((m) => m.AuditComponent),
+      },
+      {
+        // P8 — contrat commercial avec la plateforme + factures de service.
+        path: 'contrat-plateforme',
+        canActivate: [roleAdminGuard],
+        loadComponent: () =>
+          import('./pages/contrat-plateforme.component').then((m) => m.ContratPlateformeComponent),
       },
       { path: 'notifications', loadComponent: () => import('./pages/notifications.component').then((m) => m.NotificationsComponent) },
       { path: 'profil', loadComponent: () => import('./pages/profil.component').then((m) => m.ProfilComponent) },

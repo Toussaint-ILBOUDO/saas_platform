@@ -4,6 +4,7 @@ namespace App\Modules\Finance\Services;
 
 use App\Models\BulletinPaie;
 use App\Models\User;
+use App\Modules\Audit\Services\AuditService;
 use App\Modules\Systeme\Services\NotificationDispatcher;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -44,6 +45,12 @@ class BulletinPaieValidationService
         ]);
 
         $this->notifier->bulletinValide($bulletin);
+
+        AuditService::enregistrer(
+            'bulletin.valide',
+            'Bulletin ' . $bulletin->numero . ' validé',
+            $bulletin
+        );
 
         return $bulletin->fresh();
     }
@@ -172,6 +179,16 @@ class BulletinPaieValidationService
         ]);
 
         $this->notifier->bulletinVerse($bulletin);
+
+        AuditService::enregistrer(
+            'bulletin.verse',
+            'Bulletin ' . $bulletin->numero . ' versé',
+            $bulletin,
+            [
+                'montant' => $bulletin->montant_net ?? null,
+                'mode_paiement' => $data['mode_paiement'] ?? null,
+            ]
+        );
 
         return $bulletin->fresh();
     }

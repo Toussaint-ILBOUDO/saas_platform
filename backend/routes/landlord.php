@@ -2,10 +2,12 @@
 
 use App\Modules\Landlord\Controllers\AuthenticatedSessionController;
 use App\Modules\Landlord\Controllers\CabinetController;
+use App\Modules\Landlord\Controllers\CataloguePlateformeController;
+use App\Modules\Landlord\Controllers\ContratCabinetController;
 use App\Modules\Landlord\Controllers\DashboardController;
+use App\Modules\Landlord\Controllers\FacturationCabinetController;
 use App\Modules\Landlord\Controllers\JournalController;
 use App\Modules\Landlord\Controllers\ParametresController;
-use App\Modules\Landlord\Controllers\SectionPlaceholderController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,7 +50,33 @@ Route::prefix('admin')->name('landlord.')->middleware('central.domain')->group(f
         Route::get('parametres', [ParametresController::class, 'index'])->name('parametres.index');
         Route::put('parametres', [ParametresController::class, 'update'])->name('parametres.update');
 
-        // Sections (placeholders — implémentation réelle en P7)
-        Route::get('facturation', SectionPlaceholderController::class)->defaults('section', 'facturation')->name('facturation.index');
+        // Contrats commerciaux de cabinets (P8)
+        Route::get('cabinets/{cabinet}/contrats', [ContratCabinetController::class, 'index'])->name('contrats.index');
+        Route::post('cabinets/{cabinet}/contrats', [ContratCabinetController::class, 'store'])->name('contrats.store');
+        Route::get('cabinets/{cabinet}/contrats/{contrat}', [ContratCabinetController::class, 'show'])->name('contrats.show');
+        Route::put('cabinets/{cabinet}/contrats/{contrat}', [ContratCabinetController::class, 'update'])->name('contrats.update');
+        Route::post('cabinets/{cabinet}/contrats/{contrat}/valider', [ContratCabinetController::class, 'valider'])->name('contrats.valider');
+        Route::get('cabinets/{cabinet}/contrats/{contrat}/pdf', [ContratCabinetController::class, 'pdf'])->name('contrats.pdf');
+        Route::delete('cabinets/{cabinet}/contrats/{contrat}', [ContratCabinetController::class, 'destroy'])->name('contrats.destroy');
+
+        // Facturation des cabinets (P8) : brouillon → émission → paiement
+        Route::get('facturation', [FacturationCabinetController::class, 'index'])->name('facturation.index');
+        Route::get('facturation/preparer', [FacturationCabinetController::class, 'preparer'])->name('facturation.preparer');
+        Route::post('facturation', [FacturationCabinetController::class, 'creerBrouillon'])->name('facturation.creer');
+        Route::get('facturation/{facture}', [FacturationCabinetController::class, 'show'])->name('facturation.show');
+        Route::post('facturation/{facture}/emettre', [FacturationCabinetController::class, 'emettre'])->name('facturation.emettre');
+        Route::post('facturation/{facture}/annuler', [FacturationCabinetController::class, 'annuler'])->name('facturation.annuler');
+        Route::post('facturation/{facture}/lignes', [FacturationCabinetController::class, 'ajouterLigne'])->name('facturation.lignes.ajouter');
+        Route::delete('facturation/{facture}/lignes/{ligneId}', [FacturationCabinetController::class, 'supprimerLigne'])->name('facturation.lignes.supprimer');
+        Route::post('facturation/{facture}/paiements', [FacturationCabinetController::class, 'ajouterPaiement'])->name('facturation.paiements.ajouter');
+        Route::delete('facturation/{facture}', [FacturationCabinetController::class, 'supprimerBrouillon'])->name('facturation.brouillon.supprimer');
+        Route::get('facturation/{facture}/pdf', [FacturationCabinetController::class, 'pdf'])->name('facturation.pdf');
+
+        // Catalogue éditable de la plateforme : services facturables + lignes types (P8)
+        Route::get('catalogue', [CataloguePlateformeController::class, 'index'])->name('catalogue.index');
+        Route::put('catalogue/services/{service}', [CataloguePlateformeController::class, 'majService'])->name('catalogue.services.update');
+        Route::post('catalogue/lignes-types', [CataloguePlateformeController::class, 'creerLigneType'])->name('catalogue.lignes-types.creer');
+        Route::put('catalogue/lignes-types/{ligne}', [CataloguePlateformeController::class, 'majLigneType'])->name('catalogue.lignes-types.update');
+        Route::delete('catalogue/lignes-types/{ligne}', [CataloguePlateformeController::class, 'supprimerLigneType'])->name('catalogue.lignes-types.desactiver');
     });
 });

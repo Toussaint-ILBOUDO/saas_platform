@@ -19,8 +19,12 @@ class StoreProduitRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'prix' => ['required', 'numeric', 'min:0'],
             'frais_livraison' => ['nullable', 'numeric', 'min:0'],
+            'reference' => ['nullable', 'string', 'max:60', 'unique:produits,reference'],
+            'prix_promo' => ['nullable', 'numeric', 'min:0'],
+            'stock' => ['nullable', 'integer', 'min:0'],
             'image' => ['nullable', 'image', 'max:5120'],
             'is_active' => ['nullable', 'boolean'],
+            'est_archive' => ['nullable', 'boolean'],
         ];
     }
 

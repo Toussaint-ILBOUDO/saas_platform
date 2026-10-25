@@ -105,6 +105,17 @@
                             </form>
                         @endif
 
+                        {{-- P8 : contrat commercial & facturation --}}
+                        <a class="btn btn-outline-primary btn-sm" href="{{ route('landlord.contrats.index', $cabinet) }}">
+                            <i class="bi bi-file-earmark-text me-1"></i>Contrat
+                        </a>
+                        <a class="btn btn-outline-primary btn-sm" href="{{ route('landlord.facturation.preparer', ['cabinet' => $cabinet->id]) }}">
+                            <i class="bi bi-receipt me-1"></i>Nouvelle facture
+                        </a>
+                        <a class="btn btn-outline-secondary btn-sm" href="{{ route('landlord.facturation.index', ['cabinet' => $cabinet->id]) }}">
+                            <i class="bi bi-list-ul me-1"></i>Son historique
+                        </a>
+
                         @if ($cabinet->status === 'actif' && $cabinet->admin_utilisateur_id)
                             <form method="POST" action="{{ route('landlord.cabinets.impersoner', $cabinet) }}">
                                 @csrf

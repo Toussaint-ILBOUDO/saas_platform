@@ -24,6 +24,10 @@ class EnseignantResource extends JsonResource
             'telephone_whatsapp' => $this->telephone_whatsapp,
             'telephone_appel' => $this->telephone_appel,
             'statut' => (bool) $this->statut,
+            // Photo servie par la route admin (accessible même pour un compte
+            // suspendu) — cache-buster sur updated_at (M1).
+            'photo_url' => "/api/admin/enseignants/{$this->id}/photo"
+                . '?v=' . ($this->updated_at?->timestamp ?? 0),
             'profil' => $profil ? [
                 'id' => $profil->id,
                 'numero_orange_money' => $profil->numero_orange_money,

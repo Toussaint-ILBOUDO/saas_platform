@@ -8,6 +8,7 @@ import { messageErreurApi } from '../../services/messages';
 import {
   BulletinContestation,
   BulletinPaie,
+  BulletinPaieLigne,
   MetaPage,
   MOTIFS_CONTESTATION,
   PeriodeComptable,
@@ -49,6 +50,22 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
       .lignes-mini { font-size: 0.82rem; }
       .lignes-mini tr:last-child td { border-bottom: none; }
       .contestation { background: var(--mpc-rouge-clair); color: #5c1818; }
+      .bulletin-identite { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-bottom: 0.9rem; }
+      .bulletin-identite .ident-item { font-size: 0.85rem; }
+      .bulletin-identite .ident-label { display: block; font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .bulletin-identite .ident-valeur { font-weight: 600; color: #1f2937; }
+      .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.7rem; margin-bottom: 1.1rem; }
+      .metric { background: #f8fafc; border: 1px solid var(--mpc-bordure); border-radius: 0.9rem; padding: 0.7rem 0.9rem; }
+      .metric-label { font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .metric-value { font-size: 1.1rem; font-weight: 800; color: var(--mpc-bleu); font-variant-numeric: tabular-nums; }
+      .metric-value.accent { color: #0a5d35; }
+      .section-titre { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mpc-texte-doux); margin: 1.1rem 0 0.5rem; }
+      .table-clair tfoot th { background: #f1f5f9; font-size: 0.82rem; }
+      .recap-ligne { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; padding: 0.12rem 0; min-width: 240px; }
+      .recap-total { border-top: 1px solid var(--mpc-bordure); margin-top: 0.25rem; padding-top: 0.35rem; font-weight: 800; font-size: 1rem; color: #0a5d35; }
+      .badge-direction { font-size: 0.66rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 99px; }
+      .badge-credit { background: var(--mpc-vert-pale); color: #0a5d35; }
+      .badge-debit { background: var(--mpc-rouge-clair); color: #7a1d1d; }
     `,
   ],
   template: `
@@ -143,43 +160,104 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
               <button type="button" class="btn-close" (click)="fermerDetail()"></button>
             </div>
             <div class="modal-body">
-              <p class="text-doux-tiny">{{ detail()!.periode?.label }}</p>
+              <div class="bulletin-identite">
+                <div class="ident-item">
+                  <span class="ident-label">Enseignant</span>
+                  <span class="ident-valeur">{{ detail()!.enseignant?.nom ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Période</span>
+                  <span class="ident-valeur">{{ detail()!.periode?.label ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Émis le</span>
+                  <span class="ident-valeur">{{ dateCourte(detail()!.created_at) }}</span>
+                </div>
+              </div>
 
-              <table class="table table-sm lignes-mini">
-                <thead><tr><th>Élève</th><th>Matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr></thead>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-label">Heures validées</div>
+                  <div class="metric-value">{{ chiffre(totalHeures(detail()!.lignes)) }} h</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Montant brut</div>
+                  <div class="metric-value">{{ monnaie(detail()!.montant_brut) }}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Frais de suivi</div>
+                  <div class="metric-value">−{{ monnaie(detail()!.frais_suivi) }}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Net à percevoir</div>
+                  <div class="metric-value accent">{{ monnaie(detail()!.montant_net_final ?? detail()!.montant_net) }}</div>
+                </div>
+              </div>
+
+              <div class="section-titre">Détail de mes interventions</div>
+              <table class="table table-sm lignes-mini table-clair">
+                <thead>
+                  <tr><th>Élève</th><th>Matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr>
+                </thead>
                 <tbody>
                   @for (l of detail()!.lignes; track l.id) {
                     <tr>
-                      <td>{{ l.eleve }}</td>
-                      <td>{{ l.matiere }}</td>
+                      <td>{{ l.eleve ?? '—' }}</td>
+                      <td>{{ l.matiere ?? '—' }}</td>
                       <td class="text-end">{{ chiffre(l.nombre_heures) }} h</td>
                       <td class="text-end">{{ monnaie(l.taux_horaire) }}</td>
                       <td class="text-end">{{ monnaie(l.montant) }}</td>
                     </tr>
+                  } @empty {
+                    <tr><td colspan="5" class="text-center text-doux-tiny py-3">Aucune ligne sur ce bulletin.</td></tr>
                   }
                 </tbody>
+                @if (detail()!.lignes.length > 0) {
+                  <tfoot>
+                    <tr>
+                      <th colspan="2">Total</th>
+                      <th class="text-end">{{ chiffre(totalHeures(detail()!.lignes)) }} h</th>
+                      <th></th>
+                      <th class="text-end montant">{{ monnaie(detail()!.montant_brut) }}</th>
+                    </tr>
+                  </tfoot>
+                }
               </table>
 
               @if (detail()!.ajustements.length > 0) {
-                <table class="table table-sm lignes-mini mt-2">
-                  <thead><tr><th>Ajustement</th><th class="text-end">Montant</th></tr></thead>
+                <div class="section-titre">Compléments &amp; déductions</div>
+                <table class="table table-sm lignes-mini table-clair">
+                  <thead><tr><th>Libellé</th><th>Nature</th><th class="text-end">Montant</th></tr></thead>
                   <tbody>
                     @for (a of detail()!.ajustements; track a.id) {
                       <tr>
                         <td>{{ a.libelle }}</td>
-                        <td class="text-end">{{ a.type === 'retenue' ? '−' : '+' }}{{ monnaie(a.montant) }}</td>
+                        <td>
+                          <span class="badge-direction" [class.badge-credit]="a.type === 'prime'" [class.badge-debit]="a.type === 'retenue'">
+                            {{ a.type === 'prime' ? 'Crédit' : 'Débit' }}
+                          </span>
+                        </td>
+                        <td class="text-end montant">{{ a.type === 'retenue' ? '−' : '+' }}{{ monnaie(a.montant) }}</td>
                       </tr>
                     }
                   </tbody>
                 </table>
               }
 
-              <div class="d-flex flex-column align-items-end mt-3 gap-1">
-                <div class="text-doux-tiny">Brut — <b class="montant">{{ monnaie(detail()!.montant_brut) }}</b></div>
-                @if (detail()!.frais_suivi > 0) {
-                  <div class="text-doux-tiny">Frais de suivi — <b class="montant">−{{ monnaie(detail()!.frais_suivi) }}</b></div>
-                }
-                <div class="fw-bold montant fs-5">Net {{ monnaie(detail()!.montant_net_final ?? detail()!.montant_net) }}</div>
+              <div class="d-flex justify-content-end mt-3">
+                <div>
+                  <div class="recap-ligne"><span>Montant brut</span><b class="montant">{{ monnaie(detail()!.montant_brut) }}</b></div>
+                  @if (detail()!.frais_suivi > 0) {
+                    <div class="recap-ligne"><span>Frais de suivi</span><b class="montant">−{{ monnaie(detail()!.frais_suivi) }}</b></div>
+                  }
+                  @if (detail()!.total_primes) {
+                    <div class="recap-ligne"><span>Primes (crédits)</span><b class="montant">+{{ monnaie(detail()!.total_primes) }}</b></div>
+                  }
+                  @if (detail()!.total_retenues) {
+                    <div class="recap-ligne"><span>Retenues (débits)</span><b class="montant">−{{ monnaie(detail()!.total_retenues) }}</b></div>
+                  }
+                  <div class="recap-ligne recap-total"><span>Net à percevoir</span><b class="montant">{{ monnaie(detail()!.montant_net_final ?? detail()!.montant_net) }}</b></div>
+                </div>
               </div>
 
               @if (detail()!.commentaire_enseignant) {
@@ -342,8 +420,16 @@ export class MesBulletinsComponent implements OnInit {
     void this.charger();
   }
 
-  protected ouvrirDetail(b: BulletinPaie): void {
-    this.detail.set(b);
+  protected async ouvrirDetail(b: BulletinPaie): Promise<void> {
+    // La liste ne transporte ni les lignes ni les ajustements : on affiche
+    // l'en-tête tout de suite puis on recharge le détail complet.
+    this.detail.set({ ...b, lignes: b.lignes ?? [], ajustements: b.ajustements ?? [] });
+    this.alerte.set('');
+    try {
+      this.detail.set(await firstValueFrom(this.api.getMesBulletin(b.id)));
+    } catch (e) {
+      this.alerte.set(messageErreurApi(e));
+    }
   }
 
   protected fermerDetail(): void {
@@ -442,6 +528,16 @@ export class MesBulletinsComponent implements OnInit {
       autre: 'Autre',
     };
     return libelles[m] ?? m;
+  }
+
+  protected totalHeures(lignes: BulletinPaieLigne[]): number {
+    return (lignes ?? []).reduce((s, l) => s + Number(l.nombre_heures || 0), 0);
+  }
+
+  protected dateCourte(v: string | null | undefined): string {
+    if (!v) return '—';
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR');
   }
 
   protected chiffre(v: number | null | undefined): string {

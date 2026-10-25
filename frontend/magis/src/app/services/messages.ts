@@ -41,7 +41,11 @@ export function messageErreurApi(erreur: unknown): string {
   }
 
   if (statut === null || statut === 0) {
-    return 'Serveur injoignable. Vérifiez que le backend est démarré.';
+    // PWA : hors-ligne, les écritures sont refusées — message explicite.
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return 'Aucune connexion internet : reconnectez-vous pour effectuer cette action.';
+    }
+    return 'Serveur injoignable. Réessayez dans un instant.';
   }
   if (statut === 502 || statut === 503 || statut === 504) {
     return 'Serveur temporairement indisponible. Réessayez dans un instant.';

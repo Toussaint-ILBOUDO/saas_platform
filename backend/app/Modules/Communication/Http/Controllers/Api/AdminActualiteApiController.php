@@ -8,8 +8,10 @@ use App\Models\Actualite;
 use App\Modules\Communication\Http\Requests\StoreActualiteRequest;
 use App\Modules\Communication\Http\Requests\UpdateActualiteRequest;
 use App\Modules\Communication\Services\ActualiteService;
+use App\Support\SertMediaPublic;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Backoffice actualités — backoffice MVP T3.5. Réutilise le service et les
@@ -18,6 +20,8 @@ use Illuminate\Http\Request;
  */
 class AdminActualiteApiController extends Controller
 {
+    use SertMediaPublic;
+
     public function __construct(protected ActualiteService $service)
     {
     }
@@ -98,5 +102,16 @@ class AdminActualiteApiController extends Controller
         $this->service->delete($actualite);
 
         return response()->json(['message' => 'Actualité supprimée.']);
+    }
+
+    /**
+     * Image de l'actualité (route contrôlée : le disque public tenant
+     * n'est pas exposé via `/storage`).
+     */
+    public function image(Actualite $actualite): Response
+    {
+        $this->authorize('view', $actualite);
+
+        return $this->repondreMedia($actualite->getFirstMedia('image_principale'));
     }
 }

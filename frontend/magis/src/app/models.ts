@@ -97,25 +97,217 @@ export interface DocumentBibliotheque {
   slug: string;
   titre: string;
   resume?: string | null;
-  types: { url: string; nom: string; taille: number }[];
+  description?: string | null;
+  types: { url: string | null; nom: string; taille: number; mime?: string }[];
+  fichier?: { nom: string; taille: number; mime: string; extension?: string } | null;
   matiere?: string | null;
   classe?: string | null;
+  type_document?: string | null;
+  periode?: string | null;
+  tags?: string[];
   nb_vues?: number;
   nb_telechargements?: number;
+  nb_aimes?: number;
+  nb_n_aimes?: number;
+  nombre_favoris?: number;
   note_moyenne?: number;
+  nb_notes?: number;
+  ma_reaction?: 'aime' | 'n_aime_pas' | null;
+  is_favori?: boolean;
   created_at?: string | null;
 }
+
+/** Référentiels de la bibliothèque publique (filtres). */
+export interface ReferentielsBibliothequePublique {
+  types: { id: number; nom: string }[];
+  matieres: { id: number; nom: string }[];
+  classes: { id: number; nom: string }[];
+}
+
+export type TriBibliotheque = 'recent' | 'populaire' | 'note' | 'apprecies' | 'favoris';
 
 export interface Produit {
   id: number;
   slug: string;
   nom: string;
   description?: string | null;
+  reference?: string | null;
   prix?: number;
+  prix_promo?: number | null;
+  prix_vente?: number;
+  en_promotion?: boolean;
+  disponible?: boolean;
+  stock?: number | null;
   frais_livraison?: number;
   categorie?: string | null;
+  categorie_id?: number | null;
   image_url?: string | null;
   is_active?: boolean;
+  est_archive?: boolean;
+  similaires?: Produit[];
+}
+
+/** Ligne de panier persistée (localStorage). */
+export interface LignePanier {
+  produit_id: number;
+  nom: string;
+  slug?: string;
+  prix_vente: number;
+  image_url?: string | null;
+  quantite: number;
+}
+
+/** Réponse du devis serveur du panier. */
+export interface DevisPanier {
+  lignes: {
+    produit_id: number;
+    nom: string;
+    slug: string;
+    reference?: string | null;
+    image_url?: string | null;
+    quantite: number;
+    prix_unitaire: number;
+    prix_normal?: number;
+    en_promotion?: boolean;
+    sous_total: number;
+    stock_disponible?: number | null;
+    disponible: boolean;
+  }[];
+  montant_total: number;
+  frais_livraison: number;
+  disponible: boolean;
+}
+
+export type StatutCommande =
+  | 'en_attente'
+  | 'confirmee'
+  | 'en_preparation'
+  | 'livree'
+  | 'annulee';
+
+export interface CommandeSynthese {
+  reference: string;
+  date?: string | null;
+  statut: StatutCommande;
+  statut_libelle?: string;
+  is_livraison: boolean;
+  montant_total: number;
+  frais_livraison: number;
+  total_articles: number;
+  annulable?: boolean;
+  annulation_demandee?: boolean;
+  nom_client?: string;
+  prenom_client?: string | null;
+}
+
+export interface CommandeDetail extends CommandeSynthese {
+  telephone_client?: string;
+  whatsapp?: string | null;
+  email_client?: string | null;
+  adresse_livraison?: string | null;
+  quartier?: string | null;
+  point_de_repere?: string | null;
+  lien_geolocalisation?: string | null;
+  notes_client?: string | null;
+  note_interne?: string | null;
+  annulation_motif?: string | null;
+  lignes: {
+    produit?: string | null;
+    slug?: string | null;
+    reference?: string | null;
+    image_url?: string | null;
+    quantite: number;
+    prix_unitaire: number;
+    sous_total: number;
+  }[];
+  etapes?: { statut: string; libelle: string; date?: string | null; fait: boolean }[];
+  historique?: { ancien_statut?: string | null; nouveau_statut?: string; date?: string | null }[];
+  pdf?: string;
+}
+
+/** Chronologie de suivi public d'une commande. */
+export interface SuiviCommande {
+  reference: string;
+  date?: string | null;
+  statut: StatutCommande;
+  statut_libelle: string;
+  is_livraison: boolean;
+  quartier?: string | null;
+  nom_client: string;
+  prenom_client?: string | null;
+  montant_total: number;
+  frais_livraison: number;
+  etapes: { statut: string; libelle: string; date?: string | null; fait: boolean }[];
+  derniere_maj?: string | null;
+  annulation_demandee: boolean;
+  annulable: boolean;
+  lignes: { nom?: string | null; quantite: number; prix_unitaire: number; sous_total: number }[];
+}
+
+/** Formulaire de commande (sans compte possible). */
+export interface CommandeFormulaire {
+  nom_client: string;
+  prenom_client?: string;
+  telephone_client: string;
+  whatsapp?: string;
+  adresse_livraison?: string;
+  quartier?: string;
+  point_de_repere?: string;
+  lien_geolocalisation?: string;
+  is_livraison: boolean;
+  mode_paiement?: string;
+  notes?: string;
+  cle_idempotence?: string;
+  panier: { produit_id: number; quantite: number }[];
+}
+
+/** Réponse à la validation d'une commande. */
+export interface CommandeCreee {
+  message: string;
+  commande: {
+    reference: string;
+    date?: string | null;
+    statut: StatutCommande;
+    montant_total: number;
+    frais_livraison: number;
+    is_livraison: boolean;
+    lien_suivi: string;
+    pdf: string;
+  };
+}
+
+/** Tableau de bord de la console librairie. */
+export interface DashboardLibrairie {
+  produits: number;
+  produits_publies: number;
+  produits_archives: number;
+  produits_stock_faible: number;
+  categories: number;
+  commandes: number;
+  commandes_du_jour: number;
+  commandes_par_statut: { statut: string; total: number }[];
+  ca_accessible: boolean;
+  chiffre_affaires: number | null;
+  frais_livraison_encaisses: number | null;
+  dernieres_commandes: {
+    reference: string;
+    nom_client: string;
+    statut: string;
+    montant_total: number;
+    is_livraison: boolean;
+    total_articles: number;
+    date?: string | null;
+  }[];
+  top_produits: { id: number; nom: string; image_url?: string | null }[];
+}
+
+/** Réglages / délégation de la librairie. */
+export interface ParametresLibrairie {
+  sigle: string | null;
+  frais_livraison: number;
+  admin_peut_voir_dashboard: boolean;
+  admin_peut_voir_ca: boolean;
+  admin_peut_voir_commandes: boolean;
 }
 
 export interface Temoignage {
@@ -223,6 +415,8 @@ export interface SessionUtilisateur {
   nom: string;
   prenom: string;
   email: string;
+  telephone_whatsapp?: string | null;
+  telephone_appel?: string | null;
   statut?: boolean;
   roles: string[];
   active_role?: string | null;
@@ -232,6 +426,63 @@ export interface SessionUtilisateur {
    * identifiant qui doit être utilisé pour les URL `/api/mes-enfants/{eleve}/…`.
    */
   eleve?: { id: number } | null;
+}
+
+/** Bloc de profil enseignant (`GET /auth/moi/profils`, rôle actif = enseignant). */
+export interface ProfilEnseignant {
+  numero_orange_money?: string | null;
+  diplome_max?: string | null;
+  lieu_de_service?: string | null;
+  domicile?: string | null;
+  matieres: number[];
+  matieres_libelles: string[];
+}
+
+/** Bloc de profil parent (`GET /auth/moi/profils`, rôle actif = parent). */
+export interface ProfilParent {
+  adresse_domicile?: string | null;
+  profession?: string | null;
+  nombre_enfants: number;
+}
+
+/** Enfant rattaché au compte parent (synthèse de la fiche élève). */
+export interface EnfantSynthese {
+  id: number;
+  nom_complet: string;
+  classe?: string | null;
+  ecole?: string | null;
+}
+
+/** Fiche élève éditable (`GET /auth/moi/profils` rôle élève, `PUT /auth/eleves/{id}`). */
+export interface FicheEleve {
+  id: number;
+  classe_id: number | null;
+  classe?: string | null;
+  ecole?: string | null;
+  date_naissance?: string | null;
+  lieu_naissance?: string | null;
+  parent_charge?: string | null;
+  etablissement_origine?: string | null;
+  profession_pere?: string | null;
+  profession_mere?: string | null;
+  regime_etude?: string | null;
+  loisirs_sport?: string | null;
+  religion_enfant?: string | null;
+  maladies_allergies?: string | null;
+  interdits_familiaux?: string | null;
+  boisson_preferee?: string | null;
+  nourriture_preferee?: string | null;
+  autres_precautions?: string | null;
+  autres_observations?: string | null;
+}
+
+/** Réponse de `GET /auth/moi/profils` : le bloc correspond au rôle actif. */
+export interface ReponseProfils {
+  role: string | null;
+  enseignant?: ProfilEnseignant;
+  parent?: ProfilParent;
+  enfants?: EnfantSynthese[];
+  eleve?: FicheEleve | null;
 }
 
 export interface UtilisateurAdmin {
@@ -310,8 +561,6 @@ export interface NotificationEspace {
   icone?: string | null;
   couleur?: string | null;
   action_label?: string | null;
-  /** URL absolue Blade — backoffice historique, hors espace Angular. */
-  url?: string | null;
   /** Chemin interne de l'espace : c'est celui que l'écran doit router. */
   route_angular?: string | null;
   lu: boolean;
@@ -526,9 +775,22 @@ export interface EnseignantReferentiel {
   telephone_whatsapp: string | null;
   telephone_appel: string | null;
   statut: boolean;
+  photo_url?: string | null;
   profil: ProfilEnseignantReferentiel | null;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+/**
+ * Rapport d'import CSV d'enseignants (M1) : import partiel possible, chaque
+ * ligne ignorée ou avertie est référencée par son numéro de ligne fichier
+ * (l'en-tête est la ligne 1).
+ */
+export interface RapportImportEnseignant {
+  importees: number;
+  ignorees: number;
+  erreurs: { ligne: number; message: string; nom?: string; prenom?: string }[];
+  avertissements: { ligne: number; message: string }[];
 }
 
 /**
@@ -746,6 +1008,12 @@ export interface ReponseCahierTexte {
   message?: string;
   /** Renseigné par `ApiService` à partir du statut : `true` si ligne créée. */
   cree?: boolean;
+  /**
+   * Renseigné depuis l'en-tête `X-MPC-File` (T4.5) : la saisie est en file
+   * d'attente hors-ligne, elle **n'est pas encore au serveur** — l'écran doit
+   * annoncer une mise en file, pas un enregistrement.
+   */
+  misEnFile?: boolean;
 }
 
 /**
@@ -942,6 +1210,9 @@ export interface Facture {
   parent: { id: number; nom: string | null } | null;
   type_cours: { id: number; libelle: string } | null;
   lignes: LigneFacture[];
+  ajustements: FactureAjustement[];
+  total_credits: number;
+  total_debits: number;
   actions: string[];
   created_at: string | null;
   updated_at: string | null;
@@ -962,6 +1233,19 @@ export interface LigneFacture {
 }
 
 /**
+ * Ajustement d'une facture : ligne bonus/débit ajoutée par l'administration
+ * après génération, qui s'ajoute au montant total.
+ */
+export interface FactureAjustement {
+  id: number;
+  facture_id: number;
+  type_ajustement_id: number | null;
+  type: DirectionAjustement;
+  libelle: string;
+  montant: number;
+}
+
+/**
  * Payload de génération : le contrat + la période + les frais éventuels. Le
  * volume horaire et les lignes viennent du serveur (rapports validés, D-051).
  */
@@ -973,6 +1257,11 @@ export interface FactureFormulaire {
   remise?: number | null;
   commentaire?: string;
   date_limite_paiement?: string | null;
+  /**
+   * Lignes bonus/débit saisies dans l'aperçu, emportées par la génération
+   * (mêmes champs que l'ajustement ajouté après coup sur la facture).
+   */
+  ajustements?: { type_ajustement_id: number; libelle: string; montant: number }[];
 }
 
 /** Règlement : acte administratif (jamais auto-réglé par le parent). */
@@ -1000,6 +1289,8 @@ export interface FactureApercu {
   frais_suivi: number;
   autres_frais: number;
   remise: number;
+  total_credits: number;
+  total_debits: number;
   montant_total: number;
 }
 
@@ -1085,7 +1376,7 @@ export interface BulletinPaie {
   date_reception: string | null;
   recu_par: string | null;
 
-  enseignant: { id: number; nom: string | null; email: string | null } | null;
+  enseignant: { id: number; nom: string | null; email: string | null; telephone?: string | null } | null;
   periode: { id: number; label: string; date_debut: string; date_fin: string; statut: string; est_ouverte: boolean } | null;
   lignes: BulletinPaieLigne[];
   ajustements: BulletinPaieAjustement[];
@@ -1162,4 +1453,484 @@ export interface BulletinVersement {
   date_paiement: string;
   mode_paiement: ModePaiement;
   reference_paiement?: string;
+}
+
+/* =====================================================================
+   Création directe — parent & élève (`/pedagogie/parents`, `/pedagogie/eleves`)
+   ===================================================================== */
+
+/** Ligne du référentiel parents de l'admin (ParentResource). */
+export interface ParentCabinet {
+  id: number;
+  nom: string;
+  prenom: string;
+  email: string | null;
+  telephone_whatsapp: string | null;
+  telephone_appel: string | null;
+  statut: boolean;
+  profil?: {
+    id: number;
+    profession: string | null;
+    adresse_domicile: string | null;
+    nombre_enfants: number;
+  } | null;
+  nombre_enfants?: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+/** Formulaire de création d'un parent (mot de passe exigé, min 8). */
+export interface ParentFormulaire {
+  nom: string;
+  prenom: string;
+  telephone_whatsapp: string | null;
+  telephone_appel: string | null;
+  email: string | null;
+  password: string;
+  profession: string | null;
+  adresse_domicile: string | null;
+  nombre_enfants: number | null;
+}
+
+/** Ligne du référentiel élèves de l'admin (EleveResource, wrappé sur `Eleve`). */
+export interface EleveCabinet {
+  id: number;
+  user_id: number;
+  nom: string | null;
+  prenom: string;
+  email: string | null;
+  telephone_whatsapp: string | null;
+  telephone_appel: string | null;
+  statut_compte: boolean;
+  ecole: string | null;
+  date_naissance: string | null;
+  lieu_naissance: string | null;
+  classe: { id: number; nom: string; sigle: string } | null;
+  parent: { id: number; nom: string; prenom: string; telephone_whatsapp: string | null } | null;
+  created_at?: string | null;
+}
+
+/** Formulaire de création d'un élève : parent et classe obligatoires. */
+export interface EleveFormulaire {
+  parent_id: number | null;
+  prenom: string;
+  nom: string | null;
+  classe_id: number | null;
+  date_naissance: string | null;
+  lieu_naissance: string | null;
+  ecole: string | null;
+  email: string | null;
+  telephone_whatsapp: string | null;
+  telephone_appel: string | null;
+  password: string | null;
+}
+
+/* =====================================================================
+   M3 — Scolarité : fiches admin parents & élèves (détail / édition)
+   ===================================================================== */
+
+/** Fiche scolaire complète — `EleveDetailResource.fiche`. */
+export interface FicheScolaire {
+  parent_charge: string | null;
+  etablissement_origine: string | null;
+  profession_pere: string | null;
+  profession_mere: string | null;
+  regime_etude: 'interne' | 'externe' | null;
+  loisirs_sport: string | null;
+  religion_enfant: string | null;
+  maladies_allergies: string | null;
+  interdits_familiaux: string | null;
+  boisson_preferee: string | null;
+  nourriture_preferee: string | null;
+  autres_precautions: string | null;
+  autres_observations: string | null;
+}
+
+/** Fiche complète d'un élève côté admin (GET/PUT /pedagogie/eleves/{id}). */
+export interface EleveScolarite extends EleveCabinet {
+  parent_id: number;
+  classe_id: number;
+  fiche: FicheScolaire;
+}
+
+/** Fiche détaillée d'un parent + ses enfants rattachés. */
+export interface ParentScolarite extends ParentCabinet {
+  enfants?: EleveCabinet[];
+}
+
+/** Payload d'édition admin d'un parent (identité + profil). */
+export interface ParentEdition {
+  nom: string;
+  prenom: string;
+  email: string | null;
+  telephone_whatsapp: string | null;
+  telephone_appel: string | null;
+  password?: string;
+  adresse_domicile: string | null;
+  profession: string | null;
+  nombre_enfants: number | null;
+}
+
+/**
+ * Payload d'édition admin d'un élève : rattachements + identité + fiche.
+ * La fiche voyage **à plat** (l'API ne l'attend pas imbriquée) — elle ne
+ * l'est que dans la réponse (`EleveDetailResource`).
+ */
+export interface EleveEdition {
+  parent_id: number;
+  classe_id: number;
+  nom: string | null;
+  prenom: string;
+  email: string | null;
+  telephone_whatsapp: string | null;
+  telephone_appel: string | null;
+  password?: string;
+  ecole: string | null;
+  date_naissance: string | null;
+  lieu_naissance: string | null;
+  parent_charge: string | null;
+  etablissement_origine: string | null;
+  profession_pere: string | null;
+  profession_mere: string | null;
+  regime_etude: 'interne' | 'externe' | null;
+  loisirs_sport: string | null;
+  religion_enfant: string | null;
+  maladies_allergies: string | null;
+  interdits_familiaux: string | null;
+  boisson_preferee: string | null;
+  nourriture_preferee: string | null;
+  autres_precautions: string | null;
+  autres_observations: string | null;
+}
+
+/* =====================================================================
+   Bibliothèque — espace membre & modération (Angular)
+   ===================================================================== */
+
+export type StatutDocumentBibliotheque = 'brouillon' | 'en_attente' | 'publie' | 'refuse' | 'archive';
+
+/** Lien réflexif : la note/signalisation/le signalement rattache le document. */
+export interface RefMinimal {
+  id: number;
+  nom: string;
+  prenom: string;
+}
+
+export interface CommentaireBibliotheque {
+  id: number;
+  contenu: string;
+  signale: boolean;
+  user: RefMinimal | null;
+  replies: CommentaireBibliotheque[];
+  created_at: string | null;
+}
+
+export interface SignalementBibliotheque {
+  id: number;
+  motif: string;
+  motif_libelle?: string;
+  description: string | null;
+  precisions: string | null;
+  statut: 'en_attente' | 'en_cours' | 'traite' | 'rejete';
+  statut_libelle?: string;
+  note_admin: string | null;
+  user: RefMinimal | null;
+  /** Trace de l'action de modération effectuée sur ce signalement. */
+  traite_at?: string | null;
+  traite_par?: RefMinimal | null;
+  created_at: string | null;
+}
+
+/** Fichier métadonnées — jamais d'URL (disque privé). */
+export interface FichierDocument {
+  nom: string;
+  taille: number;
+  mime: string;
+  extension: string;
+}
+
+/** Document de la bibliothèque dans l'espace membre / modération. */
+export interface DocumentBibliothequeEspace {
+  id: number;
+  slug: string;
+  titre: string;
+  description: string | null;
+  resume: string | null;
+  statut: StatutDocumentBibliotheque;
+  is_public: boolean;
+  nb_vues: number;
+  nb_telechargements: number;
+  nombre_favoris: number;
+  note_moyenne: number;
+  nb_notes: number;
+  is_favori: boolean;
+  ma_note: number | null;
+  auteur: RefMinimal | null;
+  type_document: { id: number; nom: string; sigle: string } | null;
+  classe: { id: number; nom: string; sigle: string } | null;
+  matiere: { id: number; nom: string; sigle: string } | null;
+  periode: { id: number; nom: string; sigle: string } | null;
+  tags: { id: number; nom: string; slug: string }[];
+  fichier: FichierDocument | null;
+  commentaires: CommentaireBibliotheque[] | null;
+  signalements: SignalementBibliotheque[] | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface StatsBibliotheque {
+  total: number;
+  publies: number;
+  brouillons: number;
+  en_attente: number;
+  refuses: number;
+  archives: number;
+  total_vues: number;
+  total_telechargements: number;
+  total_favoris: number;
+  note_moyenne: number;
+}
+
+/** Dernier commentaire du dashboard (aperçu réduit). */
+export interface DernierCommentaire {
+  id: number;
+  contenu: string;
+  created_at: string | null;
+  user: RefMinimal | null;
+  document: { id: number; titre: string; slug: string } | null;
+}
+
+export interface DashboardBibliotheque extends StatsBibliotheque {
+  derniers_commentaires: DernierCommentaire[];
+}
+
+/** Référentiels du formulaire de document. */
+export interface ReferentielsBibliotheque {
+  types: { id: number; nom: string; sigle: string }[];
+  classes: { id: number; nom: string; sigle: string }[];
+  matieres: { id: number; nom: string; sigle: string }[];
+  periodes: { id: number; nom: string; sigle: string }[];
+}
+
+/** FormData de création/édition — le fichier est envoyé en multipart. */
+export interface DocumentBibliothequeFormulaire {
+  titre: string;
+  description: string | null;
+  resume: string | null;
+  type_document_id: number | null;
+  classe_id: number | null;
+  matiere_id: number | null;
+  periode_id: number | null;
+  tags: string[];
+  is_public: boolean;
+  /** `brouillon` ou `en_attente` uniquement à la création. */
+  statut: 'brouillon' | 'en_attente';
+  fichier: File | null;
+}
+
+/** Ligne de la file de signalements (modération admin). */
+export interface SignalementAdmin {
+  id: number;
+  motif: string;
+  motif_libelle: string;
+  description: string | null;
+  precisions: string | null;
+  statut: 'en_attente' | 'en_cours' | 'traite' | 'rejete';
+  statut_libelle: string;
+  note_admin: string | null;
+  email_contact: string | null;
+  anonyme: boolean;
+  user: RefMinimal | null;
+  traite_par: RefMinimal | null;
+  traite_at: string | null;
+  document: {
+    id: number;
+    titre: string;
+    slug: string;
+    statut: StatutDocumentBibliotheque;
+    is_public: boolean;
+    auteur: RefMinimal | null;
+  } | null;
+  created_at: string | null;
+}
+
+/** Motifs codifiés de signalement d'un document (API). */
+export const MOTIFS_SIGNALEMENT: { valeur: string; libelle: string }[] = [
+  { valeur: 'document_incorrect', libelle: 'Document incorrect' },
+  { valeur: 'contenu_inapproprie', libelle: 'Contenu inapproprié' },
+  { valeur: 'fichier_illisible', libelle: 'Fichier illisible' },
+  { valeur: 'doublon', libelle: 'Doublon' },
+  { valeur: 'probleme_droits', libelle: 'Problème de droits' },
+  { valeur: 'autre', libelle: 'Autre' },
+];
+
+/* ============================================================
+   T7A.6 — Objectifs pédagogiques (D-050)
+   ============================================================ */
+
+/** Ref minimale d'élève renvoyée par l'API objectifs. */
+export interface RefEleveObjectif {
+  id: number;
+  nom?: string | null;
+  prenom?: string | null;
+  classe?: string | null;
+}
+
+/** Période telle que vue par l'écran objectifs (filtre + formulaire). */
+export interface PeriodeObjectif {
+  id: number;
+  label: string;
+  date_debut?: string | null;
+  date_fin?: string | null;
+  statut: StatutPeriode;
+  est_ouverte: boolean;
+}
+
+export interface MatiereRefObjectif {
+  id: number;
+  nom: string;
+  sigle?: string | null;
+}
+
+/** Ligne de ventilation d'un objectif — ses propres moyennes (D-050). */
+export interface ObjectifMatiere {
+  id: number;
+  matiere: MatiereRefObjectif | null;
+  moyenne_visee: number | null;
+  moyenne_obtenue: number | null;
+  commentaire: string | null;
+}
+
+export interface ObjectifPedagogique {
+  id: number;
+  eleve: RefEleveObjectif | null;
+  periode: PeriodeObjectif | null;
+  enseignant: { id: number; nom?: string | null; prenom?: string | null } | null;
+  moyenne_visee: number | null;
+  moyenne_obtenue: number | null;
+  materiel_disponible: string | null;
+  materiel_manquant: string | null;
+  commentaire_admin: string | null;
+  matieres: ObjectifMatiere[];
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+/** Ligne de ventilation du formulaire. */
+export interface LigneObjectifMatiere {
+  matiere_id: number | null;
+  moyenne_visee: number | null;
+  moyenne_obtenue: number | null;
+  commentaire: string | null;
+}
+
+export interface ObjectifFormulaire {
+  eleve_id: number | null;
+  periode_id: number | null;
+  moyenne_visee: number | null;
+  moyenne_obtenue: number | null;
+  materiel_disponible: string | null;
+  materiel_manquant: string | null;
+  commentaire_admin: string | null;
+  matieres: LigneObjectifMatiere[];
+}
+
+/* ============================================================
+   Audit — journal d'activité du cabinet (M13)
+   ============================================================ */
+
+export interface EntreeAudit {
+  id: number;
+  action: string;
+  description: string | null;
+  level: 'info' | 'warning';
+  utilisateur?: { id: number | null; nom_complet: string; email: string } | null;
+  entite?: { type: string; id: number } | null;
+  contexte?: Record<string, unknown> | null;
+  ip: string | null;
+  user_agent: string | null;
+  date: string;
+}
+
+export interface FiltresAudit {
+  action?: string;
+  q?: string;
+  du?: string;
+  au?: string;
+}
+
+/* ============================================================
+   Plateforme — contrat commercial et factures (P8)
+   ============================================================ */
+
+/** Q-A17 : montant null = non négocié ≠ 0 = gratuit négocié éxplicitement. */
+export interface TarifsContratPlateforme {
+  frais_creation_contrat: number | null;
+  frais_contrat_actif: number | null;
+  abonnement_mensuel_enseignant: number | null;
+  abonnement_mensuel_parent: number | null;
+  abonnement_mensuel_eleve: number | null;
+  frais_rapport_mensuel: number | null;
+  abonnement_annuel_admin: number | null;
+  maintenance_annuelle_site: number | null;
+  taux_commission_librairie: number | null;
+  taux_commission_autres: number | null;
+}
+
+export interface ServiceContratPlateforme {
+  libelle: string;
+  description: string | null;
+  categorie: string;
+}
+
+export interface MonContratPlateforme {
+  numero: string;
+  version: number;
+  statut: string;
+  date_effet: string | null;
+  date_fin_validite: string | null;
+  responsable_nom: string | null;
+  modalites_paiement: string | null;
+  conditions_particulieres: string | null;
+  exonerations_codes: string[];
+  tarifs: TarifsContratPlateforme;
+  /** Catalogue éditable : clé → libellé/description/catégorie. */
+  services: Record<string, ServiceContratPlateforme>;
+  /** cle catégorie → libellé affichable. */
+  categories: Record<string, string>;
+  valide_le: string | null;
+}
+
+export interface FacturePlateforme {
+  id: number;
+  numero: string | null;
+  periode_debut: string;
+  periode_fin: string;
+  statut: 'emise' | 'partiellement_payee' | 'payee';
+  montant_total: number;
+  montant_paye: number;
+  emise_le: string | null;
+}
+
+export interface PaiementFacturePlateforme {
+  montant: number;
+  mode: string;
+  reference: string | null;
+  date: string;
+}
+
+export interface DetailFacturePlateforme extends FacturePlateforme {
+  conditions_paiement: string | null;
+  /** Détaillé facturé : le même tableau que sur le PDF. */
+  lignes: Array<{
+    libelle: string;
+    type: string;
+    sens: 'debit' | 'credit';
+    quantite: number;
+    prix_unitaire: number | null;
+    montant: number;
+    source: 'auto' | 'manuelle';
+    motif: string | null;
+  }>;
+  paiements: PaiementFacturePlateforme[];
 }

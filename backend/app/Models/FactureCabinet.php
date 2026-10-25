@@ -3,39 +3,43 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
+/**
+ * Facture d'un cabinet de la plateforme (une facture ne couvre qu'un
+ * cabinet et une période, base centrale Landlord).
+ */
 class FactureCabinet extends Model
 {
-    protected $fillable = [
-        'numero',
-        'periode_debut',
-        'periode_fin',
-        'total_cours',
-        'total_ventes',
-        'total_inscriptions',
-        'montant_commission',
-        'montant_total_du',
-        'statut',
-        'date_facture',
-        'date_paiement',
+    use CentralConnection;
+
+    public const STATUT_BROUILLON = 'brouillon';
+    public const STATUT_EMISE = 'emise';
+    public const STATUT_PARTIELLEMENT_PAYEE = 'partiellement_payee';
+    public const STATUT_PAYEE = 'payee';
+    public const STATUT_ANNULEE = 'annulee';
+
+    public const STATUTS = [
+        self::STATUT_BROUILLON,
+        self::STATUT_EMISE,
+        self::STATUT_PARTIELLEMENT_PAYEE,
+        self::STATUT_PAYEE,
+        self::STATUT_ANNULEE,
     ];
+
+    protected $table = 'factures_cabinet';
+
+    protected $guarded = [];
 
     protected $casts = [
-        'periode_debut'    => 'date',
-        'periode_fin'      => 'date',
-        'date_facture'     => 'date',
-        'date_paiement'    => 'date',
-        'total_cours'      => 'integer',
-        'total_ventes'     => 'integer',
-        'total_inscriptions' => 'integer',
-        'montant_commission' => 'integer',
-        'montant_total_du'   => 'integer',
+        'periode_debut' => 'date',
+        'periode_fin' => 'date',
+        'emise_le' => 'datetime',
+        'annulee_le' => 'datetime',
+        'date_echeance' => 'date',
     ];
-
-    // ======================
-    // RELATIONS
-    // ======================
 
     public function lignes(): HasMany
     {
@@ -47,66 +51,52 @@ class FactureCabinet extends Model
         return $this->hasMany(PaiementCabinet::class);
     }
 
-    // ======================
-    // HELPERS
-    // ======================
-
-    public function estPayee(): bool
+    public function evenements(): HasMany
     {
-        return $this->statut === 'payee';
+        return $this->hasMany(EvenementFacturable::class);
     }
 
-    public function estEnAttente(): bool
+    /** Cabinet central (sans FK, identifiant string dans tenants). */
+    public function cabinet(): BelongsTo
     {
-        return $this->statut === 'en_attente';
+        return $this->belongsTo(Cabinet::class, 'cabinet_id', 'id');
+    }
+
+    /** Somme des débits − somme des crédits des lignes. */
+    public function montantCalcule(): int
+    {
+        return (int) $this->lignes()
+            ->get(['sens', 'montant'])
+            ->reduce(fn (int $total, LigneFactureCabinet $l) => $total + ($l->sens === 'debit' ? $l->montant : -$l->montant), 0);
+    }
+
+    public function resteAPayer(): int
+    {
+        return max(0, $this->montant_total - $this->montant_paye);
+    }
+
+    public function estEmise(): bool
+    {
+        return in_array($this->statut, [self::STATUT_EMISE, self::STATUT_PARTIELLEMENT_PAYEE, self::STATUT_PAYEE]);
+    }
+
+    public function estBrouillon(): bool
+    {
+        return $this->statut === self::STATUT_BROUILLON;
     }
 
     public function estPartiellementPayee(): bool
     {
-        return $this->statut === 'partiel';
+        return $this->statut === self::STATUT_PARTIELLEMENT_PAYEE;
+    }
+
+    public function estPayee(): bool
+    {
+        return $this->statut === self::STATUT_PAYEE;
     }
 
     public function estAnnulee(): bool
     {
-        return $this->statut === 'annulee';
-    }
-
-    public function getMontantPayeAttribute(): int
-    {
-        if ($this->relationLoaded('paiements')) {
-            return (int) $this->paiements
-                ->where('statut', 'valide')
-                ->sum('montant_paye');
-        }
-
-        if (array_key_exists('montant_paye', $this->attributes)) {
-            return (int) $this->attributes['montant_paye'];
-        }
-
-        return (int) $this->paiements()
-            ->where('statut', 'valide')
-            ->sum('montant_paye');
-    }
-
-    public function getMontantRestantAttribute(): int
-    {
-        return $this->montant_total_du - $this->montant_paye;
-    }
-
-    /**
-     * Génère un numéro de facture unique.
-     * Format : FCAB-YYYYMM-NNNNN
-     */
-    public static function genererNumero(): string
-    {
-        $prefixe = 'FCAB-' . now()->format('Ym') . '-';
-
-        $dernierNumero = self::query()
-            ->where('date_facture', '>=', now()->startOfMonth())
-            ->where('date_facture', '<', now()->addMonth()->startOfMonth())
-            ->count();
-
-        return $prefixe
-            . str_pad($dernierNumero + 1, 5, '0', STR_PAD_LEFT);
+        return $this->statut === self::STATUT_ANNULEE;
     }
 }

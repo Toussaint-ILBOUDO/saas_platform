@@ -4,11 +4,17 @@ namespace App\Modules\Finance\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Facture;
+use App\Models\FactureAjustement;
+use App\Models\TypeAjustement;
 use App\Modules\Finance\Http\Requests\FilterFactureRequest;
 use App\Modules\Finance\Http\Requests\GenererFactureApiRequest;
 use App\Modules\Finance\Http\Requests\PayerFactureApiRequest;
 use App\Modules\Finance\Http\Requests\PreviewFactureApiRequest;
+use App\Modules\Finance\Http\Requests\StoreAjustementFactureApiRequest;
+use App\Modules\Finance\Http\Resources\FactureAjustementResource;
 use App\Modules\Finance\Http\Resources\FactureResource;
+use App\Modules\Finance\Http\Resources\TypeAjustementResource;
+use App\Modules\Finance\Services\FactureAdjustmentService;
 use App\Modules\Finance\Services\FacturePdfService;
 use App\Modules\Finance\Services\FacturationService;
 use App\Modules\Finance\Services\FactureQueryService;
@@ -37,6 +43,7 @@ class FactureApiController extends Controller
 {
     public function __construct(
         private readonly FacturationService $service,
+        private readonly FactureAdjustmentService $adjustments,
         private readonly FactureQueryService $queries,
         private readonly FacturePdfService $pdfs,
     ) {}
@@ -173,6 +180,57 @@ class FactureApiController extends Controller
     }
 
     /**
+     * Ajout d'un ajustement (bonus/débit) à une facture non réglée.
+     */
+    public function storeAjustement(
+        StoreAjustementFactureApiRequest $request,
+        Facture $facture
+    ): JsonResponse {
+        $ajustement = $this->adjustments->ajouter(
+            $facture,
+            $request->validated(),
+        );
+
+        return FactureAjustementResource::make($ajustement)
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    /**
+     * Suppression d'un ajustement d'une facture.
+     */
+    public function destroyAjustement(
+        Request $request,
+        Facture $facture,
+        FactureAjustement $ajustement
+    ): JsonResponse {
+        $this->authorize('update', $facture);
+
+        if ((int) $ajustement->facture_id !== (int) $facture->id) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
+        $this->adjustments->supprimer($ajustement);
+
+        return response()->json(null, Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Types d'ajustement actifs (crédit/débit) pour la saisie d'une facture.
+     */
+    public function typesAjustement(): AnonymousResourceCollection
+    {
+        $this->authorize('viewAny', Facture::class);
+
+        $types = TypeAjustement::where('is_active', true)
+            ->orderBy('direction')
+            ->orderBy('libelle')
+            ->get();
+
+        return TypeAjustementResource::collection($types);
+    }
+
+    /**
      * PDF (stream) d'une facture — accessible à l'admin `facture.view`.
      */
     public function pdf(Facture $facture): Response
@@ -195,6 +253,7 @@ class FactureApiController extends Controller
             'contrat.typeCours',
             'lignes.affectation.enseignant.user',
             'lignes.affectation.matiere',
+            'ajustements.typeAjustement',
         ]);
     }
 }

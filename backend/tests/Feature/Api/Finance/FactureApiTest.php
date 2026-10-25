@@ -12,6 +12,7 @@ use App\Models\Matiere;
 use App\Models\PeriodeComptable;
 use App\Models\RapportMensuelEnseignant;
 use App\Models\RapportMensuelEnseignantLigne;
+use App\Models\TypeAjustement;
 use App\Models\TypeCours;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -223,7 +224,7 @@ class FactureApiTest extends TenantTestCase
             ->assertJsonPath('data.lignes.0.nombre_heures', 2)
             ->assertJsonPath('data.lignes.0.montant', 5000)
             ->assertJsonPath('data.lignes.0.matiere', 'Mathématiques')
-            ->assertJsonPath('data.actions', ['pdf', 'payer'])
+            ->assertJsonPath('data.actions', ['pdf', 'payer', 'ajuster'])
             ->assertJsonStructure(['data' => ['numero_facture', 'eleve', 'parent', 'periode', 'lignes']]);
 
         // Le numéro séquentiel existe et commence par le préfixe FAC.
@@ -251,6 +252,69 @@ class FactureApiTest extends TenantTestCase
             ->assertJsonPath('data.remise', 2000)
             // 5000 + 1000 + 500 − 2000 = 4500
             ->assertJsonPath('data.montant_total', 4500);
+    }
+
+    public function test_generer_avec_ajustements_saisis_dans_lapercu(): void
+    {
+        $socle = $this->socle('c1');
+        $this->injRapportValide($socle);
+
+        tenancy()->initialize('c1');
+        $bonus = TypeAjustement::create([
+            'libelle' => 'Bonus fidélité',
+            'direction' => 'credit',
+            'is_active' => true,
+        ]);
+        $frais = TypeAjustement::create([
+            'libelle' => 'Frais de dossier',
+            'direction' => 'debit',
+            'is_active' => true,
+        ]);
+        tenancy()->end();
+
+        $this->connecte('c1', $socle['admin_email']);
+
+        $ajustements = [
+            ['type_ajustement_id' => $bonus->id, 'libelle' => 'Bonus fidélité', 'montant' => 1000],
+            ['type_ajustement_id' => $frais->id, 'libelle' => 'Frais de dossier', 'montant' => 500],
+        ];
+
+        // L'aperçu intègre les lignes bonus/débit sans rien écrire.
+        $this->postJson($this->adminApi('c1', '/preview'), $this->payloadFacture($socle, [
+            'frais_suivi' => 1000,
+            'ajustements' => $ajustements,
+        ]))
+            ->assertOk()
+            ->assertJsonPath('data.montant_cours', 5000)
+            ->assertJsonPath('data.total_credits', 1000)
+            ->assertJsonPath('data.total_debits', 500)
+            // 5 000 + 1 000 (frais) + 1 000 (bonus) − 500 (débit) = 6 500
+            ->assertJsonPath('data.montant_total', 6500);
+
+        // L'aperçu ne crée aucune facture.
+        $this->assertSame(0, Facture::count());
+
+        // La génération emporte les mêmes lignes.
+        $this->postJson($this->adminApi('c1'), $this->payloadFacture($socle, [
+            'frais_suivi' => 1000,
+            'ajustements' => $ajustements,
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.montant_total', 6500)
+            ->assertJsonPath('data.total_credits', 1000)
+            ->assertJsonPath('data.total_debits', 500)
+            ->assertJsonCount(2, 'data.ajustements');
+
+        $facture = Facture::firstOrFail();
+        $this->assertSame(2, $facture->ajustements()->count());
+        $this->assertSame(
+            'credit',
+            $facture->ajustements()->where('libelle', 'Bonus fidélité')->first()->type
+        );
+        $this->assertSame(
+            'debit',
+            $facture->ajustements()->where('libelle', 'Frais de dossier')->first()->type
+        );
     }
 
     public function test_generer_refuse_sans_rapport_valide(): void
@@ -379,6 +443,141 @@ class FactureApiTest extends TenantTestCase
         ])
             ->assertUnprocessable()
             ->assertJsonStructure(['message', 'code', 'erreurs' => ['mode_paiement']]);
+    }
+
+    // ---------------------------------------------------------- ajustements
+
+    public function test_ajustement_ajoute_puis_supprime(): void
+    {
+        $socle = $this->socle('c1');
+        $this->injRapportValide($socle);
+
+        tenancy()->initialize('c1');
+        $bonus = TypeAjustement::create([
+            'libelle' => 'Bonus fidélité',
+            'direction' => 'credit',
+            'is_active' => true,
+        ]);
+        $frais = TypeAjustement::create([
+            'libelle' => 'Frais de dossier',
+            'direction' => 'debit',
+            'is_active' => true,
+        ]);
+        tenancy()->end();
+
+        $this->connecte('c1', $socle['admin_email']);
+
+        $id = data_get(
+            $this->postJson($this->adminApi('c1'), $this->payloadFacture($socle))->json(),
+            'data.id'
+        );
+
+        // Bonus de 1 000 F : 5 000 → 6 000.
+        $ajustement = $this->postJson($this->adminApi('c1', "/{$id}/ajustements"), [
+            'type_ajustement_id' => $bonus->id,
+            'libelle' => 'Bonus fidélité',
+            'montant' => 1000,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.libelle', 'Bonus fidélité')
+            ->assertJsonPath('data.type', 'credit')
+            ->json();
+
+        $this->getJson($this->adminApi('c1', "/{$id}"))
+            ->assertOk()
+            ->assertJsonPath('data.montant_total', 6000)
+            ->assertJsonPath('data.total_credits', 1000)
+            ->assertJsonCount(1, 'data.ajustements');
+
+        // Débit de 500 F : 6 000 → 5 500.
+        $this->postJson($this->adminApi('c1', "/{$id}/ajustements"), [
+            'type_ajustement_id' => $frais->id,
+            'libelle' => 'Frais de dossier',
+            'montant' => 500,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.type', 'debit');
+
+        $this->getJson($this->adminApi('c1', "/{$id}"))
+            ->assertOk()
+            ->assertJsonPath('data.montant_total', 5500)
+            ->assertJsonPath('data.total_debits', 500)
+            ->assertJsonCount(2, 'data.ajustements');
+
+        // Suppression du bonus : 5 500 → 4 500.
+        $this->deleteJson($this->adminApi('c1', "/{$id}/ajustements/{$ajustement['data']['id']}"))
+            ->assertNoContent();
+
+        $this->getJson($this->adminApi('c1', "/{$id}"))
+            ->assertOk()
+            ->assertJsonPath('data.montant_total', 4500)
+            ->assertJsonPath('data.total_credits', 0)
+            ->assertJsonCount(1, 'data.ajustements');
+    }
+
+    public function test_ajustement_refuse_sur_facture_payee(): void
+    {
+        $socle = $this->socle('c1');
+        $this->injRapportValide($socle);
+
+        tenancy()->initialize('c1');
+        $bonus = TypeAjustement::create([
+            'libelle' => 'Bonus fidélité',
+            'direction' => 'credit',
+            'is_active' => true,
+        ]);
+        tenancy()->end();
+
+        $this->connecte('c1', $socle['admin_email']);
+
+        $id = data_get(
+            $this->postJson($this->adminApi('c1'), $this->payloadFacture($socle))->json(),
+            'data.id'
+        );
+
+        $this->postJson($this->adminApi('c1', "/{$id}/paiement"), [
+            'date_paiement' => '2026-10-20',
+            'mode_paiement' => 'especes',
+        ])->assertOk();
+
+        $this->postJson($this->adminApi('c1', "/{$id}/ajustements"), [
+            'type_ajustement_id' => $bonus->id,
+            'libelle' => 'Bonus fidélité',
+            'montant' => 1000,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonStructure(['message', 'code', 'erreurs' => ['facture']]);
+    }
+
+    public function test_types_ajustement_actifs(): void
+    {
+        $socle = $this->socle('c1');
+
+        tenancy()->initialize('c1');
+        TypeAjustement::create([
+            'libelle' => 'Bonus fidélité',
+            'direction' => 'credit',
+            'is_active' => true,
+        ]);
+        TypeAjustement::create([
+            'libelle' => 'Frais de dossier',
+            'direction' => 'debit',
+            'is_active' => true,
+        ]);
+        TypeAjustement::create([
+            'libelle' => 'Type inactif',
+            'direction' => 'credit',
+            'is_active' => false,
+        ]);
+        tenancy()->end();
+
+        $this->connecte('c1', $socle['admin_email']);
+
+        $this->getJson($this->adminApi('c1', '/types-ajustement'))
+            ->assertOk()
+            ->assertJsonFragment(['libelle' => 'Bonus fidélité', 'direction' => 'credit'])
+            ->assertJsonFragment(['libelle' => 'Frais de dossier', 'direction' => 'debit'])
+            ->assertJsonMissing(['libelle' => 'Type inactif']);
     }
 
     // ------------------------------------------------------------- périmètre

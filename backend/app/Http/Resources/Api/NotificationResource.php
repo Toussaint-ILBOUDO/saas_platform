@@ -20,9 +20,11 @@ class NotificationResource extends JsonResource
             'icone' => $this->iconeHtml,
             'couleur' => $this->couleur,
             'action_label' => $this->action_label,
-            // `url` : URL absolue Blade (backoffice historique).
-            // `route_angular` : chemin interne de l'espace, à router côté front.
-            'url' => $this->url,
+            // Uniquement `route_angular` (chemin relatif de l'espace Angular) :
+            // c'est le seul lien de notification qui reste (T7A.11 a retiré
+            // l'accesseur `url` et les routes Blade du web KEduc). On ne
+            // l'expose pas comme URL absolue : le front préfixe lui-même le
+            // chemin par le domaine du cabinet.
             'route_angular' => $this->route_angular,
             'data' => $this->data ?? [],
             'lu' => $this->lu,

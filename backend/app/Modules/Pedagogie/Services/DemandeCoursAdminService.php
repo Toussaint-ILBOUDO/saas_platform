@@ -248,54 +248,22 @@ class DemandeCoursAdminService
         return $contrat;
     }
 
-/**
+    /**
      * Refuse de créer un second compte pour un numéro déjà connu.
      *
-     * La même famille demande des cours régulièrement ; il faut donc rattacher
-     * la nouvelle demande au parent existant, pas fabriquer un doublon. Le
-     * message nomme le compte trouvé pour que l'écran puisse l'afficher tel
-     * quel. La vérification vit ici et non dans le FormRequest parce que les
-     * numéros effectifs ne sont connus qu'après repli sur ceux de la demande.
+     * La détection vit dans `ParentService::refuserSiDejaConnu` : elle est
+     * partagée avec la création directe d'un parent (sans demande de cours).
      */
     private function refuserSiParentDejaConnu(?string $whatsapp, ?string $appel): void
     {
-        $whatsapp = trim((string) $whatsapp);
-        $appel = trim((string) $appel);
-
-        if ($whatsapp === '' && $appel === '') {
-            return;
-        }
-
-        $existant = User::role('parent')
-            ->where(function ($query) use ($whatsapp, $appel): void {
-                $query
-                    ->when($whatsapp !== '', fn ($q) => $q->where('telephone_whatsapp', $whatsapp))
-                    ->when(
-                        $appel !== '',
-                        fn ($q) => $q->when(
-                            $whatsapp !== '',
-                            fn ($q2) => $q2->orWhere('telephone_appel', $appel),
-                            fn ($q2) => $q2->where('telephone_appel', $appel)
-                        )
-                    );
-            })
-            ->first();
-
-        if ($existant) {
-            throw ValidationException::withMessages([
-                'telephone_whatsapp' => sprintf(
-                    'Un parent est déjà enregistré avec ce numéro (%s). Utilisez-le plutôt que d\'en créer un second.',
-                    $existant->email ?: 'sans email'
-                ),
-            ]);
-        }
+        $this->parents->refuserSiDejaConnu($whatsapp, $appel);
     }
 
     /**
      * « Traiter » sur une demande refusée est un contresens : la demande est
- * sortie du pipeline. On le dit explicitement plutôt que de laisser le
+     * sortie du pipeline. On le dit explicitement plutôt que de laisser le
      * statut basculer en silence.
- */
+     */
     private function refuserSiDejaAnnulee(DemandeCours $demandeCours): void
     {
         if ($demandeCours->statut === DemandeCours::ANNULEE) {

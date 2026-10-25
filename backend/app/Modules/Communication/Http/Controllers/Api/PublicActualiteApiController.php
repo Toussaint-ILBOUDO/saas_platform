@@ -6,11 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\ActualitePublicResource;
 use App\Models\Actualite;
 use App\Modules\Communication\Services\ActualiteService;
+use App\Support\SertMediaPublic;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class PublicActualiteApiController extends Controller
 {
+    use SertMediaPublic;
+
     public function __construct(protected ActualiteService $service)
     {
     }
@@ -41,5 +45,16 @@ class PublicActualiteApiController extends Controller
         $resource->showContenu = true;
 
         return response()->json($resource->resolve(app('request')));
+    }
+
+    /**
+     * Image de l'actualité (route contrôlée : le disque public tenant
+     * n'est pas exposé via `/storage`).
+     */
+    public function image(string $slug): Response
+    {
+        $actualite = $this->service->getBySlug($slug);
+
+        return $this->repondreMedia($actualite->getFirstMedia('image_principale'));
     }
 }

@@ -79,6 +79,21 @@ class FactureResource extends JsonResource
                 $this->whenLoaded('lignes')
             ),
 
+            /*
+             * Ajustements (bonus/débit) ajoutés après génération : ils font
+             * partie du montant total. Comme pour le bulletin, le détail porte
+             * les totaux crédit/débit pour l'affichage.
+             */
+            'ajustements' => FactureAjustementResource::collection(
+                $this->whenLoaded('ajustements')
+            ),
+            'total_credits' => $this->resource->relationLoaded('ajustements')
+                ? (int) $this->ajustements->where('type', 'credit')->sum('montant')
+                : 0,
+            'total_debits' => $this->resource->relationLoaded('ajustements')
+                ? (int) $this->ajustements->where('type', 'debit')->sum('montant')
+                : 0,
+
             'actions' => $this->actionsAutorisees($request->user()),
 
             'created_at' => $this->created_at?->toIso8601String(),
@@ -102,6 +117,12 @@ class FactureResource extends JsonResource
 
         if ($this->estEnAttente() && $user->can('payer', $this->resource)) {
             $actions[] = 'payer';
+        }
+
+        // Une facture non réglée accepte des ajustements de l'administration
+        // (bonus/débit) tant que le montant n'est pas figé par le paiement.
+        if (! $this->estPayee() && $user->can('update', $this->resource)) {
+            $actions[] = 'ajuster';
         }
 
         return $actions;

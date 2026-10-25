@@ -34,6 +34,8 @@ class LigneCommande extends Model
 
     public function produit(): BelongsTo
     {
-        return $this->belongsTo(Produit::class);
+        // `withTrashed` : l'historique commercial doit rester lisible même si
+        // le produit a été supprimé du catalogue.
+        return $this->belongsTo(Produit::class)->withTrashed();
     }
 }

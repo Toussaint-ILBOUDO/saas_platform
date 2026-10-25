@@ -3,11 +3,14 @@
 namespace App\Modules\Finance\Services;
 
 use App\Models\Facture;
+use App\Models\FactureAjustement;
 use App\Models\LigneFacture;
 use App\Models\ContratCours;
 use App\Models\PeriodeComptable;
 use App\Models\AffectationEnseignant;
 use App\Models\RapportMensuelEnseignant;
+use App\Models\TypeAjustement;
+use App\Modules\Audit\Services\AuditService;
 use App\Modules\Systeme\Services\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
@@ -153,6 +156,8 @@ class FacturationService
      * Calcule le preview complet de la facture sans rien créer.
      *
      * Retourne les lignes calculées, les totaux, et les infos élève/parent.
+     * Les éventuelles lignes bonus/débit saisies dans le formulaire sont
+     * intégrées au total comme elles le seront à la génération.
      */
     public function calculerPreview(
         ContratCours $contrat,
@@ -177,11 +182,17 @@ class FacturationService
         $autresFrais = (int) ($frais['autres_frais'] ?? 0);
         $remise = (int) ($frais['remise'] ?? 0);
 
+        [$totalCredits, $totalDebits] = $this->totauxAjustements(
+            $frais['ajustements'] ?? []
+        );
+
         $montantTotal =
             $montantCours
             + $fraisSuivi
             + $autresFrais
-            - $remise;
+            - $remise
+            + $totalCredits
+            - $totalDebits;
 
         $eleveUser = $contrat->eleve->user ?? null;
         $parentUser = $contrat->eleve->parent?->user ?? null;
@@ -202,8 +213,68 @@ class FacturationService
             'frais_suivi' => $fraisSuivi,
             'autres_frais' => $autresFrais,
             'remise' => $remise,
+            'total_credits' => $totalCredits,
+            'total_debits' => $totalDebits,
             'montant_total' => $montantTotal,
         ];
+    }
+
+    /**
+     * Totaux crédit/débit d'une liste de lignes bonus/débit soumises.
+     *
+     * @param  array<int, array<string, mixed>>  $ajustements
+     * @return array{0: int, 1: int}  [total_credits, total_debits]
+     */
+    private function totauxAjustements(array $ajustements): array
+    {
+        $types = TypeAjustement::query()
+            ->whereIn('id', collect($ajustements)->pluck('type_ajustement_id'))
+            ->get()
+            ->keyBy('id');
+
+        $totalCredits = 0;
+        $totalDebits = 0;
+
+        foreach ($ajustements as $ligne) {
+            $type = $types->get((int) ($ligne['type_ajustement_id'] ?? 0));
+            $montant = max(1, (int) ($ligne['montant'] ?? 0));
+
+            if ($type && $type->direction === 'debit') {
+                $totalDebits += $montant;
+            } else {
+                $totalCredits += $montant;
+            }
+        }
+
+        return [$totalCredits, $totalDebits];
+    }
+
+    /**
+     * Crée les lignes bonus/débit d'une facture (appelé sous transaction).
+     *
+     * @param  array<int, array<string, mixed>>  $ajustements
+     */
+    private function creerAjustements(Facture $facture, array $ajustements): void
+    {
+        $types = TypeAjustement::query()
+            ->whereIn('id', collect($ajustements)->pluck('type_ajustement_id'))
+            ->get()
+            ->keyBy('id');
+
+        foreach ($ajustements as $ligne) {
+            $typeId = (int) ($ligne['type_ajustement_id'] ?? 0);
+            $type = $types->get($typeId);
+
+            FactureAjustement::create([
+                'facture_id' => $facture->id,
+                'type_ajustement_id' => $typeId,
+                'type' => $type && $type->direction === 'debit'
+                    ? 'debit'
+                    : 'credit',
+                'libelle' => (string) ($ligne['libelle'] ?? $type?->libelle ?? 'Ajustement'),
+                'montant' => max(1, (int) ($ligne['montant'] ?? 0)),
+            ]);
+        }
     }
 
     /**
@@ -284,11 +355,20 @@ class FacturationService
             $autresFrais = (int) ($data['autres_frais'] ?? 0);
             $remise = (int) ($data['remise'] ?? 0);
 
+            // Lignes bonus/débit emportées depuis l'aperçu.
+            $ajustements = array_values($data['ajustements'] ?? []);
+
+            [$totalCredits, $totalDebits] = $this->totauxAjustements(
+                $ajustements
+            );
+
             $montantTotal =
                 $montantCours
                 + $fraisSuivi
                 + $autresFrais
-                - $remise;
+                - $remise
+                + $totalCredits
+                - $totalDebits;
 
             // ─── Création de la facture ───
             // Numéro atomique : calculé sous verrou à partir du maximum
@@ -361,8 +441,20 @@ class FacturationService
                 ]);
             }
 
+            // ─── Lignes bonus/débit saisies dans l'aperçu ───
+            if ($ajustements !== []) {
+                $this->creerAjustements($facture, $ajustements);
+            }
+
             // ─── Notification au parent ───
             $this->notifier->invoiceCreated($facture);
+
+            AuditService::enregistrer(
+                'facture.emise',
+                'Facture ' . $facture->numero_facture . ' émise',
+                $facture,
+                ['montant_total' => $facture->montant_total]
+            );
 
             return $facture->load([
                 'contrat.eleve.user',
@@ -370,6 +462,7 @@ class FacturationService
                 'periode',
                 'lignes.affectation.enseignant.user',
                 'lignes.affectation.matiere',
+                'ajustements',
             ]);
         });
     }
@@ -408,6 +501,16 @@ class FacturationService
                 'periode',
                 'lignes',
             ])
+        );
+
+        AuditService::enregistrer(
+            'facture.reglee',
+            'Facture ' . $facture->numero_facture . ' réglée',
+            $facture,
+            [
+                'montant_total' => $facture->montant_total,
+                'mode_paiement' => $data['mode_paiement'],
+            ]
         );
 
         return $facture->fresh();

@@ -107,6 +107,7 @@ class TenantDatabaseSeeder extends Seeder
         */
         $this->call(TypeCoursSeeder::class);
         $this->call(TypeDocumentSeeder::class);
+        $this->call(TypeAjustementSeeder::class);
 
         /*
         |--------------------------------------------------------------------------

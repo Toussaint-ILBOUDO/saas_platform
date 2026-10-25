@@ -1,3 +1,43 @@
+@if (nbBandeaux() > 0) {
+  <div class="bandeaux-fixes">
+    @if (miseAJourDisponible()) {
+      <div class="bandeau bandeau-maj" role="status">
+        <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+        <span>Une nouvelle version est disponible.</span>
+        <button type="button" class="bouton-maj" (click)="appliquerMiseAJour()">Mettre à jour</button>
+        <button type="button" class="fermer-maj" (click)="ignorerMiseAJour()" aria-label="Ignorer pour l'instant">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+    @if (file.echecs().length) {
+      <div class="bandeau bandeau-echec" role="alert">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <span>{{ texteEchecs() }}</span>
+        <button type="button" class="fermer-echec" (click)="file.ignorerEchecs()" aria-label="Ignorer l'avertissement">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+    @if (file.synchronise()) {
+      <div class="bandeau bandeau-synchronise" role="status">
+        <i class="bi bi-check2-circle" aria-hidden="true"></i>
+        <span>Synchronisé : toutes vos saisies sont envoyées.</span>
+      </div>
+    } @else if (texteReseau()) {
+      <div class="bandeau bandeau-hors-ligne" role="status">
+        <i
+          class="bi"
+          [class.bi-wifi-off]="auth.horsLigne()"
+          [class.bi-cloud-upload]="!auth.horsLigne()"
+          aria-hidden="true"
+        ></i>
+        <span>{{ texteReseau() }}</span>
+      </div>
+    }
+  </div>
+}
+
 @if (!sansChrome()) {
   <app-header></app-header>
 }
@@ -9,7 +49,16 @@
 }
 
 @if (!sansChrome()) {
-  <button type="button" class="remontee" (click)="versHaut()" [class._visible]="haut" aria-label="Remonter en haut de page">
+  <button
+    type="button"
+    class="remontee"
+    [class._leve]="nbBandeaux() >= 1"
+    [class._leve-haut]="nbBandeaux() === 2"
+    [class._leve-trois]="nbBandeaux() >= 3"
+    (click)="versHaut()"
+    [class._visible]="haut"
+    aria-label="Remonter en haut de page"
+  >
     <i class="bi bi-arrow-up"></i>
   </button>
 }

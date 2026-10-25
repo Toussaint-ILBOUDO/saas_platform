@@ -27,36 +27,6 @@
             <span class="nav-text">Actualités</span>
         </a>
 
-        <a class="nav-link" href="{{ route('mes-cours.index') }}">
-            <span class="nav-icon"><i class="bi bi-easel" aria-hidden="true"></i></span>
-            <span class="nav-text">Mes cours</span>
-        </a>
-
-        <a class="nav-link" href="{{ route('planning.index') }}">
-            <span class="nav-icon"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
-            <span class="nav-text">Planning</span>
-        </a>
-
-        <a class="nav-link" href="{{ route('documents.index') }}">
-            <span class="nav-icon"><i class="bi bi-folder" aria-hidden="true"></i></span>
-            <span class="nav-text">Documents</span>
-        </a>
-
-        <a class="nav-link" href="{{ route('objectifs-pedagogiques.index') }}">
-            <span class="nav-icon"><i class="bi bi-bullseye" aria-hidden="true"></i></span>
-            <span class="nav-text">Objectifs</span>
-        </a>
-
-        <a class="nav-link" href="{{ route('evaluations.index') }}">
-            <span class="nav-icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span>
-            <span class="nav-text">Évaluations</span>
-        </a>
-
-        <a class="nav-link" href="{{ route('cahiers-textes.index') }}">
-            <span class="nav-icon"><i class="bi bi-journal-text" aria-hidden="true"></i></span>
-            <span class="nav-text">Cahiers de textes</span>
-        </a>
-
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                 <span class="nav-icon"><i class="bi bi-library" aria-hidden="true"></i></span>

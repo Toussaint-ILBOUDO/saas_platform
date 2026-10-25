@@ -333,7 +333,13 @@ class ApiPublicTest extends TenantTestCase
             ->assertStatus(201)
             ->assertJsonStructure([
                 'message',
-                'commande' => ['id', 'token', 'montant_total', 'statut', 'lien_suivi'],
+                'commande' => [
+                    'reference',
+                    'statut',
+                    'montant_total',
+                    'lien_suivi',
+                    'pdf',
+                ],
             ]);
 
         tenancy()->end();

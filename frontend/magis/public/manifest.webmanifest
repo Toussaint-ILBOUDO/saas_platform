@@ -1,0 +1,34 @@
+{
+  "name": "Magis Plus Center — Espace cabinet",
+  "short_name": "Magis",
+  "description": "Espace cabinet Magis Plus Center : cours, planning, factures, bibliothèque et communication.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/espace",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#12305e",
+  "background_color": "#ffffff",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

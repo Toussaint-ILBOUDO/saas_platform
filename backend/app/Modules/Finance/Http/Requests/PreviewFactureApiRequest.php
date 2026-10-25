@@ -27,6 +27,22 @@ class PreviewFactureApiRequest extends FormRequest
             'frais_suivi' => ['nullable', 'integer', 'min:0'],
             'autres_frais' => ['nullable', 'integer', 'min:0'],
             'remise' => ['nullable', 'integer', 'min:0'],
+            // Bonus/débit saisis AVANT la génération, exactement comme dans
+            // l'aperçu des bulletins de paie : aucune écriture, juste le calcul.
+            'ajustements' => ['nullable', 'array', 'max:50'],
+            'ajustements.*.type_ajustement_id' => [
+                'required',
+                'integer',
+                'exists:type_ajustements,id',
+                function ($attribute, $value, $fail) {
+                    $type = \App\Models\TypeAjustement::find($value);
+                    if ($type && ! $type->is_active) {
+                        $fail('Ce type d\'ajustement n\'est plus actif.');
+                    }
+                },
+            ],
+            'ajustements.*.libelle' => ['required', 'string', 'max:255'],
+            'ajustements.*.montant' => ['required', 'integer', 'min:1'],
         ];
     }
 

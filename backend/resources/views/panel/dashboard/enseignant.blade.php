@@ -18,13 +18,6 @@
 
         <div class="col-md-4">
             <div class="card p-3">
-                <h5>Cahier de texte</h5>
-                <a href="{{ route('cahiers-textes.create.select-eleve') }}">Voir</a>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3">
                 <h5>Actualités</h5>
                 <p class="text-muted mb-2">Les dernières nouvelles de l'école</p>
                 <a href="{{ route('actualites.internes') }}">Suivre</a>
@@ -36,13 +29,6 @@
                 <h5>Bibliothèque</h5>
                 <p class="text-muted mb-2">Les documents de l'école</p>
                 <a href="{{ route('bibliothequepub.index') }}">Explorer</a>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3">
-                <h5>Mes bulletins de paie</h5>
-                <a href="{{ route('mes-bulletins.index') }}">Voir</a>
             </div>
         </div>
 

@@ -7,7 +7,7 @@ import { RevealDirective } from '../directives/reveal.directive';
 import { CounterComponent } from '../components/counter.component';
 import { SectionTitleComponent } from '../components/section-title.component';
 import { ContactInfoComponent } from '../components/contact-info.component';
-import { TemoignagesCarouselComponent } from '../components/temoignages-carousel.component';
+import { TemoignageCarteComponent } from '../components/temoignage-carte.component';
 import { FaqBlockComponent } from '../components/faq-block.component';
 import { SeoService } from '../services/seo.service';
 import {
@@ -34,7 +34,7 @@ interface OngletSolution {
     CounterComponent,
     SectionTitleComponent,
     ContactInfoComponent,
-    TemoignagesCarouselComponent,
+    TemoignageCarteComponent,
     FaqBlockComponent,
   ],
   styles: [
@@ -515,6 +515,30 @@ interface OngletSolution {
         font-weight: 600;
         margin: 0 0.35rem 0.35rem 0;
       }
+      .btn-voir-plus {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid var(--mpc-primaire);
+        background: transparent;
+        color: var(--mpc-primaire);
+        border-radius: 999px;
+        padding: 0.7rem 1.5rem;
+        font: inherit;
+        font-weight: 700;
+        font-size: 0.92rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+      .btn-voir-plus:hover:not(:disabled) {
+        background: var(--mpc-primaire);
+        color: #fff;
+      }
+      .btn-voir-plus:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
       .cta-bande-inner {
         background: var(--mpc-bleu);
         color: #fff;
@@ -687,7 +711,7 @@ interface OngletSolution {
               <h4 style="color: var(--mpc-bleu); font-weight:700">{{ CONTENT.zones.blocTitre }}</h4>
               <p style="color: var(--mpc-texte-doux); line-height:1.7">{{ CONTENT.zones.blocTexte1 }}</p>
               <div class="mt-3">
-                <span class="zone-puce" *ngFor="let ville of villesPrincipales"><i class="bi bi-geo-fill"></i>{{ ville }}</span>
+                <span class="zone-puce" *ngFor="let ville of localitesCabinet"><i class="bi bi-geo-fill"></i>{{ ville }}</span>
               </div>
             </div>
           </div>
@@ -695,9 +719,6 @@ interface OngletSolution {
             <div class="zone-carte">
               <h4 style="color: var(--mpc-bleu); font-weight:700">Une couverture qui s'étend</h4>
               <p style="color: var(--mpc-texte-doux); line-height:1.7">{{ CONTENT.zones.blocTexte2 }}</p>
-              <div class="mt-3">
-                <span class="zone-puce" *ngFor="let ville of villesSecondaires"><i class="bi bi-geo-fill"></i>{{ ville }}</span>
-              </div>
               <div class="hors-zones">
                 <h5 style="color: var(--mpc-bleu); font-weight:700; display:flex; align-items:center; gap:.5rem">
                   <i class="bi bi-globe2" style="color: var(--mpc-primaire)"></i>{{ CONTENT.zones.horsZones.titre }}
@@ -737,12 +758,12 @@ interface OngletSolution {
       <div class="container">
         <app-section-title surtitre="Notre réseau" [titre]="CONTENT.enseignants.titre" [sousTitre]="CONTENT.enseignants.sousTitre"></app-section-title>
 
-<div class="row g-4" *ngIf="enseignants().length > 0">
-         <div class="col-12 col-sm-6 col-lg-4" *ngFor="let enseignant of enseignants() | slice:0:6" appReveal>
+<div class="row g-4" *ngIf="enseignantsVisibles.length > 0">
+         <div class="col-12 col-sm-6 col-lg-4" *ngFor="let enseignant of enseignantsVisibles" appReveal>
             <article class="enseignant-carte">
               <div class="enseignant-front">
                 <img class="avatar" *ngIf="enseignant.photo_url" [src]="enseignant.photo_url" alt="{{ enseignant.nom_complet }}" loading="lazy" />
-                <span class="avatar" *ngIf="!enseignant.photo_url">{{ initiale(enseignant.nom_complet) }}</span>
+                <span class="avatar" *ngIf="!enseignant.photo_url">{{ sigle(enseignant.nom_complet) }}</span>
                 <div>
                   <p class="enseignant-nom">{{ enseignant.nom_complet }}</p>
                   <p class="enseignant-role">Enseignant(e)</p>
@@ -757,6 +778,13 @@ interface OngletSolution {
               </div>
             </article>
           </div>
+        </div>
+
+        <div class="text-center mt-4" *ngIf="plusDAfficherEnseignants">
+          <button type="button" class="btn-voir-plus" (click)="voirPlusEnseignants()" [disabled]="enseignantsChargement()">
+            <i class="bi" [ngClass]="enseignantsChargement() ? 'bi-hourglass-split' : 'bi-plus-circle'"></i>
+            {{ enseignantsChargement() ? 'Chargement…' : 'Voir plus d\u2019enseignants' }}
+          </button>
         </div>
 
         <p class="text-center" style="color: var(--mpc-texte-doux)" *ngIf="enseignants().length === 0 && enseignantsCharge()">{{ CONTENT.enseignants.vide }}</p>
@@ -781,10 +809,17 @@ interface OngletSolution {
     <section id="temoignages" class="py-5" style="background: var(--mpc-surface-teintee)">
       <div class="container">
         <app-section-title surtitre="Ils nous font confiance" [titre]="CONTENT.temoignages.titre" [sousTitre]="CONTENT.temoignages.sousTitre"></app-section-title>
-        <ng-container *ngIf="temoignagesHaut.length > 0">
-          <app-temoignages-carousel [temoignages]="temoignagesHaut"></app-temoignages-carousel>
-        </ng-container>
-        <p class="text-center mt-3" style="color: var(--mpc-texte-doux)" *ngIf="temoignagesHaut.length === 0">{{ CONTENT.temoignages.vide }}</p>
+        <div class="row g-4" *ngIf="temoignages().length > 0">
+          <div class="col-12 col-md-6 col-lg-4" *ngFor="let temoignage of temoignages()" appReveal>
+            <app-temoignage-carte [temoignage]="temoignage" [compact]="true"></app-temoignage-carte>
+          </div>
+        </div>
+        <p class="text-center mt-3" style="color: var(--mpc-texte-doux)" *ngIf="temoignages().length === 0">{{ CONTENT.temoignages.vide }}</p>
+        <div class="text-center mt-4" *ngIf="temoignages().length > 0">
+          <a class="btn-voir-plus" routerLink="/temoignages">
+            <i class="bi bi-chat-quote"></i> Voir tous les témoignages
+          </a>
+        </div>
       </div>
     </section>
 
@@ -858,6 +893,12 @@ export class AccueilComponent implements OnInit {
   protected readonly sectionsFaq = signal<FaqSection[]>([]);
   protected readonly stats = signal<{ icone: string; valeur: number; libelle: string }[] | null>(null);
   protected readonly enseignantsCharge = signal(false);
+  /** Nombre de cartes enseignants affichées (« Voir plus » augmente de 6 en 6). */
+  protected readonly nbEnseignants = signal(6);
+  /** Total réel des enseignants actifs (meta de la pagination publique). */
+  protected readonly totalEnseignants = signal(0);
+  /** Drapeau de chargement du bouton « Voir plus ». */
+  protected readonly enseignantsChargement = signal(false);
   protected indiceSolution = 0;
 
   protected readonly ongletsSolutions: readonly OngletSolution[] = CONTENT.solutions.onglets;
@@ -866,16 +907,64 @@ export class AccueilComponent implements OnInit {
     return this.ongletsSolutions[this.indiceSolution];
   }
 
-  protected get temoignagesHaut(): Temoignage[] {
-    return this.temoignages().slice(0, 6);
+  /** Cartes enseignants effectivement rendues (6 d'abord, +6 par clic). */
+  protected get enseignantsVisibles(): Enseignant[] {
+    return this.enseignants().slice(0, this.nbEnseignants());
+  }
+
+  /** Affiche le bouton « Voir plus » tant qu'il reste des enseignants à charger. */
+  protected get plusDAfficherEnseignants(): boolean {
+    return this.enseignants().length < this.totalEnseignants();
+  }
+
+  /** Localités déclarées dans la fiche cabinet (zones d'intervention). */
+  protected get localitesCabinet(): string[] {
+    const localites = this.fiche()?.zones?.localites;
+    return Array.isArray(localites) && localites.length > 0
+      ? localites
+      : this.villesPrincipales;
   }
 
   protected get villesPrincipales(): string[] {
     return CONTENT.zones.villesPrincipales.split(', ').map((v) => v.trim());
   }
 
-  protected get villesSecondaires(): string[] {
-    return CONTENT.zones.villesSecondaires.split(', ').map((v) => v.trim());
+  /**
+   * Sigle d'avatar : initiales du nom complet (ex. « Sibri Ilboudo » → « SI »)
+   * utilisé quand l'enseignant n'a pas encore chargé de photo.
+   */
+  protected sigle(nomComplet: string): string {
+    const mots = (nomComplet || '').trim().split(/\s+/).filter(Boolean);
+    if (mots.length === 0) {
+      return 'E';
+    }
+    return mots
+      .slice(0, 3)
+      .map((mot) => mot.charAt(0).toUpperCase())
+      .join('');
+  }
+
+  /** Charge 6 enseignants supplémentaires (page suivante) au clic sur « Voir plus ». */
+  protected voirPlusEnseignants(): void {
+    if (this.enseignantsChargement() || !this.plusDAfficherEnseignants) {
+      return;
+    }
+    this.enseignantsChargement.set(true);
+    const cible = this.nbEnseignants() + 6;
+    const page = Math.floor(this.enseignants().length / 6) + 1;
+    this.api.getEnseignants(page).subscribe({
+      next: ({ data, meta }) => {
+        const connus = new Set(this.enseignants().map((e) => e.id));
+        const nouveaux = data.filter((e) => !connus.has(e.id));
+        this.enseignants.set([...this.enseignants(), ...nouveaux]);
+        this.nbEnseignants.set(cible);
+        if (typeof meta?.total === 'number') {
+          this.totalEnseignants.set(meta.total);
+        }
+        this.enseignantsChargement.set(false);
+      },
+      error: () => this.enseignantsChargement.set(false),
+    });
   }
 
   protected montage = [
@@ -899,12 +988,15 @@ export class AccueilComponent implements OnInit {
       }
     });
 
-    this.api.getEnseignants(1).subscribe(({ data }) => {
+    this.api.getEnseignants(1).subscribe(({ data, meta }) => {
       this.enseignants.set(data);
       this.enseignantsCharge.set(true);
+      if (typeof meta?.total === 'number') {
+        this.totalEnseignants.set(meta.total);
+      }
     });
 
-    this.api.getTemoignages(1).subscribe(({ data }) => {
+    this.api.getTemoignages(1, 6).subscribe(({ data }) => {
       this.temoignages.set(data);
     });
 
@@ -920,9 +1012,5 @@ export class AccueilComponent implements OnInit {
         { icone: 'bi-house-heart-fill', valeur: stats.nb_familles, libelle: 'Familles partenaires' },
       ]);
     });
-  }
-
-  protected initiale(nom: string): string {
-    return nom.trim().charAt(0).toUpperCase() || 'E';
   }
 }

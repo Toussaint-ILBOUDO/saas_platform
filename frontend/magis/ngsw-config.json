@@ -1,0 +1,73 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/manifest.webmanifest",
+          "/*.css",
+          "/*.js",
+          "/icons/*.png"
+        ]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/**/*.gif",
+          "/**/*.jpg",
+          "/**/*.jpeg",
+          "/**/*.png",
+          "/**/*.svg",
+          "/**/*.webp",
+          "/**/*.woff",
+          "/**/*.woff2"
+        ],
+        "urls": ["https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**"]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "api-public",
+      "urls": ["/api/public/**"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "timeout": "10s",
+        "maxSize": 80,
+        "maxAge": "48h"
+      }
+    },
+    {
+      "name": "api-espace",
+      "urls": [
+        "/api/mes-*",
+        "/api/pedagogie/**",
+        "/api/enseignant/**",
+        "/api/admin/**",
+        "/api/bibliotheque/**",
+        "/api/finance/**",
+        "/api/notifications*",
+        "/api/abonnement-push*"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "timeout": "10s",
+        "maxSize": 150,
+        "maxAge": "48h"
+      }
+    }
+  ],
+  "navigationRequestStrategy": "freshness",
+  "appData": {
+    "description": "PWA Magis : lecture hors-ligne 48 h (évitée sur /api/auth), écritures réseau uniquement."
+  }
+}

@@ -21,7 +21,10 @@ class ActualiteAdminResource extends JsonResource
             'contenu' => $this->contenu,
             'video_url' => $this->video_url,
             'lien_externe' => $this->lien_externe,
-            'image_url' => $this->getFirstMediaUrl('image_principale') ?: null,
+            // Route contrôlée : /storage ne résout pas en multi-tenant.
+            'image_url' => $this->getFirstMedia('image_principale')
+                ? '/api/admin/actualites/'.$this->id.'/image'
+                : null,
             'document_url' => $this->document_url,
             'is_active' => $this->is_active,
             'statut' => $this->statut,

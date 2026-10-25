@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             PeriodeDocumentSeeder::class,
             LibrairieSeeder::class,
             FaqSeeder::class,
+            CataloguePlateformeSeeder::class,
         ]);
     }
 }

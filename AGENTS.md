@@ -21,6 +21,11 @@ réinitialise la base de développement `keduc` (incident du 14/08/2026).
   `DB_PORT=5432`, `DB_USERNAME=postgres`, mot de passe dans `backend/.env`)
 - BDD des cabinets : créées dynamiquement par stancl (`cabinet_<slug>`) ; le compte
   `postgres` doit rester superuser local (`CREATEDB`).
+- **Migrations tenants** : l'option `--tenants` de `tenants:migrate` est un tableau
+  Symfony (`VALUE_IS_ARRAY`) — la virgule n'est PAS un séparateur. `--tenants=c1,magis-plus-center`
+  est lu comme un seul ID inexistant → `TenantCouldNotBeIdentifiedById`. Syntaxe correcte :
+  `php artisan tenants:migrate --force` (tous) ou
+  `php artisan tenants:migrate --tenants=c1 --tenants=magis-plus-center --force`.
 - Tests (D-003/D-023) : `phpunit.xml` = pgsql, base centrale de test `keduc_test`,
   préfixe tenant `keduc_test_` (env `TENANCY_DB_PREFIX`, saisie en `force="true"` — les
   `<env>` PHPUnit doivent surcharger le `.env` chargé par `artisan test`). Base centrale

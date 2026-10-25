@@ -76,6 +76,8 @@ class BulletinPaieResource extends JsonResource
                     )
                     : null,
                 'email' => $this->enseignant->user?->email,
+                'telephone' => $this->enseignant->user?->telephone_appel
+                    ?? $this->enseignant->user?->telephone_whatsapp,
             ]),
 
             'periode' => $this->whenLoaded('periode', fn () => [

@@ -8,7 +8,7 @@ class StoreTemoignageRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('temoignage.create') ?? false;
+        return $this->user('web')?->can('temoignage.create') ?? false;
     }
 
     public function rules(): array

@@ -5,6 +5,7 @@ namespace App\Modules\Bibliotheque\Services;
 use App\Models\DocumentBibliotheque;
 use App\Models\DocumentCommentaire;
 use App\Models\DocumentNote;
+use App\Models\DocumentReaction;
 use App\Models\DocumentSignalement;
 use App\Models\FavoriBibliotheque;
 use App\Models\DocumentAccessLog;
@@ -13,6 +14,7 @@ use App\Models\TypeDocument;
 use App\Models\PeriodeDocument;
 use App\Models\Classe;
 use App\Models\Matiere;
+use App\Modules\Audit\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -29,6 +31,7 @@ class DocumentBibliothequeService
                 $q->public();
             })
             ->withFavoriForUser(Auth::id())
+            ->withReactionForIdentity(DocumentReaction::identiteCourante())
             ->with(['auteur', 'typeDocument', 'classe', 'matiere', 'periodeRef', 'tags', 'media'])
             ->when($filters['search'] ?? null, function ($q, $search) {
                 $q->search($search);
@@ -55,6 +58,8 @@ class DocumentBibliothequeService
                     'populaires' => $q->orderByDesc('nb_vues'),
                     'telecharges' => $q->orderByDesc('nb_telechargements'),
                     'notes' => $q->orderByDesc('note_moyenne'),
+                    'apprecies' => $q->orderByDesc('nb_aimes'),
+                    'favoris' => $q->orderByDesc('nombre_favoris'),
                     'recents' => $q->latest(),
                     default => $q->latest(),
                 };
@@ -205,18 +210,21 @@ class DocumentBibliothequeService
     public function valider(DocumentBibliotheque $document): DocumentBibliotheque
     {
         $document->update(['statut' => 'publie']);
+        AuditService::enregistrer('document.valide', 'Document « ' . $document->titre . ' » validé', $document);
         return $document->refresh();
     }
 
     public function refuser(DocumentBibliotheque $document): DocumentBibliotheque
     {
         $document->update(['statut' => 'refuse']);
+        AuditService::enregistrer('document.refuse', 'Document « ' . $document->titre . ' » refusé', $document, [], 'warning');
         return $document->refresh();
     }
 
     public function archiver(DocumentBibliotheque $document): DocumentBibliotheque
     {
         $document->update(['statut' => 'archive']);
+        AuditService::enregistrer('document.archive', 'Document « ' . $document->titre . ' » archivé', $document);
         return $document->refresh();
     }
 
@@ -298,29 +306,91 @@ class DocumentBibliothequeService
         ]);
     }
 
+    /**
+     * Enregistre un signalement (membre ou visiteur anonyme).
+     *
+     * Plusieurs signalements sont autorisés (même auteur, motifs distincts
+     * ou non) : l'anti-abus repose sur le throttle de la route
+     * (`throttle:10,1`). L'empreinte IP reste stockée (hashée) à titre
+     * de trace pour la modération.
+     */
     public function addSignalement(DocumentBibliotheque $document, array $data): DocumentSignalement
     {
-        $existant = DocumentSignalement::where('user_id', Auth::id())
-            ->where('document_bibliotheque_id', $document->id)
-            ->where('statut', 'en_attente')
-            ->exists();
-
-        if ($existant) {
-            throw ValidationException::withMessages([
-                'motif' => 'Vous avez déjà un signalement en cours pour ce document.',
-            ]);
-        }
+        $userId = Auth::id();
+        $ipHash = $userId === null ? $this->empreinteIp() : null;
 
         return DocumentSignalement::create([
-            'user_id' => Auth::id(),
+            'user_id' => $userId,
             'document_bibliotheque_id' => $document->id,
             'motif' => $data['motif'],
             'description' => $data['description'] ?? null,
+            'precisions' => $data['precisions'] ?? null,
+            'email_contact' => $data['email_contact'] ?? null,
+            'ip_hash' => $ipHash,
+            'statut' => 'en_attente',
         ]);
     }
 
+    /** Empreinte IP (SHA-256) pour la traçabilité des signalements anonymes — jamais stockée en clair. */
+    protected function empreinteIp(): ?string
+    {
+        $ip = request()->ip();
+        if (! $ip) {
+            return null;
+        }
+
+        return hash('sha256', $ip.'|'.config('app.key'));
+    }
+
+    /**
+     * Mise à jour d'un signalement par la modération (statut + note).
+     * Un signalement n'entraîne jamais le retrait automatique du document.
+     */
+    public function majSignalement(DocumentSignalement $signalement, array $data): DocumentSignalement
+    {
+        $updates = [];
+
+        if (array_key_exists('statut', $data) && $data['statut'] !== $signalement->statut) {
+            $updates['statut'] = $data['statut'];
+            $updates['traite_at'] = in_array($data['statut'], ['traite', 'rejete'], true) ? now() : null;
+            $updates['traite_par_user_id'] = in_array($data['statut'], ['traite', 'rejete'], true)
+                ? Auth::id()
+                : null;
+        }
+
+        if (array_key_exists('note_admin', $data)) {
+            $updates['note_admin'] = $data['note_admin'];
+        }
+
+        if ($updates !== []) {
+            $signalement->update($updates);
+        }
+
+        return $signalement->fresh(['user', 'traitePar', 'document.auteur']);
+    }
+
+    /**
+     * Enregistre un accès puis incrémente le compteur de tête correspondant.
+     *
+     * Déduplication : une même session ne compte qu'un accès par document et
+     * par type d'action sur une fenêtre de 30 minutes. Rechargements, allers-
+     * retours entre la liste et le lecteur ou appels répétés du frontend ne
+     * gonflent donc pas les compteurs. Le journal détaillé n'est écrit que
+     * pour les accès effectivement comptabilisés (traçabilité + confidentialité).
+     */
     public function logAccess(DocumentBibliotheque $document, string $action): void
     {
+        $cle = sprintf('acces.%s.%d', $action, $document->id);
+
+        if (session()->has($cle)) {
+            $premier = (int) session()->get($cle, 0);
+            if (now()->getTimestamp() - $premier < 30 * 60) {
+                return;
+            }
+        }
+
+        session()->put($cle, now()->getTimestamp());
+
         DocumentAccessLog::create([
             'user_id' => Auth::check() ? Auth::id() : null,
             'document_bibliotheque_id' => $document->id,
@@ -332,6 +402,124 @@ class DocumentBibliothequeService
             $document->increment('nb_vues');
         } elseif ($action === 'download') {
             $document->increment('nb_telechargements');
+        }
+    }
+
+    /**
+     * Applique la réaction d'une identité (membre ou visiteur de session).
+     *
+     * Même réaction déjà posée → retrait (l'identité peut annuler son geste) ;
+     * réaction différente → remplacement ; sinon création. Les compteurs sont
+     * TOUJOURS recalculés en base, jamais modifiés côté client.
+     *
+     * @return array{reaction: string|null, nb_aimes: int, nb_n_aimes: int}
+     */
+    public function reagir(DocumentBibliotheque $document, string $reaction): array
+    {
+        if (! in_array($reaction, DocumentReaction::VALIDES, true)) {
+            throw ValidationException::withMessages([
+                'reaction' => 'Cette réaction n\'est pas valide.',
+            ]);
+        }
+
+        $identifiant = DocumentReaction::identiteCourante();
+        $visiteurConnecte = Auth::check();
+
+        DB::transaction(function () use ($document, $reaction, $identifiant, $visiteurConnecte) {
+            $existante = DocumentReaction::where('document_bibliotheque_id', $document->id)
+                ->where('identifiant', $identifiant)
+                ->first();
+
+            if ($existante && $existante->reaction === $reaction) {
+                $existante->delete();
+            } elseif ($existante) {
+                $existante->update(['reaction' => $reaction]);
+            } else {
+                DocumentReaction::create([
+                    'document_bibliotheque_id' => $document->id,
+                    'user_id' => $visiteurConnecte ? Auth::id() : null,
+                    'identifiant' => $identifiant,
+                    'reaction' => $reaction,
+                ]);
+            }
+
+            $this->recalculerCompteursReactions($document);
+        });
+
+        return [
+            'reaction' => $this->reactionCourante($document),
+            'nb_aimes' => (int) $document->nb_aimes,
+            'nb_n_aimes' => (int) $document->nb_n_aimes,
+        ];
+    }
+
+    /**
+     * Recalcule à plat les compteurs de réactions d'un document.
+     */
+    public function recalculerCompteursReactions(DocumentBibliotheque $document): void
+    {
+        $aimes = DocumentReaction::where('document_bibliotheque_id', $document->id)
+            ->where('reaction', DocumentReaction::AIME)
+            ->count();
+        $nAimes = DocumentReaction::where('document_bibliotheque_id', $document->id)
+            ->where('reaction', DocumentReaction::N_AIME_PAS)
+            ->count();
+
+        $document->update([
+            'nb_aimes' => $aimes,
+            'nb_n_aimes' => $nAimes,
+        ]);
+    }
+
+    /**
+     * Réaction de l'identité courante sur un document.
+     */
+    public function reactionCourante(DocumentBibliotheque $document): ?string
+    {
+        return DocumentReaction::where('document_bibliotheque_id', $document->id)
+            ->where('identifiant', DocumentReaction::identiteCourante())
+            ->value('reaction');
+    }
+
+    /**
+     * Passe les réactions anonymes de la session courante au compte qui vient
+     * de se connecter : aucun doublon (la clé unique identifiant/document
+     * interdit d'avoir « u:X » et « v:uuid » sur le même document).
+     */
+    public function transfertReactionsVersMembre(int $userId): void
+    {
+        $visiteur = 'v:'.DocumentReaction::visiteurId();
+        $membre = DocumentReaction::identifiantMembre($userId);
+
+        $documentsDuMembre = DocumentReaction::where('identifiant', $membre)
+            ->pluck('document_bibliotheque_id')
+            ->all();
+
+        $touched = $documentsDuMembre;
+
+        DB::transaction(function () use ($visiteur, $membre, $userId, $documentsDuMembre, &$touched) {
+            // Le membre a déjà réagi sur ces documents : la réaction anonyme
+            // est un doublon, elle est supprimée plutôt que transférée
+            // (la clé unique interdit les deux identités sur le même document).
+            DocumentReaction::where('identifiant', $visiteur)
+                ->whereIn('document_bibliotheque_id', $documentsDuMembre)
+                ->delete();
+
+            // Le reste des réactions anonymes de la session devient membre.
+            $touched = array_merge($touched, DocumentReaction::where('identifiant', $visiteur)
+                ->pluck('document_bibliotheque_id')
+                ->all());
+
+            DocumentReaction::where('identifiant', $visiteur)->update([
+                'user_id' => $userId,
+                'identifiant' => $membre,
+            ]);
+        });
+
+        foreach (array_unique($touched) as $documentId) {
+            if ($document = DocumentBibliotheque::find($documentId)) {
+                $this->recalculerCompteursReactions($document);
+            }
         }
     }
 

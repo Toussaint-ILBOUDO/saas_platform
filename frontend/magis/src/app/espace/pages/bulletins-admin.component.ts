@@ -10,6 +10,7 @@ import {
   BulletinGenererFormulaire,
   BulletinPaie,
   BulletinPaieAjustement,
+  BulletinPaieLigne,
   BulletinVersement,
   MetaPage,
   MODES_PAIEMENT,
@@ -53,9 +54,38 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
       .succes { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.8rem 0.95rem; border-radius: 0.9rem; background: var(--mpc-vert-pale); color: #0a5d35; font-size: 0.85rem; margin-bottom: 0.9rem; }
       .lignes-mini { font-size: 0.82rem; }
       .lignes-mini tr:last-child td { border-bottom: none; }
-      .apercu-zone { background: #f8fafc; border: 1px dashed var(--mpc-bordure); border-radius: 1rem; padding: 1rem; overflow-x: auto; }
-      .input-ajust { width: 110px; }
       .contestation { background: var(--mpc-rouge-clair); color: #5c1818; }
+
+      /* En-tête de bulletin (métriques + identité) */
+      .bulletin-identite { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-bottom: 0.9rem; }
+      .bulletin-identite .ident-item { font-size: 0.85rem; }
+      .bulletin-identite .ident-label { display: block; font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .bulletin-identite .ident-valeur { font-weight: 600; color: #1f2937; }
+      .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.7rem; margin-bottom: 1.1rem; }
+      .metric { background: #f8fafc; border: 1px solid var(--mpc-bordure); border-radius: 0.9rem; padding: 0.7rem 0.9rem; }
+      .metric-label { font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .metric-value { font-size: 1.1rem; font-weight: 800; color: var(--mpc-bleu); font-variant-numeric: tabular-nums; }
+      .metric-value.accent { color: #0a5d35; }
+      .section-titre { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mpc-texte-doux); margin: 1.1rem 0 0.5rem; }
+      .table-clair tfoot th { background: #f1f5f9; font-size: 0.82rem; }
+      .recap-ligne { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; padding: 0.12rem 0; min-width: 240px; }
+      .recap-total { border-top: 1px solid var(--mpc-bordure); margin-top: 0.25rem; padding-top: 0.35rem; font-weight: 800; font-size: 1rem; color: #0a5d35; }
+      .badge-direction { font-size: 0.66rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 99px; }
+      .badge-credit { background: var(--mpc-vert-pale); color: #0a5d35; }
+      .badge-debit { background: var(--mpc-rouge-clair); color: #7a1d1d; }
+
+      /* Aperçu de paie par enseignant */
+      .apercu-enseignant { background: #f8fafc; border: 1px solid var(--mpc-bordure); border-radius: 1rem; padding: 0.9rem 1rem; margin-bottom: 0.9rem; }
+      .apercu-entete { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.6rem; }
+      .apercu-nom { font-weight: 800; color: var(--mpc-bleu); font-size: 0.95rem; }
+      .apercu-resume { font-size: 0.82rem; color: var(--mpc-texte-doux); }
+      .apercu-reglages { display: flex; flex-wrap: wrap; gap: 0.9rem; align-items: flex-end; margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px dashed var(--mpc-bordure); }
+      .reglage { display: flex; flex-direction: column; gap: 0.2rem; }
+      .reglage-label { font-size: 0.7rem; font-weight: 700; color: var(--mpc-texte-doux); display: flex; align-items: center; gap: 0.35rem; }
+      .reglage input { width: 130px; }
+      .apercu-net { margin-left: auto; text-align: right; }
+      .apercu-net .net-label { font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mpc-texte-doux); }
+      .apercu-net .net-valeur { font-size: 1.05rem; font-weight: 800; color: #0a5d35; font-variant-numeric: tabular-nums; }
     `,
   ],
   template: `
@@ -181,43 +211,79 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
               </div>
 
               @if (apercu() && apercu()!.data.length > 0) {
-                <div class="apercu-zone mt-3">
-                  <table class="table table-sm lignes-mini mb-0 align-middle">
-                    <thead>
-                      <tr>
-                        <th>Enseignant</th><th class="text-end">Heures</th><th class="text-end">Brut</th>
-                        <th>Frais de suivi</th>
-                        @for (t of apercu()!.types_ajustement; track t.id) {
-                          <th class="text-end" [title]="t.direction === 'credit' ? 'Prime' : 'Retenue'">
-                            {{ t.libelle }}
-                          </th>
+                <div class="mt-3">
+                  @for (item of apercu()!.data; track item.enseignant.id) {
+                    <div class="apercu-enseignant">
+                      <div class="apercu-entete">
+                        <div>
+                          <span class="apercu-nom">{{ item.enseignant.nom ?? '—' }}</span>
+                          <span class="ms-2 text-doux-tiny">{{ item.lignes.length }} intervention(s)</span>
+                        </div>
+                        <div class="apercu-resume">
+                          Heures <b>{{ chiffre(item.total_heures) }}</b> ·
+                          Brut <b>{{ monnaie(item.montant_brut) }}</b>
+                        </div>
+                      </div>
+
+                      <div class="table-responsive">
+                        <table class="table table-sm lignes-mini mb-0 align-middle">
+                          <thead>
+                            <tr>
+                              <th>Élève</th><th>Matière</th>
+                              <th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (l of item.lignes; track l.affectation_enseignant_id + '-' + l.matiere_id) {
+                              <tr>
+                                <td>{{ l.eleve_nom || '—' }}</td>
+                                <td>{{ l.matiere_nom }}</td>
+                                <td class="text-end">{{ chiffre(l.nombre_heures) }} h</td>
+                                <td class="text-end">{{ monnaie(l.taux_horaire) }}</td>
+                                <td class="text-end">{{ monnaie(l.montant) }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div class="apercu-reglages">
+                        <div class="reglage">
+                          <label class="reglage-label">Frais de suivi</label>
+                          <input type="number" min="0" step="100" class="form-control form-control-sm"
+                                 [ngModel]="item.frais_suivi" (ngModelChange)="item.frais_suivi = +$event" name="frais_{{ item.enseignant.id }}" />
+                        </div>
+
+                        @for (t of typesCredit(); track t.id) {
+                          <div class="reglage">
+                            <label class="reglage-label">{{ t.libelle }} <span class="badge-direction badge-credit">Crédit</span></label>
+                            <input type="number" min="0" step="100" class="form-control form-control-sm"
+                                   [ngModel]="montantAjust(item, t.id)" (ngModelChange)="definirAjust(item, t.id, +$event)"
+                                   name="aj_{{ item.enseignant.id }}_{{ t.id }}" />
+                          </div>
                         }
-                        <th class="text-end">Net</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (item of apercu()!.data; track item.enseignant.id) {
-                        <tr>
-                          <td class="fw-semibold">{{ item.enseignant.nom ?? '—' }}</td>
-                          <td class="text-end">{{ chiffre(item.total_heures) }}</td>
-                          <td class="text-end">{{ monnaie(item.montant_brut) }}</td>
-                          <td>
-                            <input type="number" min="0" step="100" class="form-control form-control-sm input-ajust"
-                                   [ngModel]="item.frais_suivi" (ngModelChange)="item.frais_suivi = +$event" name="frais_{{ item.enseignant.id }}" />
-                          </td>
-                          @for (t of apercu()!.types_ajustement; track t.id) {
-                            <td>
-                              <input type="number" min="0" step="100" class="form-control form-control-sm input-ajust text-end"
-                                     [ngModel]="montantAjust(item, t.id)"
-                                     (ngModelChange)="definirAjust(item, t.id, +$event)"
-                                     name="aj_{{ item.enseignant.id }}_{{ t.id }}" />
-                            </td>
-                          }
-                          <td class="text-end montant">{{ monnaie(netItem(item)) }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+                        @for (t of typesDebit(); track t.id) {
+                          <div class="reglage">
+                            <label class="reglage-label">{{ t.libelle }} <span class="badge-direction badge-debit">Débit</span></label>
+                            <input type="number" min="0" step="100" class="form-control form-control-sm"
+                                   [ngModel]="montantAjust(item, t.id)" (ngModelChange)="definirAjust(item, t.id, +$event)"
+                                   name="aj_{{ item.enseignant.id }}_{{ t.id }}" />
+                          </div>
+                        }
+
+                        <div class="apercu-net">
+                          <div class="net-label">Net à payer</div>
+                          <div class="net-valeur">{{ monnaie(netItem(item)) }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  }
+
+                  @if (apercu()!.types_ajustement.length === 0) {
+                    <div class="text-doux-tiny">
+                      Aucun type d'ajustement actif : créez-en un pour saisir un bonus (crédit) ou un débit.
+                    </div>
+                  }
                 </div>
               } @else if (apercu() !== null) {
                 <div class="alert alert-warning mt-3 mb-0">
@@ -252,33 +318,96 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
               <button type="button" class="btn-close" (click)="fermerDetail()"></button>
             </div>
             <div class="modal-body">
-              <p class="text-doux-tiny">
-                {{ detail()!.enseignant?.nom ?? '—' }} ·
-                {{ detail()!.periode?.label }}
-              </p>
+              <div class="bulletin-identite">
+                <div class="ident-item">
+                  <span class="ident-label">Enseignant</span>
+                  <span class="ident-valeur">{{ detail()!.enseignant?.nom ?? '—' }}</span>
+                </div>
+                @if (detail()!.enseignant?.telephone) {
+                  <div class="ident-item">
+                    <span class="ident-label">Téléphone</span>
+                    <span class="ident-valeur">{{ detail()!.enseignant!.telephone }}</span>
+                  </div>
+                }
+                @if (detail()!.enseignant?.email) {
+                  <div class="ident-item">
+                    <span class="ident-label">Email</span>
+                    <span class="ident-valeur">{{ detail()!.enseignant!.email }}</span>
+                  </div>
+                }
+                <div class="ident-item">
+                  <span class="ident-label">Période</span>
+                  <span class="ident-valeur">{{ detail()!.periode?.label ?? '—' }}</span>
+                </div>
+                <div class="ident-item">
+                  <span class="ident-label">Émis le</span>
+                  <span class="ident-valeur">{{ dateCourte(detail()!.created_at) }}</span>
+                </div>
+              </div>
 
-              <table class="table table-sm lignes-mini">
-                <thead><tr><th>Élève</th><th>Matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr></thead>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-label">Heures validées</div>
+                  <div class="metric-value">{{ chiffre(totalHeures(detail()!.lignes)) }} h</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Montant brut</div>
+                  <div class="metric-value">{{ monnaie(detail()!.montant_brut) }}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Frais de suivi</div>
+                  <div class="metric-value">−{{ monnaie(detail()!.frais_suivi) }}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Net à payer</div>
+                  <div class="metric-value accent">{{ monnaie(detail()!.montant_net_final ?? detail()!.montant_net) }}</div>
+                </div>
+              </div>
+
+              <div class="section-titre">Détail des interventions</div>
+              <table class="table table-sm lignes-mini table-clair">
+                <thead>
+                  <tr><th>Élève</th><th>Matière</th><th class="text-end">Heures</th><th class="text-end">Taux/h</th><th class="text-end">Montant</th></tr>
+                </thead>
                 <tbody>
                   @for (l of detail()!.lignes; track l.id) {
                     <tr>
-                      <td>{{ l.eleve }}</td><td>{{ l.matiere }}</td>
+                      <td>{{ l.eleve ?? '—' }}</td>
+                      <td>{{ l.matiere ?? '—' }}</td>
                       <td class="text-end">{{ chiffre(l.nombre_heures) }} h</td>
                       <td class="text-end">{{ monnaie(l.taux_horaire) }}</td>
                       <td class="text-end">{{ monnaie(l.montant) }}</td>
                     </tr>
+                  } @empty {
+                    <tr><td colspan="5" class="text-center text-doux-tiny py-3">Aucune ligne sur ce bulletin.</td></tr>
                   }
                 </tbody>
+                @if (detail()!.lignes.length > 0) {
+                  <tfoot>
+                    <tr>
+                      <th colspan="2">Total</th>
+                      <th class="text-end">{{ chiffre(totalHeures(detail()!.lignes)) }} h</th>
+                      <th></th>
+                      <th class="text-end montant">{{ monnaie(detail()!.montant_brut) }}</th>
+                    </tr>
+                  </tfoot>
+                }
               </table>
 
-              @if (detail()!.lignes.length > 0 && detail()!.ajustements.length > 0) {
-                <table class="table table-sm lignes-mini mt-2">
-                  <thead><tr><th>Ajustement</th><th class="text-end">Montant</th><th></th></tr></thead>
+              @if (detail()!.ajustements.length > 0) {
+                <div class="section-titre">Ajustements (compléments &amp; déductions)</div>
+                <table class="table table-sm lignes-mini table-clair">
+                  <thead><tr><th>Libellé</th><th>Nature</th><th class="text-end">Montant</th><th></th></tr></thead>
                   <tbody>
                     @for (a of detail()!.ajustements; track a.id) {
                       <tr>
                         <td>{{ a.libelle }}</td>
-                        <td class="text-end">{{ a.type === 'retenue' ? '−' : '+' }}{{ monnaie(a.montant) }}</td>
+                        <td>
+                          <span class="badge-direction" [class.badge-credit]="a.type === 'prime'" [class.badge-debit]="a.type === 'retenue'">
+                            {{ a.type === 'prime' ? 'Crédit' : 'Débit' }}
+                          </span>
+                        </td>
+                        <td class="text-end montant">{{ a.type === 'retenue' ? '−' : '+' }}{{ monnaie(a.montant) }}</td>
                         <td class="text-end">
                           @if (detail()!.actions.includes('ajuster')) {
                             <button class="btn btn-sm btn-outline-danger py-0 px-1" (click)="retirerAjustement(a)" title="Retirer"><i class="bi bi-x"></i></button>
@@ -287,16 +416,24 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
                       </tr>
                     }
                   </tbody>
+                  <tfoot>
+                    <tr>
+                      <th colspan="2">Total primes / retenues</th>
+                      <th class="text-end">+{{ monnaie(detail()!.total_primes ?? 0) }} / −{{ monnaie(detail()!.total_retenues ?? 0) }}</th>
+                      <th></th>
+                    </tr>
+                  </tfoot>
                 </table>
               }
 
               @if (detail()!.actions.includes('ajuster')) {
-                <div class="row g-2 mt-2">
+                <div class="section-titre">Ajouter un bonus ou un débit</div>
+                <div class="row g-2">
                   <div class="col-md-4">
                     <label class="form-label">Type d'ajustement</label>
                     <select class="form-select form-select-sm" [(ngModel)]="nouvelAjustement.type_ajustement_id" name="type_ajustement_id">
                       <option [ngValue]="null">— Choisir —</option>
-                      <option *ngFor="let t of types()" [ngValue]="t.id">{{ t.libelle }}</option>
+                      <option *ngFor="let t of types()" [ngValue]="t.id">{{ t.libelle }} ({{ t.direction === 'credit' ? 'crédit' : 'débit' }})</option>
                     </select>
                   </div>
                   <div class="col-md-5">
@@ -316,12 +453,20 @@ import { ouvrirDetailDepuisRoute } from '../detail-de-route';
                 </div>
               }
 
-              <div class="d-flex flex-column align-items-end mt-3 gap-1">
-                <div class="text-doux-tiny">Brut — <b class="montant">{{ monnaie(detail()!.montant_brut) }}</b></div>
-                @if (detail()!.frais_suivi > 0) { <div class="text-doux-tiny">Frais de suivi — <b class="montant">−{{ monnaie(detail()!.frais_suivi) }}</b></div> }
-                @if (detail()!.total_primes) { <div class="text-doux-tiny">Primes — <b class="montant">+{{ monnaie(detail()!.total_primes) }}</b></div> }
-                @if (detail()!.total_retenues) { <div class="text-doux-tiny">Retenues — <b class="montant">−{{ monnaie(detail()!.total_retenues) }}</b></div> }
-                <div class="fw-bold montant fs-5">Net {{ monnaie(detail()!.montant_net_final ?? detail()!.montant_net) }}</div>
+              <div class="d-flex justify-content-end mt-3">
+                <div>
+                  <div class="recap-ligne"><span>Montant brut</span><b class="montant">{{ monnaie(detail()!.montant_brut) }}</b></div>
+                  @if (detail()!.frais_suivi > 0) {
+                    <div class="recap-ligne"><span>Frais de suivi</span><b class="montant">−{{ monnaie(detail()!.frais_suivi) }}</b></div>
+                  }
+                  @if (detail()!.total_primes) {
+                    <div class="recap-ligne"><span>Primes (crédits)</span><b class="montant">+{{ monnaie(detail()!.total_primes) }}</b></div>
+                  }
+                  @if (detail()!.total_retenues) {
+                    <div class="recap-ligne"><span>Retenues (débits)</span><b class="montant">−{{ monnaie(detail()!.total_retenues) }}</b></div>
+                  }
+                  <div class="recap-ligne recap-total"><span>Net à payer</span><b class="montant">{{ monnaie(detail()!.montant_net_final ?? detail()!.montant_net) }}</b></div>
+                </div>
               </div>
 
               @if (detail()!.commentaire_enseignant) {
@@ -478,6 +623,14 @@ export class BulletinsAdminComponent implements OnInit {
 
   protected montantNetDetail = computed<number>(() =>
     this.detail()?.montant_net_final ?? this.detail()?.montant_net ?? 0
+  );
+
+  protected typesCredit = computed(() =>
+    (this.apercu()?.types_ajustement ?? []).filter((t) => t.direction === 'credit')
+  );
+
+  protected typesDebit = computed(() =>
+    (this.apercu()?.types_ajustement ?? []).filter((t) => t.direction === 'debit')
   );
 
   async ngOnInit(): Promise<void> {
@@ -638,9 +791,17 @@ export class BulletinsAdminComponent implements OnInit {
 
   /* ---------- Détail / versement / correction / ajustements ---------- */
 
-  protected ouvrirDetail(b: BulletinPaie): void {
-    this.detail.set(b);
+  protected async ouvrirDetail(b: BulletinPaie): Promise<void> {
+    // La liste ne transporte ni les lignes ni les ajustements : on affiche
+    // l'en-tête tout de suite puis on recharge le détail complet.
+    this.detail.set({ ...b, lignes: b.lignes ?? [], ajustements: b.ajustements ?? [] });
     this.nouvelAjustement = { type_ajustement_id: null, libelle: '', montant: 0 };
+    this.alerte.set('');
+    try {
+      this.detail.set(await firstValueFrom(this.api.getBulletin(b.id)));
+    } catch (e) {
+      this.alerte.set(messageErreurApi(e));
+    }
   }
 
   protected fermerDetail(): void {
@@ -794,6 +955,16 @@ export class BulletinsAdminComponent implements OnInit {
       autre: 'Autre',
     };
     return libelles[m] ?? m;
+  }
+
+  protected totalHeures(lignes: BulletinPaieLigne[]): number {
+    return (lignes ?? []).reduce((s, l) => s + Number(l.nombre_heures || 0), 0);
+  }
+
+  protected dateCourte(v: string | null | undefined): string {
+    if (!v) return '—';
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR');
   }
 
   protected chiffre(v: number | null | undefined): string {
